@@ -596,26 +596,127 @@ function showGenerateStatus(message, type) {
     }
 }
 
-async function promptUser(message) {
-    try {
-        const result = await core.showPrompt({ message });
-        return result;
-    } catch (e) {
-        console.error(e);
-        return null;
-    }
+/**
+ * 显示一个自定义的输入对话框
+ * @param {string} message - 提示消息
+ * @param {string} defaultValue - 默认值
+ * @returns {Promise<string|null>} 用户输入的值或null（取消时）
+ */
+async function promptUser(message, defaultValue = '') {
+    return new Promise((resolve) => {
+        // 创建对话框
+        const dialog = document.createElement('dialog');
+        dialog.style.backgroundColor = '#323232';
+        dialog.style.color = '#ffffff';
+        dialog.style.border = '1px solid #4a4a4a';
+        dialog.style.borderRadius = '6px';
+        dialog.style.padding = '0';
+        dialog.style.minWidth = '400px';
+
+        // 创建内容容器
+        const container = document.createElement('div');
+        container.style.padding = '20px';
+
+        // 标题
+        const title = document.createElement('h3');
+        title.textContent = message;
+        title.style.margin = '0 0 16px 0';
+        title.style.fontSize = '14px';
+        title.style.fontWeight = 'normal';
+        container.appendChild(title);
+
+        // 输入框
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = defaultValue;
+        input.style.width = '100%';
+        input.style.padding = '8px';
+        input.style.backgroundColor = '#1e1e1e';
+        input.style.color = '#fff';
+        input.style.border = '1px solid #4a4a4a';
+        input.style.borderRadius = '3px';
+        input.style.fontSize = '13px';
+        input.style.boxSizing = 'border-box';
+        input.style.marginBottom = '16px';
+        container.appendChild(input);
+
+        // 按钮容器
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.display = 'flex';
+        buttonContainer.style.gap = '8px';
+        buttonContainer.style.justifyContent = 'flex-end';
+
+        // 取消按钮
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.className = 'secondary';
+        cancelBtn.style.padding = '8px 16px';
+        cancelBtn.addEventListener('click', () => {
+            dialog.close();
+            resolve(null);
+        });
+        buttonContainer.appendChild(cancelBtn);
+
+        // 确定按钮
+        const okBtn = document.createElement('button');
+        okBtn.textContent = 'OK';
+        okBtn.style.padding = '8px 16px';
+        okBtn.addEventListener('click', () => {
+            const value = input.value.trim();
+            dialog.close();
+            resolve(value || null);
+        });
+        buttonContainer.appendChild(okBtn);
+
+        container.appendChild(buttonContainer);
+        dialog.appendChild(container);
+
+        // 处理对话框关闭事件
+        dialog.addEventListener('close', () => {
+            dialog.remove();
+        });
+
+        // 处理ESC键取消
+        dialog.addEventListener('cancel', (e) => {
+            e.preventDefault();
+            dialog.close();
+            resolve(null);
+        });
+
+        // 处理回车键确认
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const value = input.value.trim();
+                dialog.close();
+                resolve(value || null);
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                dialog.close();
+                resolve(null);
+            }
+        });
+
+        // 显示对话框
+        document.body.appendChild(dialog);
+        dialog.showModal();
+        
+        // 聚焦输入框并选中默认值
+        setTimeout(() => {
+            input.focus();
+            if (defaultValue) {
+                input.select();
+            }
+        }, 50);
+    });
 }
 
 async function confirmUser(message) {
     try {
-        // Use showConfirm if available, otherwise use showAlert
-        if (core.showConfirm) {
-            const result = await core.showConfirm({ message });
-            return result;
-        } else {
-            await core.showAlert({ message: message + '\n\nContinue?' });
-            return true;
-        }
+        // 使用 UXP 的 confirm() 函数
+        // 返回 true 表示用户点击确定，false 表示取消
+        const result = confirm(message + '\n\nContinue?');
+        return result;
     } catch (e) {
         console.error(e);
         return false;

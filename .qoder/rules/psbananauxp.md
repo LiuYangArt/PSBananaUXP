@@ -6,7 +6,7 @@ alwaysApply: true
 
 
 这是一个Photoshop的UXP插件项目。 调用google nano banana pro模型进行ai生图
-
+photoshop 2023 版本
 
 # 编码规则
 - 总是使用中文注释
