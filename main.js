@@ -54,8 +54,8 @@ async function initializeApp() {
         loadPreset(selectedPresetName);
     }
 
-    // Try to calculate initial aspect ratio if document is open
-    await updateAspectRatio();
+    // 不在初始化时更新 Aspect Ratio，避免闪烁
+    // Aspect Ratio 会在生成图片时自动获取
 }
 
 function setupTabs() {
@@ -79,6 +79,8 @@ function setupTabs() {
 
 function setupGenerateUI() {
     const presetSelect = document.getElementById('presetSelect');
+    const presetSelectButton = document.getElementById('presetSelectButton');
+    const presetSelectText = document.getElementById('presetSelectText');
     const btnAddPreset = document.getElementById('btnAddPreset');
     const btnSavePreset = document.getElementById('btnSavePreset');
     const btnRenamePreset = document.getElementById('btnRenamePreset');
@@ -87,11 +89,41 @@ function setupGenerateUI() {
     const btnGenerate = document.getElementById('btnGenerate');
     const btnTestImport = document.getElementById('btnTestImport');
 
+    // 分辨率按钮
+    const btnRes1K = document.getElementById('btnRes1K');
+    const btnRes2K = document.getElementById('btnRes2K');
+    const btnRes4K = document.getElementById('btnRes4K');
+    const resolutionButtons = [btnRes1K, btnRes2K, btnRes4K];
+    let selectedResolution = '1K';
+
+    // 分辨率按钮点击事件
+    resolutionButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // 移除所有 active 状态
+            resolutionButtons.forEach(b => b.classList.remove('active'));
+            // 添加当前 active 状态
+            btn.classList.add('active');
+            // 保存选中的分辨率
+            selectedResolution = btn.dataset.resolution;
+        });
+    });
+
     // Populate preset dropdown
     updatePresetDropdown();
 
+    // 自定义下拉按钮点击事件
+    presetSelectButton.addEventListener('click', () => {
+        showSelectDialog('Select Preset', presetManager.getAllNames(), presetSelect.value, (selected) => {
+            presetSelect.value = selected;
+            presetSelectText.textContent = selected;
+            loadPreset(selected);
+            settingsManager.set('selected_preset', selected);
+        });
+    });
+
     // Preset selection change
     presetSelect.addEventListener('change', (e) => {
+        presetSelectText.textContent = e.target.value;
         loadPreset(e.target.value);
         settingsManager.set('selected_preset', e.target.value);
     });
@@ -107,6 +139,7 @@ function setupGenerateUI() {
         if (result.success) {
             updatePresetDropdown();
             presetSelect.value = newName;
+            document.getElementById('presetSelectText').textContent = newName;
             currentPreset = newName;
             showGenerateStatus(result.message, 'success');
         } else {
@@ -143,6 +176,7 @@ function setupGenerateUI() {
         if (result.success) {
             updatePresetDropdown();
             presetSelect.value = newName;
+            document.getElementById('presetSelectText').textContent = newName;
             currentPreset = newName;
             await settingsManager.set('selected_preset', newName);
             showGenerateStatus(result.message, 'success');
@@ -166,9 +200,11 @@ function setupGenerateUI() {
             updatePresetDropdown();
             if (presetSelect.options.length > 0) {
                 presetSelect.selectedIndex = 0;
+                document.getElementById('presetSelectText').textContent = presetSelect.value;
                 loadPreset(presetSelect.value);
             } else {
                 currentPreset = null;
+                document.getElementById('presetSelectText').textContent = '-';
                 promptInput.value = '';
             }
             showGenerateStatus(result.message, 'success');
@@ -188,8 +224,18 @@ function setupGenerateUI() {
     });
 }
 
+/**
+ * 获取当前选中的分辨率
+ */
+function getSelectedResolution() {
+    const activeBtn = document.querySelector('.resolution-buttons button.active');
+    return activeBtn ? activeBtn.dataset.resolution : '1K';
+}
+
 function setupSettingsUI() {
     const providerSelect = document.getElementById('providerSelect');
+    const providerSelectButton = document.getElementById('providerSelectButton');
+    const providerSelectText = document.getElementById('providerSelectText');
     const btnAddProvider = document.getElementById('btnAddProvider');
     const btnSaveProvider = document.getElementById('btnSaveProvider');
     const btnDeleteProvider = document.getElementById('btnDeleteProvider');
@@ -214,9 +260,23 @@ function setupSettingsUI() {
         updateDebugFolderPath();
     });
 
+    // 自定义下拉按钮点击事件
+    providerSelectButton.addEventListener('click', () => {
+        showSelectDialog('Select Provider', providerManager.getAllNames(), providerSelect.value, async (selected) => {
+            providerSelect.value = selected;
+            providerSelectText.textContent = selected;
+            loadProviderConfig(selected);
+            // 立即保存选中的 Provider
+            await settingsManager.set('selected_provider', selected);
+        });
+    });
+
     // Provider selection change
-    providerSelect.addEventListener('change', (e) => {
+    providerSelect.addEventListener('change', async (e) => {
+        providerSelectText.textContent = e.target.value;
         loadProviderConfig(e.target.value);
+        // 立即保存选中的 Provider
+        await settingsManager.set('selected_provider', e.target.value);
     });
 
     // Add new provider
@@ -228,6 +288,7 @@ function setupSettingsUI() {
         if (result.success) {
             updateProviderDropdown();
             providerSelect.value = newName;
+            document.getElementById('providerSelectText').textContent = newName;
             loadProviderConfig(newName);
             showStatus(result.message, 'success');
         } else {
@@ -277,8 +338,10 @@ function setupSettingsUI() {
             updateProviderDropdown();
             if (providerSelect.options.length > 0) {
                 providerSelect.selectedIndex = 0;
+                document.getElementById('providerSelectText').textContent = providerSelect.value;
                 loadProviderConfig(providerSelect.value);
             } else {
+                document.getElementById('providerSelectText').textContent = '-';
                 clearProviderConfig();
             }
             showStatus(result.message, 'success');
@@ -334,7 +397,7 @@ async function handleGenerateImage() {
         return;
     }
 
-    const resolution = document.getElementById('resolutionSelect').value;
+    const resolution = getSelectedResolution();
     const debugMode = settingsManager.get('debug_mode', false);
 
     isGenerating = true;
@@ -353,7 +416,6 @@ async function handleGenerateImage() {
             }, { commandName: "Get Canvas Info" });
 
             aspectRatio = calculateAspectRatio(canvasInfo.width, canvasInfo.height);
-            document.getElementById('aspectRatioDisplay').textContent = aspectRatio;
         } catch (e) {
             console.warn('Could not get canvas info:', e);
             showGenerateStatus('警告: 无法获取画布信息，使用默认比例 1:1', 'info');
@@ -426,22 +488,6 @@ ${e?.stack || 'N/A'}
 }
 
 /**
- * Update aspect ratio display based on current document
- */
-async function updateAspectRatio() {
-    try {
-        const canvasInfo = await executeAsModal(async () => {
-            return await PSOperations.getCanvasInfo();
-        }, { commandName: "Get Canvas Info" });
-
-        const aspectRatio = calculateAspectRatio(canvasInfo.width, canvasInfo.height);
-        document.getElementById('aspectRatioDisplay').textContent = aspectRatio;
-    } catch (e) {
-        document.getElementById('aspectRatioDisplay').textContent = '-';
-    }
-}
-
-/**
  * Test import - import the most recent generated image
  */
 async function handleTestImport() {
@@ -495,6 +541,7 @@ async function handleTestImport() {
 
 function updatePresetDropdown() {
     const presetSelect = document.getElementById('presetSelect');
+    const presetSelectText = document.getElementById('presetSelectText');
     presetSelect.innerHTML = '';
 
     const names = presetManager.getAllNames();
@@ -504,6 +551,15 @@ function updatePresetDropdown() {
         option.textContent = name;
         presetSelect.appendChild(option);
     });
+
+    // 更新按钮显示文本
+    if (names.length > 0 && presetSelect.value) {
+        presetSelectText.textContent = presetSelect.value;
+    } else if (names.length > 0) {
+        presetSelectText.textContent = names[0];
+    } else {
+        presetSelectText.textContent = '-';
+    }
 }
 
 function loadPreset(presetName) {
@@ -514,6 +570,7 @@ function loadPreset(presetName) {
 
 function updateProviderDropdown() {
     const providerSelect = document.getElementById('providerSelect');
+    const providerSelectText = document.getElementById('providerSelectText');
     providerSelect.innerHTML = '';
 
     const names = providerManager.getAllNames();
@@ -523,6 +580,15 @@ function updateProviderDropdown() {
         option.textContent = name;
         providerSelect.appendChild(option);
     });
+
+    // 更新按钮显示文本
+    if (names.length > 0 && providerSelect.value) {
+        providerSelectText.textContent = providerSelect.value;
+    } else if (names.length > 0) {
+        providerSelectText.textContent = names[0];
+    } else {
+        providerSelectText.textContent = '-';
+    }
 }
 
 function loadProviderConfig(providerName) {
@@ -594,6 +660,63 @@ function showGenerateStatus(message, type) {
             statusDiv.className = '';
         }, 5000);
     }
+}
+
+/**
+ * 显示自定义选择对话框
+ * @param {string} title - 对话框标题
+ * @param {Array<string>} options - 选项列表
+ * @param {string} currentValue - 当前选中值
+ * @param {Function} onSelect - 选择回调函数
+ */
+function showSelectDialog(title, options, currentValue, onSelect) {
+    // 创建对话框
+    const dialog = document.createElement('dialog');
+    dialog.className = 'select-dialog';
+
+    // 标题
+    const header = document.createElement('div');
+    header.className = 'select-dialog-header';
+    header.textContent = title;
+    dialog.appendChild(header);
+
+    // 选项列表
+    const list = document.createElement('div');
+    list.className = 'select-dialog-list';
+
+    options.forEach(option => {
+        const btn = document.createElement('button');
+        btn.className = 'select-option';
+        btn.textContent = option;
+        
+        if (option === currentValue) {
+            btn.classList.add('selected');
+        }
+
+        btn.addEventListener('click', () => {
+            onSelect(option);
+            dialog.close();
+        });
+
+        list.appendChild(btn);
+    });
+
+    dialog.appendChild(list);
+
+    // 关闭时清理
+    dialog.addEventListener('close', () => {
+        dialog.remove();
+    });
+
+    // 点击外部关闭
+    dialog.addEventListener('cancel', (e) => {
+        e.preventDefault();
+        dialog.close();
+    });
+
+    // 显示对话框
+    document.body.appendChild(dialog);
+    dialog.showModal();
 }
 
 /**

@@ -18,7 +18,7 @@
         .tab-nav {
             display: flex;
             background-color: #282828;
-            border-bottom: 1px solid #1a1a1a;
+            /* border-bottom: 1px solid #1a1a1a; */
         }
 
         .tab-button {
@@ -51,7 +51,9 @@
             gap: 12px;
             padding: 12px;
             overflow-y: auto;
+            overflow-x: hidden;
             flex: 1;
+            will-change: auto;
         }
 
         .tab-content.active {
@@ -71,6 +73,117 @@
             gap: 8px;
         }
 
+        /* 自定义下拉选择器样式 */
+        .custom-select-button {
+            width: 100%;
+            background-color: #1e1e1e;
+            color: #fff;
+            border: 1px solid #4a4a4a;
+            padding: 10px 12px;
+            border-radius: 3px;
+            font-size: 11px;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 36px;
+            box-sizing: border-box;
+        }
+
+        .custom-select-button:hover {
+            background-color: #2a2a2a;
+            border-color: #5a5a5a;
+        }
+
+        .custom-select-button:focus {
+            outline: none;
+            border-color: #0265DC;
+        }
+
+        .custom-select-arrow {
+            width: 0;
+            height: 0;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 5px solid #fff;
+            margin-left: 8px;
+        }
+
+        /* 下拉选项弹窗 */
+        .select-dialog {
+            background-color: #323232;
+            border: 1px solid #4a4a4a;
+            border-radius: 6px;
+            padding: 0;
+            min-width: 300px;
+            max-width: 400px;
+        }
+
+        .select-dialog-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid #4a4a4a;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .select-dialog-list {
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 8px 0;
+        }
+
+        .select-option {
+            width: 100%;
+            background-color: transparent;
+            color: #fff;
+            border: none;
+            padding: 12px 16px;
+            text-align: left;
+            cursor: pointer;
+            font-size: 11px;
+            line-height: 1.6;
+            transition: background-color 0.15s;
+        }
+
+        .select-option:hover {
+            background-color: #3a3a3a;
+        }
+
+        .select-option.selected {
+            background-color: #0265DC;
+            color: #fff;
+        }
+
+        .select-option.selected:hover {
+            background-color: #0056b3;
+        }
+
+        /* 滚动条样式 */
+        .select-dialog-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .select-dialog-list::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+
+        .select-dialog-list::-webkit-scrollbar-thumb {
+            background: #4a4a4a;
+            border-radius: 4px;
+        }
+
+        .select-dialog-list::-webkit-scrollbar-thumb:hover {
+            background: #5a5a5a;
+        }
+
+        /* Preset 按钮行样式 - 独立一行 */
+        .preset-buttons {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+        }
+
         label {
             font-size: 13px;
             color: #ccc;
@@ -83,40 +196,85 @@
         textarea {
             background-color: #1e1e1e;
             color: #fff;
-            border: 1px solid #4a4a4a;
-            padding: 8px 10px;
+            border: 1px solid #3a3a3a;
+            padding: 0px;
+            margin: 5px;
             border-radius: 3px;
-            font-size: 13px;
+            font-size: 11px;
             font-family: system-ui, sans-serif;
             width: 100%;
             box-sizing: border-box;
+            line-height: 1.6;
         }
 
         select,
         input {
-            height: 32px;
-            line-height: 16px;
+            height: 36px;
         }
 
         textarea {
-            resize: vertical;
+            resize: none;
             min-height: 80px;
             line-height: 1.4;
+        }
+
+        /* 分辨率按钮组样式 */
+        .resolution-buttons {
+            display: flex;
+            gap: 6px;
+        }
+
+        .resolution-buttons button {
+            flex: 1;
+            padding: 8px 12px;
+            font-size: 12px;
+            background-color: #2a2a2a;
+            border: 1px solid #3a3a3a;
+            transition: all 0.2s;
+        }
+
+        .resolution-buttons button:hover {
+            background-color: #3a3a3a;
+            border-color: #4a4a4a;
+        }
+
+        .resolution-buttons button.active {
+            background-color: #0265DC;
+            border-color: #0265DC;
+        }
+
+        .resolution-buttons button.active:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+
+        .resolution-buttons button:not(.active) {
+            opacity: 0.5;
         }
 
         select {
             appearance: none;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
             background-repeat: no-repeat;
-            background-position: right 8px center;
-            padding-right: 28px;
+            background-position: right 10px center;
+            padding-right: 32px;
+            padding-top: 12px;
+            padding-bottom: 12px;
+        }
+
+        /* 下拉菜单选项样式 */
+        select option {
+            padding: 10px 12px;
+            line-height: 2;
+            font-size: 11px;
+            min-height: 32px;
         }
 
         select:focus,
         input:focus,
         textarea:focus {
             outline: none;
-            border-color: #0265DC;
+            /* border-color: #0265DC; */
         }
 
         input[type="password"] {
@@ -160,8 +318,17 @@
             background-color: #5a5a5a;
         }
 
-        button.secondary:hover {
-            background-color: #4a4a4a;
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        button:disabled:hover {
+            background-color: #383838;
+        }
+
+        button.secondary:disabled:hover {
+            background-color: #5a5a5a;
         }
 
         .flex-grow {
@@ -202,13 +369,17 @@
 
     <!-- Generate Tab -->
     <div class="tab-content active" id="generateTab">
-        <h1 style="margin: 0;">🍌 PS Banana</h1>
+        <h1 style="margin: 0;">🍌 PS Banana by LiuYang</h1>
 
         <!-- Prompt Presets -->
         <div class="settings-section">
-            <label>Presets:</label>
-            <div class="settings-row">
-                <select id="presetSelect" class="flex-grow"></select>
+            <label>Prompt Presets:</label>
+            <button id="presetSelectButton" class="custom-select-button">
+                <span id="presetSelectText">-</span>
+                <span class="custom-select-arrow"></span>
+            </button>
+            <select id="presetSelect" style="display: none;"></select>
+            <div class="preset-buttons">
                 <button id="btnAddPreset" class="small" title="Add Preset">+</button>
                 <button id="btnSavePreset" class="small" title="Save Preset">Save</button>
                 <button id="btnRenamePreset" class="small" title="Rename Preset">Rename</button>
@@ -222,19 +393,14 @@
             <textarea id="promptInput" rows="6" placeholder="Enter your image generation prompt..."></textarea>
         </div>
 
-        <!-- Aspect Ratio Display -->
-        <div class="settings-section">
-            <label>Aspect Ratio: <span id="aspectRatioDisplay" style="color: #0265DC;">-</span></label>
-        </div>
-
         <!-- Resolution -->
         <div class="settings-section">
             <label>Resolution:</label>
-            <select id="resolutionSelect">
-                <option value="1K" selected>1K</option>
-                <option value="2K">2K</option>
-                <option value="4K">4K</option>
-            </select>
+            <div class="resolution-buttons">
+                <button id="btnRes1K" class="active" data-resolution="1K">1K</button>
+                <button id="btnRes2K" data-resolution="2K">2K</button>
+                <button id="btnRes4K" data-resolution="4K">4K</button>
+            </div>
         </div>
 
         <!-- Generate Button -->
@@ -249,8 +415,12 @@
     <div class="tab-content" id="settingsTab">
         <div class="settings-section">
             <label>Provider:</label>
-            <div class="settings-row">
-                <select id="providerSelect" class="flex-grow"></select>
+            <button id="providerSelectButton" class="custom-select-button">
+                <span id="providerSelectText">-</span>
+                <span class="custom-select-arrow"></span>
+            </button>
+            <select id="providerSelect" style="display: none;"></select>
+            <div class="preset-buttons">
                 <button id="btnAddProvider" class="small" title="Add New Provider">+</button>
                 <button id="btnSaveProvider" class="small">Save</button>
                 <button id="btnDeleteProvider" class="small danger">Del</button>
