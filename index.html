@@ -7,37 +7,214 @@
             background-color: #323232;
             color: #ffffff;
             font-family: system-ui, sans-serif;
-            padding: 12px;
+            padding: 0;
+            margin: 0;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            height: 100vh;
         }
 
-        h1 {
-            font-size: 18px;
-            margin: 0 0 10px 0;
-            color: #f0f0f0;
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            background-color: #282828;
+            border-bottom: 1px solid #1a1a1a;
+        }
+
+        .tab-button {
+            flex: 1;
+            background-color: transparent;
+            color: #aaa;
+            border: none;
+            padding: 12px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-button:hover {
+            background-color: #3a3a3a;
+            color: #fff;
+        }
+
+        .tab-button.active {
+            background-color: #323232;
+            color: #fff;
+            border-bottom-color: #0265DC;
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            padding: 12px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        /* Settings Tab Styles */
+        .settings-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .settings-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 13px;
+            color: #ccc;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        select,
+        input {
+            background-color: #1e1e1e;
+            color: #fff;
+            border: 1px solid #4a4a4a;
+            padding: 8px 10px;
+            border-radius: 3px;
+            font-size: 13px;
+            font-family: system-ui, sans-serif;
+            width: 100%;
+            height: 32px;
+            line-height: 16px;
+            box-sizing: border-box;
+        }
+
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            padding-right: 28px;
+        }
+
+        select:focus,
+        input:focus {
+            outline: none;
+            border-color: #0265DC;
+        }
+
+        input[type="password"] {
+            font-family: monospace;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 6px;
         }
 
         button {
             background-color: #0265DC;
             color: white;
             border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
+            padding: 6px 12px;
+            border-radius: 3px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
+            white-space: nowrap;
         }
 
         button:hover {
             background-color: #0056b3;
         }
+
+        button.small {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        button.danger {
+            background-color: #c83232;
+        }
+
+        button.danger:hover {
+            background-color: #a02828;
+        }
+
+        .flex-grow {
+            flex: 1;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #4a4a4a;
+            margin: 8px 0;
+        }
+
+        .status-message {
+            font-size: 12px;
+            padding: 6px 8px;
+            border-radius: 3px;
+            margin-top: 4px;
+        }
+
+        .status-success {
+            background-color: #2d5016;
+            color: #a5d68b;
+        }
+
+        .status-error {
+            background-color: #5c1616;
+            color: #f0a0a0;
+        }
     </style>
 </head>
 
 <body>
-    <h1>PS Banana by LiuYang</h1>
-    <button id="btnTest">Test Button</button>
+    <!-- Tab Navigation -->
+    <div class="tab-nav">
+        <button class="tab-button active" data-tab="generate">Generate</button>
+        <button class="tab-button" data-tab="settings">Settings</button>
+    </div>
+
+    <!-- Generate Tab -->
+    <div class="tab-content active" id="generateTab">
+        <h1 style="margin: 0;">🍌 PS Banana</h1>
+        <button id="btnTest">Test Button</button>
+    </div>
+
+    <!-- Settings Tab -->
+    <div class="tab-content" id="settingsTab">
+        <div class="settings-section">
+            <label>Provider:</label>
+            <div class="settings-row">
+                <select id="providerSelect" class="flex-grow"></select>
+                <button id="btnAddProvider" class="small" title="Add New Provider">+</button>
+                <button id="btnSaveProvider" class="small">Save</button>
+                <button id="btnDeleteProvider" class="small danger">Del</button>
+            </div>
+        </div>
+
+        <button id="btnTestConnection">Test Connection</button>
+        <div id="connectionStatus"></div>
+
+        <hr>
+
+        <div class="settings-section">
+            <label>API Key:</label>
+            <input type="password" id="inputApiKey" placeholder="Enter API Key">
+
+            <label>Base URL:</label>
+            <input type="text" id="inputBaseUrl" placeholder="https://...">
+
+            <label>Model ID:</label>
+            <input type="text" id="inputModelId" placeholder="model-name">
+        </div>
+    </div>
+
     <script src="main.js"></script>
 </body>
 
