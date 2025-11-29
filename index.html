@@ -29,7 +29,7 @@
             padding: 12px 16px;
             cursor: pointer;
             font-size: 14px;
-            border-bottom: 2px solid transparent;
+            /* border-bottom: 2px solid transparent; */
             transition: all 0.2s;
         }
 
@@ -187,6 +187,7 @@
         label {
             font-size: 13px;
             color: #ccc;
+            margin-left: 6px;
             margin-bottom: 4px;
             display: block;
         }
@@ -346,6 +347,7 @@
             padding: 6px 8px;
             border-radius: 3px;
             margin-top: 4px;
+            min-height: 24px;
         }
 
         .status-success {
@@ -369,7 +371,7 @@
 
     <!-- Generate Tab -->
     <div class="tab-content active" id="generateTab">
-        <h1 style="margin: 0;">🍌 PS Banana by LiuYang</h1>
+        <h1 style="margin: 0;">PS Banana</h1>
 
         <!-- Prompt Presets -->
         <div class="settings-section">
@@ -378,7 +380,6 @@
                 <span id="presetSelectText">-</span>
                 <span class="custom-select-arrow"></span>
             </button>
-            <select id="presetSelect" style="display: none;"></select>
             <div class="preset-buttons">
                 <button id="btnAddPreset" class="small" title="Add Preset">+</button>
                 <button id="btnSavePreset" class="small" title="Save Preset">Save</button>

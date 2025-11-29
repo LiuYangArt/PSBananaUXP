@@ -78,7 +78,12 @@ function setupTabs() {
 }
 
 function setupGenerateUI() {
-    const presetSelect = document.getElementById('presetSelect');
+    // 创建隐藏的 select 元素（用于后台数据管理）
+    const presetSelect = document.createElement('select');
+    presetSelect.id = 'presetSelect';
+    presetSelect.style.display = 'none';
+    document.body.appendChild(presetSelect);
+    
     const presetSelectButton = document.getElementById('presetSelectButton');
     const presetSelectText = document.getElementById('presetSelectText');
     const btnAddPreset = document.getElementById('btnAddPreset');
