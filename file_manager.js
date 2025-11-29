@@ -1,0 +1,356 @@
+const fs = require("uxp").storage.localFileSystem;
+const { app } = require("photoshop");
+
+/**
+ * Manages temporary files for AI image generation
+ * Creates and manages files in AppData\Local\PS_Banana
+ */
+class FileManager {
+    constructor() {
+        this.logDirName = "Logs";  // For debug logs only
+        this.logDirPath = null;
+        this.imageDirName = "GeneratedImages";  // For generated images
+        this.imageDirPath = null;
+    }
+
+    /**
+     * Get or create the log directory for debug files
+     * Uses UXP plugin data folder (no user permission needed)
+     * @returns {Promise<Folder>}
+     */
+    async getLogFolder() {
+        if (this.logDirPath) {
+            return this.logDirPath;
+        }
+
+        try {
+            // Use getDataFolder() - plugin-specific data folder
+            const dataFolder = await fs.getDataFolder();
+            
+            // Create Logs subfolder in plugin data directory
+            try {
+                this.logDirPath = await dataFolder.getEntry(this.logDirName);
+            } catch (e) {
+                // Folder doesn't exist, create it
+                this.logDirPath = await dataFolder.createFolder(this.logDirName);
+            }
+
+            console.log("Log folder path:", this.logDirPath.nativePath);
+            return this.logDirPath;
+        } catch (e) {
+            console.error("Error getting log folder:", e);
+            throw e;
+        }
+    }
+
+    /**
+     * Get or create the image directory for generated images
+     * Uses plugin data folder (same as logs, no permission needed)
+     * @returns {Promise<Folder>}
+     */
+    async getImageFolder() {
+        if (this.imageDirPath) {
+            return this.imageDirPath;
+        }
+
+        try {
+            // Use getDataFolder() for generated images too
+            // This ensures no permission issues
+            const dataFolder = await fs.getDataFolder();
+            
+            // Create GeneratedImages subfolder
+            try {
+                this.imageDirPath = await dataFolder.getEntry(this.imageDirName);
+            } catch (e) {
+                // Folder doesn't exist, create it
+                this.imageDirPath = await dataFolder.createFolder(this.imageDirName);
+            }
+
+            console.log("Image folder path:", this.imageDirPath.nativePath);
+            return this.imageDirPath;
+        } catch (e) {
+            console.error("Error getting image folder:", e);
+            throw e;
+        }
+    }
+
+    /**
+     * Backward compatibility - getTempFolder now returns log folder
+     * @deprecated Use getLogFolder() or getImageFolder() instead
+     */
+    async getTempFolder() {
+        return await this.getLogFolder();
+    }
+
+    /**
+     * Save payload to debug file
+     */
+    async savePayload(payload, providerName) {
+        try {
+            const folder = await this.getLogFolder();
+            const timestamp = this._getTimestamp();
+            const filename = `payload_${providerName.replace(/\s/g, '_')}_${timestamp}.json`;
+            const file = await folder.createFile(filename, { overwrite: true });
+            const content = JSON.stringify(payload, null, 2);
+            await file.write(content);
+            console.log(`[DEBUG] Payload saved to: ${file.nativePath}`);
+            return file.nativePath;
+        } catch (e) {
+            console.error("Error saving payload:", e);
+            return null;
+        }
+    }
+
+    /**
+     * Save response to debug file
+     */
+    async saveResponse(response, providerName) {
+        try {
+            const folder = await this.getLogFolder();
+            const timestamp = this._getTimestamp();
+            const filename = `response_${providerName.replace(/\s/g, '_')}_${timestamp}.json`;
+            const file = await folder.createFile(filename, { overwrite: true });
+            const content = JSON.stringify(response, null, 2);
+            await file.write(content);
+            console.log(`[DEBUG] Response saved to: ${file.nativePath}`);
+            return file.nativePath;
+        } catch (e) {
+            console.error("Error saving response:", e);
+            return null;
+        }
+    }
+
+    /**
+     * Save log message to debug file
+     */
+    async saveLog(message) {
+        try {
+            const folder = await this.getLogFolder();
+            const timestamp = this._getTimestamp();
+            const filename = `error_${timestamp}.txt`;
+            const file = await folder.createFile(filename, { overwrite: true });
+            await file.write(message);
+            console.log(`[DEBUG] Log saved to: ${file.nativePath}`);
+            return file.nativePath;
+        } catch (e) {
+            console.error("Error saving log:", e);
+            return null;
+        }
+    }
+
+    /**
+     * Save image data (base64 or binary) to file
+     * @param {string} base64Data - Base64 image data (without data:image prefix)
+     * @param {string} extension - File extension (png, jpg, webp)
+     * @returns {Promise<File>}
+     */
+    async saveImageFromBase64(base64Data, extension = "png") {
+        try {
+            const folder = await this.getImageFolder();
+            const timestamp = this._getTimestamp();
+            const filename = `generated_image_${timestamp}.${extension}`;
+
+            // Decode base64 to binary
+            const binaryString = atob(base64Data);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            const file = await folder.createFile(filename, { overwrite: true });
+            await file.write(bytes.buffer, { format: require("uxp").storage.formats.binary });
+
+            console.log(`[IMAGE] Image saved to: ${file.nativePath}`);
+            return file;
+        } catch (e) {
+            console.error("Error saving image from base64:", e);
+            throw e;
+        }
+    }
+
+    /**
+     * Download image from URL and save to temp folder
+     * @param {string} url - Image URL
+     * @returns {Promise<File>}
+     */
+    async downloadImage(url) {
+        try {
+            const folder = await this.getImageFolder();
+            const timestamp = this._getTimestamp();
+
+            // Determine extension from URL
+            let extension = "png";
+            if (url.includes(".webp")) extension = "webp";
+            else if (url.includes(".jpg") || url.includes(".jpeg")) extension = "jpg";
+
+            const filename = `generated_image_${timestamp}.${extension}`;
+
+            // Fetch the image
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Failed to download image: ${response.status}`);
+            }
+
+            const arrayBuffer = await response.arrayBuffer();
+
+            const file = await folder.createFile(filename, { overwrite: true });
+            await file.write(arrayBuffer, { format: require("uxp").storage.formats.binary });
+
+            console.log(`[IMAGE] Image downloaded to: ${file.nativePath}`);
+            return file;
+        } catch (e) {
+            console.error("Error downloading image:", e);
+            throw e;
+        }
+    }
+
+    /**
+     * Get timestamp string for file naming
+     */
+    _getTimestamp() {
+        const now = new Date();
+        return now.getFullYear().toString() +
+            (now.getMonth() + 1).toString().padStart(2, '0') +
+            now.getDate().toString().padStart(2, '0') +
+            now.getHours().toString().padStart(2, '0') +
+            now.getMinutes().toString().padStart(2, '0') +
+            now.getSeconds().toString().padStart(2, '0');
+    }
+
+    /**
+     * Clean up old files in both log and image folders
+     */
+    async cleanupOldFiles(daysOld = 7) {
+        try {
+            const maxAge = daysOld * 24 * 60 * 60 * 1000;
+            const now = Date.now();
+
+            // Clean up log folder
+            const logFolder = await this.getLogFolder();
+            await this._cleanupFolder(logFolder, now, maxAge);
+
+            // Clean up image folder
+            const imageFolder = await this.getImageFolder();
+            await this._cleanupFolder(imageFolder, now, maxAge);
+        } catch (e) {
+            console.error("Error cleaning up files:", e);
+        }
+    }
+
+    async _cleanupFolder(folder, now, maxAge) {
+        try {
+            const entries = await folder.getEntries();
+            for (const entry of entries) {
+                if (!entry.isFile) continue;
+
+                try {
+                    const stats = await entry.getMetadata();
+                    if (stats.modificationTime && (now - stats.modificationTime) > maxAge) {
+                        await entry.delete();
+                    }
+                } catch (e) {
+                    // Metadata not available, skip
+                }
+            }
+        } catch (e) {
+            console.error("Error cleaning folder:", e);
+        }
+    }
+
+    /**
+     * Open the log folder in system file explorer
+     * @returns {Promise<boolean>} Success status
+     */
+    async openLogFolder() {
+        try {
+            console.log('[FileManager] Opening log folder...');
+            const folder = await this.getLogFolder();
+            console.log('[FileManager] Log folder path:', folder.nativePath);
+            
+            await folder.revealInOS();
+            console.log('[FileManager] Folder revealed successfully');
+            return true;
+        } catch (e) {
+            console.error("Error opening log folder:", e);
+            console.error("Error details:", e.message, e.stack);
+            return false;
+        }
+    }
+
+    /**
+     * Get the most recent generated image file token
+     * Token can be safely passed across contexts
+     * @returns {Promise<string|null>} File session token or null
+     */
+    async getLatestImageToken() {
+        try {
+            const folder = await this.getImageFolder();
+            const entries = await folder.getEntries();
+            
+            // Filter for image files
+            const imageFiles = entries.filter(entry => {
+                if (!entry.isFile) return false;
+                const name = entry.name.toLowerCase();
+                return name.startsWith('generated_image_') && 
+                       (name.endsWith('.png') || name.endsWith('.jpg') || 
+                        name.endsWith('.jpeg') || name.endsWith('.webp'));
+            });
+
+            if (imageFiles.length === 0) {
+                console.log('[FileManager] No generated images found');
+                return null;
+            }
+
+            // 使用文件名中的时间戳排序（更可靠）
+            // 文件名格式: generated_image_20251129161530.png
+            imageFiles.sort((a, b) => {
+                const extractTimestamp = (name) => {
+                    const match = name.match(/generated_image_(\d+)\.(png|jpg|jpeg|webp)/);
+                    return match ? match[1] : '0';
+                };
+                const timeA = extractTimestamp(a.name);
+                const timeB = extractTimestamp(b.name);
+                return timeB.localeCompare(timeA); // 降序排列，最新的在前
+            });
+            
+            const latestFile = imageFiles[0];
+            
+            // Create a session token for the file
+            const token = fs.createSessionToken(latestFile);
+            console.log('[FileManager] Latest image token created for:', latestFile.name);
+            console.log('[FileManager] Token:', token);
+            return token;
+        } catch (e) {
+            console.error("[FileManager] Error getting latest image token:", e);
+            return null;
+        }
+    }
+
+    /**
+     * Get file object from session token
+     * Must be called in the context where it will be used
+     * @param {string} token - Session token
+     * @returns {Promise<File>} File object
+     */
+    async getFileFromToken(token) {
+        try {
+            console.log('[FileManager] Step A: Getting file from session token:', token);
+            // 使用 getEntryForSessionToken 来解析 session token
+            const file = await fs.getEntryForSessionToken(token);
+            
+            console.log('[FileManager] Step B: Got file object');
+            console.log('[FileManager] - File name:', file.name);
+            console.log('[FileManager] - File nativePath:', file.nativePath);
+            console.log('[FileManager] - File isFile:', file.isFile);
+            
+            return file;
+        } catch (e) {
+            console.error("[FileManager] ERROR getting file from token:", e);
+            console.error("[FileManager] - Token:", token);
+            console.error("[FileManager] - Error message:", e.message);
+            throw new Error(`Cannot access file from token - ${e.message}`);
+        }
+    }
+}
+
+module.exports = { FileManager };

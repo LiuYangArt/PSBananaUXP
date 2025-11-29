@@ -7,6 +7,7 @@ class SettingsManager {
             debug_mode: false,
             save_generated_images: false,
             selected_provider: null,
+            selected_preset: null
         };
         this.loaded = false;
     }

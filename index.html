@@ -79,7 +79,8 @@
         }
 
         select,
-        input {
+        input,
+        textarea {
             background-color: #1e1e1e;
             color: #fff;
             border: 1px solid #4a4a4a;
@@ -88,9 +89,19 @@
             font-size: 13px;
             font-family: system-ui, sans-serif;
             width: 100%;
+            box-sizing: border-box;
+        }
+
+        select,
+        input {
             height: 32px;
             line-height: 16px;
-            box-sizing: border-box;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+            line-height: 1.4;
         }
 
         select {
@@ -102,7 +113,8 @@
         }
 
         select:focus,
-        input:focus {
+        input:focus,
+        textarea:focus {
             outline: none;
             border-color: #0265DC;
         }
@@ -144,6 +156,14 @@
             background-color: #a02828;
         }
 
+        button.secondary {
+            background-color: #5a5a5a;
+        }
+
+        button.secondary:hover {
+            background-color: #4a4a4a;
+        }
+
         .flex-grow {
             flex: 1;
         }
@@ -183,7 +203,46 @@
     <!-- Generate Tab -->
     <div class="tab-content active" id="generateTab">
         <h1 style="margin: 0;">🍌 PS Banana</h1>
-        <button id="btnTest">Test Button</button>
+
+        <!-- Prompt Presets -->
+        <div class="settings-section">
+            <label>Presets:</label>
+            <div class="settings-row">
+                <select id="presetSelect" class="flex-grow"></select>
+                <button id="btnAddPreset" class="small" title="Add Preset">+</button>
+                <button id="btnSavePreset" class="small" title="Save Preset">Save</button>
+                <button id="btnRenamePreset" class="small" title="Rename Preset">Rename</button>
+                <button id="btnDeletePreset" class="small danger" title="Delete Preset">Del</button>
+            </div>
+        </div>
+
+        <!-- Prompt Input -->
+        <div class="settings-section">
+            <label>Prompt:</label>
+            <textarea id="promptInput" rows="6" placeholder="Enter your image generation prompt..."></textarea>
+        </div>
+
+        <!-- Aspect Ratio Display -->
+        <div class="settings-section">
+            <label>Aspect Ratio: <span id="aspectRatioDisplay" style="color: #0265DC;">-</span></label>
+        </div>
+
+        <!-- Resolution -->
+        <div class="settings-section">
+            <label>Resolution:</label>
+            <select id="resolutionSelect">
+                <option value="1K" selected>1K</option>
+                <option value="2K">2K</option>
+                <option value="4K">4K</option>
+            </select>
+        </div>
+
+        <!-- Generate Button -->
+        <button id="btnGenerate">Generate Image</button>
+        <button id="btnTestImport" class="secondary" style="margin-top: 4px;">Test Import (最近的图)</button>
+
+        <!-- Status Display -->
+        <div id="generateStatus"></div>
     </div>
 
     <!-- Settings Tab -->
@@ -212,6 +271,17 @@
 
             <label>Model ID:</label>
             <input type="text" id="inputModelId" placeholder="model-name">
+        </div>
+
+        <hr>
+
+        <div class="settings-section">
+            <label style="display: flex; align-items: center; cursor: pointer;">
+                <input type="checkbox" id="debugModeCheckbox" style="width: auto; margin-right: 8px;">
+                <span>Debug Mode (保存调试日志)</span>
+            </label>
+            <div id="debugFolderPath" style="font-size: 11px; color: #888; margin-top: 4px; word-break: break-all; line-height: 1.4;"></div>
+            <button id="btnOpenLogFolder" style="margin-top: 8px; display: none;">📂 打开日志文件夹</button>
         </div>
     </div>
 
