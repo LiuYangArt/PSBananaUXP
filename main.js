@@ -198,7 +198,7 @@ function setupSettingsUI() {
     const inputBaseUrl = document.getElementById('inputBaseUrl');
     const inputModelId = document.getElementById('inputModelId');
     const debugModeCheckbox = document.getElementById('debugModeCheckbox');
-    const btnOpenLogFolder = document.getElementById('btnOpenLogFolder');
+    const debugFolderPathInput = document.getElementById('debugFolderPath');
 
     // Populate provider dropdown
     updateProviderDropdown();
@@ -212,22 +212,6 @@ function setupSettingsUI() {
     debugModeCheckbox.addEventListener('change', async (e) => {
         await settingsManager.set('debug_mode', e.target.checked);
         updateDebugFolderPath();
-    });
-
-    // Open log folder button
-    btnOpenLogFolder.addEventListener('click', async () => {
-        console.log('[UI] Open log folder button clicked');
-        try {
-            const success = await fileManager.openLogFolder();
-            if (success) {
-                showStatus('✅ 已在文件管理器中打开日志文件夹', 'success');
-            } else {
-                showStatus('❌ 无法打开文件夹，请手动打开该路径', 'error');
-            }
-        } catch (e) {
-            console.error('[UI] Error in button handler:', e);
-            showStatus(`❌ 错误: ${e.message || e}`, 'error');
-        }
     });
 
     // Provider selection change
@@ -643,22 +627,21 @@ async function confirmUser(message) {
  */
 async function updateDebugFolderPath() {
     const debugModeEnabled = settingsManager.get('debug_mode', false);
-    const pathDiv = document.getElementById('debugFolderPath');
-    const btnOpenFolder = document.getElementById('btnOpenLogFolder');
+    const pathInput = document.getElementById('debugFolderPath');
     
     if (!debugModeEnabled) {
-        pathDiv.textContent = '';
-        btnOpenFolder.style.display = 'none';
+        pathInput.value = '';
+        pathInput.placeholder = '启用 Debug Mode 后显示路径';
         return;
     }
     
     try {
         const folder = await fileManager.getLogFolder();
-        pathDiv.innerHTML = `📁 调试文件保存在:<br>${folder.nativePath}`;
-        btnOpenFolder.style.display = 'block';
+        pathInput.value = folder.nativePath;
+        pathInput.placeholder = '';
     } catch (e) {
         console.error('Failed to get debug folder path:', e);
-        pathDiv.textContent = `⚠️ 无法获取日志路径: ${e.message}`;
-        btnOpenFolder.style.display = 'none';
+        pathInput.value = '';
+        pathInput.placeholder = `⚠️ 无法获取路径: ${e.message}`;
     }
 }

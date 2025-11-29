@@ -3,12 +3,16 @@ trigger: always_on
 alwaysApply: true
 ---
 
-总是使用中文注释
+
 
 这是一个Photoshop的UXP插件项目。 调用google nano banana pro模型进行ai生图
 
 
-#workspace结构
+# 编码规则
+- 总是使用中文注释
+- 总是用context 7 mcp 查找api
+  
+# workspace结构
 PSBananaUXP 是开发中的插件路径，我们开发插件要写的所有内容都放在下面
 
 

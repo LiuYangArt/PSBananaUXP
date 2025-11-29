@@ -257,7 +257,7 @@ class FileManager {
         }
     }
 
-    /**
+   /**
      * Open the log folder in system file explorer
      * @returns {Promise<boolean>} Success status
      */
@@ -265,15 +265,47 @@ class FileManager {
         try {
             console.log('[FileManager] Opening log folder...');
             const folder = await this.getLogFolder();
-            console.log('[FileManager] Log folder path:', folder.nativePath);
+            const folderPath = folder.nativePath;
+            console.log('[FileManager] Log folder path:', folderPath);
             
-            await folder.revealInOS();
-            console.log('[FileManager] Folder revealed successfully');
-            return true;
+            // 使用 shell.openPath() 打开文件夹
+            const shell = require('uxp').shell;
+            
+            // 方法 1: 尝试 shell.openPath()
+            console.log('[FileManager] Method 1: Attempting shell.openPath...');
+            let result = await shell.openPath(folderPath);
+            console.log('[FileManager] shell.openPath result:', result, 'type:', typeof result);
+            
+            if (result === '') {
+                console.log('[FileManager] Folder opened successfully');
+                return true;
+            }
+            
+            // 方法 1 失败，记录详细信息并复制路径到剪贴板
+            console.error('[FileManager] shell.openPath failed:', result);
+            console.log('[FileManager] Copying path to clipboard as fallback...');
+            
+            await navigator.clipboard.writeText(folderPath);
+            console.log('[FileManager] Path copied to clipboard');
+            
+            throw new Error(`无法自动打开文件夹，路径已复制到剪贴板，请手动打开: ${folderPath}`);
         } catch (e) {
-            console.error("Error opening log folder:", e);
-            console.error("Error details:", e.message, e.stack);
-            return false;
+            // 检查是否是我们主动抛出的错误（路径已复制）
+            if (e.message && e.message.includes('路径已复制到剪贴板')) {
+                throw e;
+            }
+            
+            // 其他错误，也尝试复制路径
+            console.error("[FileManager] Unexpected error in openLogFolder:", e);
+            console.error("[FileManager] Error details:", e.message, e.stack);
+            
+            try {
+                const folder = await this.getLogFolder();
+                await navigator.clipboard.writeText(folder.nativePath);
+                throw new Error(`发生错误，路径已复制到剪贴板: ${folder.nativePath}`);
+            } catch (copyError) {
+                throw new Error(`无法打开文件夹: ${e.message}`);
+            }
         }
     }
 

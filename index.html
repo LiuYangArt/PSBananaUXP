@@ -280,8 +280,12 @@
                 <input type="checkbox" id="debugModeCheckbox" style="width: auto; margin-right: 8px;">
                 <span>Debug Mode (保存调试日志)</span>
             </label>
-            <div id="debugFolderPath" style="font-size: 11px; color: #888; margin-top: 4px; word-break: break-all; line-height: 1.4;"></div>
-            <button id="btnOpenLogFolder" style="margin-top: 8px; display: none;">📂 打开日志文件夹</button>
+            <div style="margin-top: 8px;">
+                <label>📁 调试文件保存在（可复制）：</label>
+                <input type="text" id="debugFolderPath" 
+                       style="font-size: 11px; color: #aaa;"
+                       placeholder="启用 Debug Mode 后显示路径">
+            </div>
         </div>
     </div>
 
