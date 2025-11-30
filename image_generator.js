@@ -16,6 +16,7 @@ class ImageGenerator {
      * @param {string} options.resolution - Resolution (1K, 2K, 4K)
      * @param {boolean} options.debugMode - Save debug files
      * @param {string} options.mode - Generation mode ('text2img' or 'imgedit')
+     * @param {boolean} options.searchWeb - Enable Google Search tool
      * @param {string} options.inputImage - Base64 encoded input image (for image edit mode)
      * @param {string} options.sourceImage - Base64 encoded source image (多图模式)
      * @param {string} options.referenceImage - Base64 encoded reference image (多图模式)
@@ -28,7 +29,8 @@ class ImageGenerator {
             aspectRatio, 
             resolution, 
             debugMode, 
-            mode = 'text2img', 
+            mode = 'text2img',
+            searchWeb = false,
             inputImage,
             sourceImage,
             referenceImage
@@ -42,6 +44,7 @@ class ImageGenerator {
         const providerType = this._detectProviderType(provider);
         console.log(`[DEBUG] Provider type detected: ${providerType}`);
         console.log(`[DEBUG] Generation mode: ${mode}`);
+        console.log(`[DEBUG] Search web mode: ${searchWeb}`);
 
         // Build payload
         const payload = this._buildPayload(
@@ -50,7 +53,8 @@ class ImageGenerator {
             resolution, 
             provider, 
             providerType, 
-            mode, 
+            mode,
+            searchWeb,
             inputImage,
             sourceImage,
             referenceImage
@@ -177,22 +181,22 @@ class ImageGenerator {
     /**
      * Build request payload
      */
-    _buildPayload(prompt, aspectRatio, resolution, provider, providerType, mode = 'text2img', inputImage = null, sourceImage = null, referenceImage = null) {
+    _buildPayload(prompt, aspectRatio, resolution, provider, providerType, mode = 'text2img', searchWeb = false, inputImage = null, sourceImage = null, referenceImage = null) {
         if (providerType === "google_official") {
-            return this._buildGooglePayload(prompt, aspectRatio, resolution, mode, inputImage, sourceImage, referenceImage);
+            return this._buildGooglePayload(prompt, aspectRatio, resolution, mode, searchWeb, inputImage, sourceImage, referenceImage);
         } else if (providerType === "yunwu") {
-            return this._buildYunwuPayload(prompt, aspectRatio, resolution, mode, inputImage, sourceImage, referenceImage);
+            return this._buildYunwuPayload(prompt, aspectRatio, resolution, mode, searchWeb, inputImage, sourceImage, referenceImage);
         } else if (providerType === "gptgod") {
-            return this._buildGPTGodPayload(prompt, aspectRatio, resolution, provider, mode, inputImage, sourceImage, referenceImage);
+            return this._buildGPTGodPayload(prompt, aspectRatio, resolution, provider, mode, searchWeb, inputImage, sourceImage, referenceImage);
         } else if (providerType === "openrouter") {
-            return this._buildOpenRouterPayload(prompt, aspectRatio, resolution, provider, mode, inputImage, sourceImage, referenceImage);
+            return this._buildOpenRouterPayload(prompt, aspectRatio, resolution, provider, mode, searchWeb, inputImage, sourceImage, referenceImage);
         }
     }
 
     /**
      * Build Google Official Gemini API payload
      */
-    _buildGooglePayload(prompt, aspectRatio, resolution, mode = 'text2img', inputImage = null, sourceImage = null, referenceImage = null) {
+    _buildGooglePayload(prompt, aspectRatio, resolution, mode = 'text2img', searchWeb = false, inputImage = null, sourceImage = null, referenceImage = null) {
         const generationConfig = {
             response_modalities: ["IMAGE"],
             image_config: {
@@ -260,18 +264,25 @@ class ImageGenerator {
             parts.push({ text: prompt });
         }
 
-        return {
+        const payload = {
             contents: [{
                 parts: parts
             }],
             generationConfig: generationConfig
         };
+
+        // 如果启用了搜索网络模式，添加google_search工具
+        if (searchWeb) {
+            payload.generationConfig.tools = [{ google_search: {} }];
+        }
+
+        return payload;
     }
 
     /**
      * Build Yunwu/Gemini-compatible payload
      */
-    _buildYunwuPayload(prompt, aspectRatio, resolution, mode = 'text2img', inputImage = null, sourceImage = null, referenceImage = null) {
+    _buildYunwuPayload(prompt, aspectRatio, resolution, mode = 'text2img', searchWeb = false, inputImage = null, sourceImage = null, referenceImage = null) {
         const generationConfig = {
             responseModalities: ["image"],
             imageConfig: {
@@ -339,19 +350,27 @@ class ImageGenerator {
             parts.push({ text: prompt });
         }
 
-        return {
+        const payload = {
             contents: [{
                 parts: parts
             }],
             generationConfig: generationConfig
         };
+
+        // 如果启用了搜索网络模式，添加googleSearch工具
+        if (searchWeb) {
+            payload.generationConfig.tools = [{ googleSearch: {} }];
+        }
+
+        return payload;
     }
 
     /**
      * Build GPTGod payload (OpenAI-compatible)
      * Resolution handled via model switching
+     * Note: GPTGod may not support google_search tool for image generation
      */
-    _buildGPTGodPayload(prompt, aspectRatio, resolution, provider, mode = 'text2img', inputImage = null, sourceImage = null, referenceImage = null) {
+    _buildGPTGodPayload(prompt, aspectRatio, resolution, provider, mode = 'text2img', searchWeb = false, inputImage = null, sourceImage = null, referenceImage = null) {
         let model = provider.model;
 
         // Auto-switch model for resolution if using default gptgod model
@@ -434,12 +453,14 @@ class ImageGenerator {
             }],
             stream: false
         };
+        // 注：GPTGod的OpenAI兼容格式可能不支持google_search工具，忽略searchWeb参数
     }
 
     /**
      * Build OpenRouter payload
+     * Note: OpenRouter may not support google_search tool for image generation
      */
-    _buildOpenRouterPayload(prompt, aspectRatio, resolution, provider, mode = 'text2img', inputImage = null, sourceImage = null, referenceImage = null) {
+    _buildOpenRouterPayload(prompt, aspectRatio, resolution, provider, mode = 'text2img', searchWeb = false, inputImage = null, sourceImage = null, referenceImage = null) {
         const imageConfig = {
             aspect_ratio: aspectRatio
         };
@@ -509,6 +530,7 @@ class ImageGenerator {
             modalities: ["image", "text"],
             image_config: imageConfig
         };
+        // 注：OpenRouter的格式可能不支持google_search工具，忽略searchWeb参数
     }
 
     /**

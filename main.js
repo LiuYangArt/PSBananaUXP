@@ -92,6 +92,7 @@ function setupGenerateUI() {
     const btnTestImport = document.getElementById('btnTestImport');
     const btnTestExport = document.getElementById('btnTestExport');
     const selectionModeCheckbox = document.getElementById('selectionModeCheckbox');
+    const searchWebCheckbox = document.getElementById('searchWebCheckbox');
     const multiImageModeCheckbox = document.getElementById('multiImageModeCheckbox');
     const multiImageModeSection = document.getElementById('multiImageModeSection');
 
@@ -103,6 +104,16 @@ function setupGenerateUI() {
     selectionModeCheckbox.addEventListener('change', async (e) => {
         await settingsManager.set('selection_mode', e.target.checked);
         console.log(`[UI] Selection mode switched to: ${e.target.checked}`);
+    });
+
+    // 搜索网络模式复选框
+    const savedSearchWebMode = settingsManager.get('search_web_mode', false);
+    searchWebCheckbox.checked = savedSearchWebMode;
+    console.log(`[UI] Restored search web mode: ${savedSearchWebMode}`);
+
+    searchWebCheckbox.addEventListener('change', async (e) => {
+        await settingsManager.set('search_web_mode', e.target.checked);
+        console.log(`[UI] Search web mode switched to: ${e.target.checked}`);
     });
 
     // 多图生图模式复选框（仅在Image Edit模式下有效）
@@ -574,6 +585,7 @@ async function handleGenerateImage() {
     const debugMode = settingsManager.get('debug_mode', false);
     const mode = generationMode;  // 'text2img' 或 'imgedit'
     const selectionMode = settingsManager.get('selection_mode', false);
+    const searchWebMode = settingsManager.get('search_web_mode', false);  // 搜索网络模式
     const multiImageMode = settingsManager.get('multi_image_mode', false);  // 多图生图模式
 
     isGenerating = true;
@@ -705,6 +717,7 @@ async function handleGenerateImage() {
             resolution,
             debugMode,
             mode: mode,
+            searchWeb: searchWebMode,           // 传递搜索网络模式
             inputImage: exportedImageData,      // base64编码的输入图片(仅单图image edit模式)
             sourceImage: sourceImageData,        // base64编码的source图片(多图模式)
             referenceImage: referenceImageData   // base64编码的reference图片(多图模式)
