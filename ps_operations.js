@@ -2,6 +2,7 @@ const { app } = require("photoshop");
 const { batchPlay } = require("photoshop").action;
 const { executeAsModal } = require("photoshop").core;
 const fs = require("uxp").storage.localFileSystem;
+const { calculateAspectRatio, ASPECT_RATIOS } = require('./aspect_ratio');
 
 /**
  * Photoshop operations for image generation
@@ -28,6 +29,134 @@ class PSOperations {
             console.error("Error getting canvas info:", e);
             throw e;
         }
+    }
+
+    /**
+     * 获取当前选区信息
+     * 必须在executeAsModal中调用
+     * @returns {Promise<Object>} - 返回选区边界和状态
+     */
+    static async getSelectionInfo() {
+        try {
+            const doc = app.activeDocument;
+            if (!doc) {
+                throw new Error("No active document");
+            }
+
+            // 使用batchPlay获取选区边界
+            const result = await batchPlay([
+                {
+                    "_obj": "get",
+                    "_target": [
+                        {
+                            "_property": "selection"
+                        },
+                        {
+                            "_ref": "document",
+                            "_enum": "ordinal",
+                            "_value": "targetEnum"
+                        }
+                    ]
+                }
+            ], {
+                "synchronousExecution": true,
+                "modalBehavior": "wait"
+            });
+
+            // 检查是否有选区
+            if (!result || !result[0] || !result[0].selection) {
+                return { hasSelection: false };
+            }
+
+            const selection = result[0].selection;
+            
+            return {
+                hasSelection: true,
+                bounds: {
+                    left: selection.left._value,
+                    top: selection.top._value,
+                    right: selection.right._value,
+                    bottom: selection.bottom._value
+                }
+            };
+        } catch (e) {
+            console.error("Error getting selection info:", e);
+            // 如果没有选区，返回false
+            return { hasSelection: false };
+        }
+    }
+
+    /**
+     * 根据选区边界计算生图区域
+     * 找到最接近的标准比例，并确保生图区域包含选区
+     * @param {Object} selectionBounds - 选区边界 {left, top, right, bottom}
+     * @param {number} canvasWidth - 画布宽度
+     * @param {number} canvasHeight - 画布高度
+     * @returns {Object} - 生图区域 {left, top, width, height, aspectRatio}
+     */
+    static calculateGenerationRegion(selectionBounds, canvasWidth, canvasHeight) {
+        const { left, top, right, bottom } = selectionBounds;
+        const selectionWidth = right - left;
+        const selectionHeight = bottom - top;
+        
+        console.log(`[PS] Selection bounds: ${selectionWidth}x${selectionHeight} at (${left}, ${top})`);
+        
+        // 计算选区的宽高比
+        const selectionRatio = selectionWidth / selectionHeight;
+        
+        // 找到最接近的标准比例
+        let closestRatio = ASPECT_RATIOS[0];
+        let minDifference = Math.abs(selectionRatio - closestRatio.value);
+        
+        for (const ratio of ASPECT_RATIOS) {
+            const difference = Math.abs(selectionRatio - ratio.value);
+            if (difference < minDifference) {
+                minDifference = difference;
+                closestRatio = ratio;
+            }
+        }
+        
+        console.log(`[PS] Selection ratio: ${selectionRatio.toFixed(4)}, closest: ${closestRatio.name}`);
+        
+        // 根据标准比例计算生图区域尺寸
+        let regionWidth, regionHeight;
+        const targetRatio = closestRatio.value;
+        
+        if (selectionRatio < targetRatio) {
+            // 选区太窄，需要扩展宽度
+            regionHeight = selectionHeight;
+            regionWidth = Math.round(regionHeight * targetRatio);
+        } else if (selectionRatio > targetRatio) {
+            // 选区太宽，需要扩展高度
+            regionWidth = selectionWidth;
+            regionHeight = Math.round(regionWidth / targetRatio);
+        } else {
+            // 已经是目标比例
+            regionWidth = selectionWidth;
+            regionHeight = selectionHeight;
+        }
+        
+        // 计算生图区域的位置，使其居中包含选区
+        const regionLeft = Math.round(left + (selectionWidth - regionWidth) / 2);
+        const regionTop = Math.round(top + (selectionHeight - regionHeight) / 2);
+        
+        // 确保生图区域不超出画布边界
+        const finalLeft = Math.max(0, Math.min(regionLeft, canvasWidth - regionWidth));
+        const finalTop = Math.max(0, Math.min(regionTop, canvasHeight - regionHeight));
+        const finalRight = finalLeft + regionWidth;
+        const finalBottom = finalTop + regionHeight;
+        
+        console.log(`[PS] Generation region: ${regionWidth}x${regionHeight} at (${finalLeft}, ${finalTop})`);
+        
+        return {
+            left: finalLeft,
+            top: finalTop,
+            right: finalRight,
+            bottom: finalBottom,
+            width: regionWidth,
+            height: regionHeight,
+            aspectRatio: closestRatio.name
+        };
     }
 
     /**
@@ -190,6 +319,68 @@ class PSOperations {
     }
 
     /**
+     * 在指定区域导入图片并调整到区域大小
+     * 必须在executeAsModal中调用
+     * @param {string} token - File session token
+     * @param {Object} region - 生图区域 {left, top, width, height}
+     */
+    static async importImageInRegion(token, region) {
+        try {
+            if (!token) {
+                throw new Error("Invalid file token");
+            }
+            if (!region) {
+                throw new Error("Invalid region");
+            }
+
+            const doc = app.activeDocument;
+            if (!doc) {
+                throw new Error("No active document");
+            }
+
+            console.log(`[PS] Importing image in region: ${region.width}x${region.height} at (${region.left}, ${region.top})`);
+            
+            const layerName = await this.getNextLayerName();
+
+            // 导入图片
+            await batchPlay([
+                {
+                    "_obj": "placeEvent",
+                    "null": {
+                        "_path": token,
+                        "_kind": "local"
+                    },
+                    "freeTransformCenterState": {
+                        "_enum": "quadCenterState",
+                        "_value": "QCSAverage"
+                    },
+                    "_isCommand": true
+                }
+            ], {
+                "synchronousExecution": true,
+                "modalBehavior": "wait"
+            });
+
+            const newLayer = doc.activeLayers[0];
+            if (!newLayer) {
+                throw new Error("Failed to get the newly created layer");
+            }
+
+            newLayer.name = layerName;
+            console.log(`[PS] Layer created: ${layerName}`);
+
+            // 调整图层到区域大小和位置
+            await this.resizeLayerToRegion(newLayer, region);
+
+            return layerName;
+        } catch (e) {
+            console.error("[PS] ERROR in importImageInRegion:", e);
+            const errorMsg = e.message || String(e) || "Unknown error";
+            throw new Error(`Failed to import image in region: ${errorMsg}`);
+        }
+    }
+
+    /**
      * Resize layer to fill canvas
      * Must be called within executeAsModal
      */
@@ -260,6 +451,74 @@ class PSOperations {
     }
 
     /**
+     * 调整图层到指定区域的大小和位置
+     * 必须在executeAsModal中调用
+     * @param {Layer} layer - 要调整的图层
+     * @param {Object} region - 目标区域 {left, top, width, height}
+     */
+    static async resizeLayerToRegion(layer, region) {
+        try {
+            // 获取图层边界
+            const layerBounds = layer.bounds;
+            const layerWidth = layerBounds.right - layerBounds.left;
+            const layerHeight = layerBounds.bottom - layerBounds.top;
+
+            console.log(`[PS] Region: ${region.width}x${region.height}, Layer: ${layerWidth}x${layerHeight}`);
+
+            // 计算缩放比例以填充区域
+            const scaleX = (region.width / layerWidth) * 100;
+            const scaleY = (region.height / layerHeight) * 100;
+
+            // 使用较大的缩放比例确保填充
+            const scale = Math.max(scaleX, scaleY);
+
+            console.log(`[PS] Scaling layer to ${scale.toFixed(2)}%`);
+
+            // 缩放图层
+            await batchPlay([
+                {
+                    "_obj": "transform",
+                    "_target": [
+                        {
+                            "_ref": "layer",
+                            "_enum": "ordinal",
+                            "_value": "targetEnum"
+                        }
+                    ],
+                    "freeTransformCenterState": {
+                        "_enum": "quadCenterState",
+                        "_value": "QCSAverage"
+                    },
+                    "width": {
+                        "_unit": "percentUnit",
+                        "_value": scale
+                    },
+                    "height": {
+                        "_unit": "percentUnit",
+                        "_value": scale
+                    },
+                    "interfaceIconFrameDimmed": {
+                        "_enum": "interpolationType",
+                        "_value": "bicubic"
+                    },
+                    "_isCommand": true
+                }
+            ], {
+                "synchronousExecution": true,
+                "modalBehavior": "wait"
+            });
+
+            // 将图层居中到区域
+            await this.centerLayerToRegion(layer, region);
+
+        } catch (e) {
+            console.error("Error resizing layer to region:", e);
+            const errorMsg = e.message || String(e) || "Unknown error";
+            throw new Error(`Failed to resize layer to region: ${errorMsg}`);
+        }
+    }
+
+    /**
      * Center layer on canvas
      */
     static async centerLayer(layer) {
@@ -308,6 +567,61 @@ class PSOperations {
     }
 
     /**
+     * 将图层居中到指定区域
+     * 必须在executeAsModal中调用
+     * @param {Layer} layer - 要移动的图层
+     * @param {Object} region - 目标区域 {left, top, width, height}
+     */
+    static async centerLayerToRegion(layer, region) {
+        try {
+            // 获取缩放后的图层边界
+            const layerBounds = layer.bounds;
+            const layerWidth = layerBounds.right - layerBounds.left;
+            const layerHeight = layerBounds.bottom - layerBounds.top;
+
+            // 计算区域中心
+            const regionCenterX = region.left + region.width / 2;
+            const regionCenterY = region.top + region.height / 2;
+
+            // 计算需要的偏移量，使图层中心对齐区域中心
+            const offsetX = regionCenterX - (layerBounds.left + layerWidth / 2);
+            const offsetY = regionCenterY - (layerBounds.top + layerHeight / 2);
+
+            console.log(`[PS] Centering layer to region: offset (${offsetX.toFixed(2)}, ${offsetY.toFixed(2)})`);
+
+            await batchPlay([
+                {
+                    "_obj": "move",
+                    "_target": [
+                        {
+                            "_ref": "layer",
+                            "_enum": "ordinal",
+                            "_value": "targetEnum"
+                        }
+                    ],
+                    "to": {
+                        "_obj": "offset",
+                        "horizontal": {
+                            "_unit": "pixelsUnit",
+                            "_value": offsetX
+                        },
+                        "vertical": {
+                            "_unit": "pixelsUnit",
+                            "_value": offsetY
+                        }
+                    },
+                    "_isCommand": true
+                }
+            ], {
+                "synchronousExecution": true,
+                "modalBehavior": "wait"
+            });
+        } catch (e) {
+            console.error("Error centering layer to region:", e);
+        }
+    }
+
+    /**
      * Move layer to top
      */
     static async moveLayerToTop(layer) {
@@ -344,9 +658,10 @@ class PSOperations {
      * @param {number} maxSize - 导出图片长边最大长度
      * @param {number} quality - 压缩质量 (0-100)
      * @param {Object} executionContext - executeAsModal的执行上下文
+     * @param {Object} region - 可选，需要导出的区域 {left, top, width, height}
      * @returns {Promise<Object>} - 包含file和token的对象
      */
-    static async exportVisibleLayersAsWebP(maxSize = 2048, quality = 80, executionContext = null) {
+    static async exportVisibleLayersAsWebP(maxSize = 2048, quality = 80, executionContext = null, region = null) {
         try {
             const doc = app.activeDocument;
             if (!doc) {
@@ -355,20 +670,29 @@ class PSOperations {
 
             console.log(`[PS] Exporting visible layers as WebP (maxSize: ${maxSize}, quality: ${quality})`);
 
-            // 获取画布尺寸
-            const canvasWidth = doc.width;
-            const canvasHeight = doc.height;
-            console.log(`[PS] Original canvas size: ${canvasWidth}x${canvasHeight}`);
+            // 获取导出区域尺寸
+            let exportSourceWidth, exportSourceHeight;
+            if (region) {
+                // 如果指定了区域，使用区域尺寸
+                exportSourceWidth = region.width;
+                exportSourceHeight = region.height;
+                console.log(`[PS] Exporting region: ${exportSourceWidth}x${exportSourceHeight} at (${region.left}, ${region.top})`);
+            } else {
+                // 否则使用画布尺寸
+                exportSourceWidth = doc.width;
+                exportSourceHeight = doc.height;
+                console.log(`[PS] Exporting full canvas: ${exportSourceWidth}x${exportSourceHeight}`);
+            }
 
             // 计算导出尺寸,保持宽高比
-            let exportWidth = canvasWidth;
-            let exportHeight = canvasHeight;
-            const maxDimension = Math.max(canvasWidth, canvasHeight);
+            let exportWidth = exportSourceWidth;
+            let exportHeight = exportSourceHeight;
+            const maxDimension = Math.max(exportSourceWidth, exportSourceHeight);
             
             if (maxDimension > maxSize) {
                 const scale = maxSize / maxDimension;
-                exportWidth = Math.round(canvasWidth * scale);
-                exportHeight = Math.round(canvasHeight * scale);
+                exportWidth = Math.round(exportSourceWidth * scale);
+                exportHeight = Math.round(exportSourceHeight * scale);
                 console.log(`[PS] Scaled export size: ${exportWidth}x${exportHeight}`);
             }
 
@@ -399,18 +723,32 @@ class PSOperations {
             }
 
             try {
-                // 如果需要缩放,先复制文档
+                // 如果需要裁切区域或缩放,先复制文档
                 let targetDoc = doc;
                 let needsCleanup = false;
                 
-                if (maxDimension > maxSize) {
-                    console.log('[PS] Creating duplicate document for resize...');
+                if (region || maxDimension > maxSize) {
+                    console.log('[PS] Creating duplicate document for crop/resize...');
                     // 复制文档并合并图层
                     targetDoc = await doc.duplicate(`temp_export_${timestamp}`, true);
                     needsCleanup = true;
                     
-                    // 调整图像大小 - 使用resizeImage而不是resizeCanvas
-                    await targetDoc.resizeImage(exportWidth, exportHeight);
+                    // 如果有区域，先裁切到区域
+                    if (region) {
+                        await targetDoc.crop({
+                            left: region.left,
+                            top: region.top,
+                            right: region.right,
+                            bottom: region.bottom
+                        });
+                        console.log(`[PS] Cropped to region: ${region.width}x${region.height}`);
+                    }
+                    
+                    // 如果需要缩放
+                    if (maxDimension > maxSize) {
+                        await targetDoc.resizeImage(exportWidth, exportHeight);
+                        console.log(`[PS] Resized to: ${exportWidth}x${exportHeight}`);
+                    }
                 }
 
                 // 使用batchPlay保存WebP格式

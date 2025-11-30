@@ -9,7 +9,8 @@ class SettingsManager {
             selected_provider: null,
             selected_preset: null,
             export_max_size: 2048,  // 导出图片长边最大长度
-            export_quality: 80      // WebP压缩质量
+            export_quality: 80,      // WebP压缩质量
+            selection_mode: false    // 使用选区区域生图
         };
         this.loaded = false;
     }

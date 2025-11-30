@@ -91,6 +91,17 @@ function setupGenerateUI() {
     const btnGenerate = document.getElementById('btnGenerate');
     const btnTestImport = document.getElementById('btnTestImport');
     const btnTestExport = document.getElementById('btnTestExport');
+    const selectionModeCheckbox = document.getElementById('selectionModeCheckbox');
+
+    // 选区模式复选框
+    const savedSelectionMode = settingsManager.get('selection_mode', false);
+    selectionModeCheckbox.checked = savedSelectionMode;
+    console.log(`[UI] Restored selection mode: ${savedSelectionMode}`);
+
+    selectionModeCheckbox.addEventListener('change', async (e) => {
+        await settingsManager.set('selection_mode', e.target.checked);
+        console.log(`[UI] Selection mode switched to: ${e.target.checked}`);
+    });
 
     // 生图模式按钮
     const btnModeText2Img = document.getElementById('btnModeText2Img');
@@ -532,6 +543,7 @@ async function handleGenerateImage() {
     const resolution = getSelectedResolution();
     const debugMode = settingsManager.get('debug_mode', false);
     const mode = generationMode;  // 'text2img' 或 'imgedit'
+    const selectionMode = settingsManager.get('selection_mode', false);
 
     isGenerating = true;
     document.getElementById('btnGenerate').disabled = true;
@@ -543,29 +555,56 @@ async function handleGenerateImage() {
         let aspectRatio = '1:1';
         let canvasInfo = null;
         let exportedImageData = null;  // base64编码的图片数据
+        let selectionRegion = null;     // 选区生图区域信息
 
         try {
             const exportData = await executeAsModal(async (executionContext) => {
                 const info = await PSOperations.getCanvasInfo();
+                let region = null;
+                
+                // 如果启用了选区模式，获取选区信息并计算生图区域
+                if (selectionMode) {
+                    const selectionInfo = await PSOperations.getSelectionInfo();
+                    if (selectionInfo && selectionInfo.hasSelection) {
+                        // 根据选区计算生图区域
+                        region = PSOperations.calculateGenerationRegion(selectionInfo.bounds, info.width, info.height);
+                        console.log('[MAIN] Selection region calculated:', region);
+                    }
+                }
                 
                 // 如果是image edit模式,导出当前可见图层
                 let imageData = null;
                 if (mode === 'imgedit') {
                     const maxSize = settingsManager.get('export_max_size', 2048);
                     const quality = settingsManager.get('export_quality', 80);
-                    const exportResult = await PSOperations.exportVisibleLayersAsWebP(maxSize, quality, executionContext);
+                    
+                    // 如果有选区区域，导出该区域；否则导出整个画布
+                    const exportResult = await PSOperations.exportVisibleLayersAsWebP(
+                        maxSize, 
+                        quality, 
+                        executionContext,
+                        region  // 传递选区区域信息
+                    );
                     
                     // 转换为base64
                     const base64 = await fileManager.fileToBase64(exportResult.file);
                     imageData = base64;
                 }
                 
-                return { info, imageData };
+                return { info, imageData, region };
             }, { commandName: "Get Canvas Info and Export" });
 
             canvasInfo = exportData.info;
             exportedImageData = exportData.imageData;
-            aspectRatio = calculateAspectRatio(canvasInfo.width, canvasInfo.height);
+            selectionRegion = exportData.region;
+            
+            // 如果有选区区域，使用选区区域的比例；否则使用整个画布的比例
+            if (selectionRegion) {
+                aspectRatio = selectionRegion.aspectRatio;
+                console.log(`[MAIN] Using selection region aspect ratio: ${aspectRatio}`);
+            } else {
+                aspectRatio = calculateAspectRatio(canvasInfo.width, canvasInfo.height);
+            }
             
             if (mode === 'imgedit') {
                 console.log('[MAIN] Image exported, base64 length:', exportedImageData?.length || 0);
@@ -606,8 +645,12 @@ async function handleGenerateImage() {
         showGenerateStatus('正在导入图片到Photoshop...', 'info');
 
         const layerName = await executeAsModal(async () => {
-            // 使用 token 方式导入,和 Test Import 一致
-            return await PSOperations.importImageByToken(imageToken);
+            // 如果有选区区域，使用选区区域导入；否则使用普通导入
+            if (selectionRegion) {
+                return await PSOperations.importImageInRegion(imageToken, selectionRegion);
+            } else {
+                return await PSOperations.importImageByToken(imageToken);
+            }
         }, { commandName: "Import Generated Image" });
 
         showGenerateStatus(`✅ 完成！图层: ${layerName}`, 'success');
@@ -672,18 +715,40 @@ async function handleTestImport() {
         }
 
         console.log('[TEST] Step 2: Got token:', token);
-        showGenerateStatus(`📥 正在导入图片...`, 'info');
+        
+        const selectionMode = settingsManager.get('selection_mode', false);
+        const regionText = selectionMode ? ' (选区模式)' : '';
+        showGenerateStatus(`📥 正在导入图片${regionText}...`, 'info');
 
         // Import to Photoshop using token
         console.log('[TEST] Step 3: Calling executeAsModal...');
         const layerName = await executeAsModal(async () => {
-            console.log('[TEST] Step 4: Inside executeAsModal, calling importImageByToken...');
-            // 直接传递 token，不需要 fileManager
-            return await PSOperations.importImageByToken(token);
+            console.log('[TEST] Step 4: Inside executeAsModal...');
+            
+            let region = null;
+            
+            // 如果启用了选区模式，获取选区信息
+            if (selectionMode) {
+                const doc = app.activeDocument;
+                if (doc) {
+                    const selectionInfo = await PSOperations.getSelectionInfo();
+                    if (selectionInfo && selectionInfo.hasSelection) {
+                        region = PSOperations.calculateGenerationRegion(selectionInfo.bounds, doc.width, doc.height);
+                        console.log('[TEST] Using selection region:', region);
+                    }
+                }
+            }
+            
+            // 根据是否有选区区域选择导入方法
+            if (region) {
+                return await PSOperations.importImageInRegion(token, region);
+            } else {
+                return await PSOperations.importImageByToken(token);
+            }
         }, { commandName: "Test Import Image" });
 
         console.log('[TEST] Step 5: Import completed, layerName:', layerName);
-        showGenerateStatus(`✅ 测试导入成功！图层: ${layerName}`, 'success');
+        showGenerateStatus(`✅ 测试导入成功${regionText}！图层: ${layerName}`, 'success');
 
     } catch (e) {
         console.error('[TEST] ERROR in handleTestImport:', e);
@@ -716,18 +781,34 @@ async function handleTestExport() {
 
         const maxSize = settingsManager.get('export_max_size', 2048);
         const quality = settingsManager.get('export_quality', 80);
+        const selectionMode = settingsManager.get('selection_mode', false);
 
-        console.log(`[TEST EXPORT] Exporting with maxSize=${maxSize}, quality=${quality}`);
+        console.log(`[TEST EXPORT] Exporting with maxSize=${maxSize}, quality=${quality}, selectionMode=${selectionMode}`);
 
         const exportResult = await executeAsModal(async (executionContext) => {
-            return await PSOperations.exportVisibleLayersAsWebP(maxSize, quality, executionContext);
+            let region = null;
+            
+            // 如果启用了选区模式，获取选区信息
+            if (selectionMode) {
+                const doc = app.activeDocument;
+                if (doc) {
+                    const selectionInfo = await PSOperations.getSelectionInfo();
+                    if (selectionInfo && selectionInfo.hasSelection) {
+                        region = PSOperations.calculateGenerationRegion(selectionInfo.bounds, doc.width, doc.height);
+                        console.log('[TEST EXPORT] Using selection region:', region);
+                    }
+                }
+            }
+            
+            return await PSOperations.exportVisibleLayersAsWebP(maxSize, quality, executionContext, region);
         }, { commandName: "Test Export Layers" });
 
         console.log('[TEST EXPORT] Export completed:', exportResult);
         console.log('[TEST EXPORT] File path:', exportResult.file.nativePath);
         console.log('[TEST EXPORT] Export size:', exportResult.width, 'x', exportResult.height);
 
-        showGenerateStatus(`✅ 导出成功！\n路径: ${exportResult.file.nativePath}\n尺寸: ${exportResult.width}x${exportResult.height}`, 'success');
+        const regionText = selectionMode ? ' (选区模式)' : '';
+        showGenerateStatus(`✅ 导出成功${regionText}！\n路径: ${exportResult.file.nativePath}\n尺寸: ${exportResult.width}x${exportResult.height}`, 'success');
 
     } catch (e) {
         console.error('[TEST EXPORT] ERROR:', e);
