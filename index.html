@@ -288,7 +288,7 @@
         }
 
         button {
-            background-color: #0265DC;
+            background-color: #2a2a2a;
             color: white;
             border: none;
             padding: 6px 12px;
@@ -299,6 +299,14 @@
         }
 
         button:hover {
+            background-color: #3a3a3a;
+        }
+
+        button.primary {
+            background-color: #0265DC;
+        }
+
+        button.primary:hover {
             background-color: #0056b3;
         }
 
@@ -382,7 +390,7 @@
                 <button id="btnAddPreset" class="small" title="Add Preset">+</button>
                 <button id="btnSavePreset" class="small" title="Save Preset">Save</button>
                 <button id="btnRenamePreset" class="small" title="Rename Preset">Rename</button>
-                <button id="btnDeletePreset" class="small danger" title="Delete Preset">Del</button>
+                <button id="btnDeletePreset" class="small" title="Delete Preset">Del</button>
             </div>
         </div>
 
@@ -412,7 +420,7 @@
         </div>
 
         <!-- Generate Button -->
-        <button id="btnGenerate" style="padding: 10px 16px; font-size: 14px; font-weight: 500;">Generate Image</button>
+        <button id="btnGenerate" class="primary" style="padding: 10px 16px; font-size: 14px; font-weight: 500;">Generate Image</button>
         <button id="btnTestExport" class="secondary" style="margin-top: 4px;">Test Export (测试导出)</button>
         <button id="btnTestImport" class="secondary" style="margin-top: 4px;">Test Import (最近的图)</button>
 
@@ -452,7 +460,7 @@
             <div class="preset-buttons">
                 <button id="btnAddProvider" class="small" title="Add New Provider">+</button>
                 <button id="btnSaveProvider" class="small">Save</button>
-                <button id="btnDeleteProvider" class="small danger">Del</button>
+                <button id="btnDeleteProvider" class="small">Del</button>
             </div>
         </div>
 
