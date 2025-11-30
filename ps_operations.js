@@ -371,11 +371,12 @@ class PSOperations {
                 console.log(`[PS] Scaled export size: ${exportWidth}x${exportHeight}`);
             }
 
-            // 创建临时文件 - 使用plugin data folder,不需要权限
+            // 创建临时文件 - 放在ExportedImages文件夹下
             const dataFolder = await fs.getDataFolder();
+            const exportFolder = await dataFolder.createFolder('ExportedImages', { overwrite: false });
             const timestamp = Date.now();
             const webpFileName = `ps_export_${timestamp}.webp`;
-            const webpFile = await dataFolder.createFile(webpFileName, { overwrite: true });
+            const webpFile = await exportFolder.createFile(webpFileName, { overwrite: true });
 
             console.log(`[PS] Export file path: ${webpFile.nativePath}`);
 

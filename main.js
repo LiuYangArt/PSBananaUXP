@@ -94,15 +94,31 @@ function setupGenerateUI() {
     const btnModeImgEdit = document.getElementById('btnModeImgEdit');
     const modeButtons = [btnModeText2Img, btnModeImgEdit];
 
+    // 从设置中恢复上次选择的模式
+    const savedMode = settingsManager.get('generation_mode', 'text2img');
+    generationMode = savedMode;
+    
+    // 设置按钮状态
+    modeButtons.forEach(btn => {
+        if (btn.dataset.mode === savedMode) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    console.log(`[UI] Restored generation mode: ${generationMode}`);
+
     // 生图模式按钮点击事件
     modeButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             // 移除所有 active 状态
             modeButtons.forEach(b => b.classList.remove('active'));
             // 添加当前 active 状态
             btn.classList.add('active');
             // 保存选中的模式
             generationMode = btn.dataset.mode;
+            await settingsManager.set('generation_mode', generationMode);
             console.log(`[UI] Generation mode switched to: ${generationMode}`);
         });
     });
@@ -114,15 +130,32 @@ function setupGenerateUI() {
     const resolutionButtons = [btnRes1K, btnRes2K, btnRes4K];
     let selectedResolution = '1K';
 
+    // 从设置中恢复上次选择的分辨率
+    const savedResolution = settingsManager.get('generation_resolution', '1K');
+    selectedResolution = savedResolution;
+    
+    // 设置按钮状态
+    resolutionButtons.forEach(btn => {
+        if (btn.dataset.resolution === savedResolution) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    console.log(`[UI] Restored resolution: ${selectedResolution}`);
+
     // 分辨率按钮点击事件
     resolutionButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             // 移除所有 active 状态
             resolutionButtons.forEach(b => b.classList.remove('active'));
             // 添加当前 active 状态
             btn.classList.add('active');
             // 保存选中的分辨率
             selectedResolution = btn.dataset.resolution;
+            await settingsManager.set('generation_resolution', selectedResolution);
+            console.log(`[UI] Resolution switched to: ${selectedResolution}`);
         });
     });
 
@@ -238,8 +271,14 @@ function setupGenerateUI() {
  * 获取当前选中的分辨率
  */
 function getSelectedResolution() {
-    const activeBtn = document.querySelector('.resolution-buttons button.active');
-    return activeBtn ? activeBtn.dataset.resolution : '1K';
+    // 只选择分辨率按钮,不包括模式按钮
+    const resolutionButtons = document.querySelectorAll('#btnRes1K, #btnRes2K, #btnRes4K');
+    for (let btn of resolutionButtons) {
+        if (btn.classList.contains('active')) {
+            return btn.dataset.resolution;
+        }
+    }
+    return '1K';  // 默认值
 }
 
 function setupSettingsUI() {
@@ -457,7 +496,8 @@ async function handleGenerateImage() {
 
         // STAGE 2: AI generation (NOT in executeAsModal - UI stays responsive)
         const modeText = mode === 'imgedit' ? 'Image Edit' : 'Text to Image';
-        showGenerateStatus(`正在生成图片... (${modeText}, ${resolution}, ${aspectRatio})`, 'info');
+        const aspectRatioText = aspectRatio || '1:1';  // 使用默认值避免undefined
+        showGenerateStatus(`正在生成图片... (${modeText}, ${resolution}, ${aspectRatioText})`, 'info');
 
         const imageFile = await imageGenerator.generate({
             prompt,
