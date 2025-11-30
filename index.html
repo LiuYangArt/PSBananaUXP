@@ -400,15 +400,6 @@
             <textarea witch="500" id="promptInput" rows="6" placeholder="Enter your image generation prompt..."></textarea>
         </div>
 
-        <!-- Generation Mode -->
-        <div class="settings-section">
-            <label>Generation Mode:</label>
-            <div class="resolution-buttons">
-                <button id="btnModeText2Img" class="active" data-mode="text2img">Text to Image</button>
-                <button id="btnModeImgEdit" data-mode="imgedit">Image Edit</button>
-            </div>
-        </div>
-
         <!-- Resolution -->
         <div class="settings-section">
             <label>Resolution:</label>
@@ -431,6 +422,15 @@
         <button id="btnGenerate" class="primary" style="padding: 10px 16px; font-size: 14px; font-weight: 500;">Generate Image</button>
         <button id="btnTestExport" class="secondary" style="margin-top: 4px;">Test Export (测试导出)</button>
         <button id="btnTestImport" class="secondary" style="margin-top: 4px;">Test Import (最近的图)</button>
+
+        <!-- Generation Mode -->
+        <div class="settings-section">
+            <label>Generation Mode:</label>
+            <div class="resolution-buttons">
+                <button id="btnModeText2Img" class="active" data-mode="text2img">Text to Image</button>
+                <button id="btnModeImgEdit" data-mode="imgedit">Image Edit</button>
+            </div>
+        </div>
 
         <!-- Status Display -->
         <div id="generateStatus"></div>
