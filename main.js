@@ -708,8 +708,10 @@ async function handleGenerateImage() {
                 console.log('[MAIN] Image exported, base64 length:', exportedImageData?.length || 0);
             }
         } catch (e) {
-            console.warn('Could not get canvas info:', e);
-            showGenerateStatus('警告: 无法获取画布信息,使用默认比例 1:1', 'info');
+            console.error('Failed to get canvas info or export:', e);
+            const errorMessage = e?.message || String(e) || 'Unknown error';
+            showGenerateStatus(`❌ ${errorMessage}`, 'error');
+            return;  // 终止生图流程
         }
 
         // STAGE 2: AI generation (NOT in executeAsModal - UI stays responsive)
