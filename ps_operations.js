@@ -307,6 +307,10 @@ class PSOperations {
 
             // Resize to canvas size
             await this.resizeLayerToCanvas(newLayer);
+            
+            // 将图层移到最顶层（所有组之外）
+            await this.moveLayerToTop(newLayer);
+            console.log(`[PS] Layer moved to top of document`);
 
             return layerName;
         } catch (e) {
@@ -371,6 +375,10 @@ class PSOperations {
 
             // 调整图层到区域大小和位置
             await this.resizeLayerToRegion(newLayer, region);
+            
+            // 将图层移到最顶层（所有组之外）
+            await this.moveLayerToTop(newLayer);
+            console.log(`[PS] Layer moved to top of document`);
 
             return layerName;
         } catch (e) {
@@ -622,10 +630,41 @@ class PSOperations {
     }
 
     /**
-     * Move layer to top
+     * Move layer to top of document (outside all groups)
+     * 将图层移到文档最顶层（所有组之外）
      */
     static async moveLayerToTop(layer) {
         try {
+            const doc = app.activeDocument;
+            
+            // 先将图层移出组（如果在组内）
+            if (layer.parent && layer.parent.typename === "LayerSet") {
+                console.log(`[PS] Layer is inside group '${layer.parent.name}', moving out...`);
+                // 将图层移到文档根层级
+                await batchPlay([
+                    {
+                        "_obj": "move",
+                        "_target": [
+                            {
+                                "_ref": "layer",
+                                "_enum": "ordinal",
+                                "_value": "targetEnum"
+                            }
+                        ],
+                        "to": {
+                            "_ref": "document",
+                            "_enum": "ordinal",
+                            "_value": "targetEnum"
+                        },
+                        "_isCommand": true
+                    }
+                ], {
+                    "synchronousExecution": true,
+                    "modalBehavior": "wait"
+                });
+            }
+            
+            // 然后移到最顶层
             await batchPlay([
                 {
                     "_obj": "move",
