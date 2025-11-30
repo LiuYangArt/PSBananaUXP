@@ -16,29 +16,27 @@ class FileManager {
     /**
      * Get or create the log directory for debug files
      * Uses UXP plugin data folder (no user permission needed)
+     * 每次都检查目录是否存在，防止目录被删除后缓存失效
      * @returns {Promise<Folder>}
      */
     async getLogFolder() {
-        if (this.logDirPath) {
-            return this.logDirPath;
-        }
-
         try {
             // Use getDataFolder() - plugin-specific data folder
             const dataFolder = await fs.getDataFolder();
             
-            // Create Logs subfolder in plugin data directory
+            // 尝试获取现有目录，如果不存在则创建
             try {
                 this.logDirPath = await dataFolder.getEntry(this.logDirName);
             } catch (e) {
-                // Folder doesn't exist, create it
+                // 目录不存在，创建新目录
+                console.log(`[FileManager] Log folder not found, creating: ${this.logDirName}`);
                 this.logDirPath = await dataFolder.createFolder(this.logDirName);
             }
 
-            console.log("Log folder path:", this.logDirPath.nativePath);
+            console.log("[FileManager] Log folder path:", this.logDirPath.nativePath);
             return this.logDirPath;
         } catch (e) {
-            console.error("Error getting log folder:", e);
+            console.error("[FileManager] Error getting log folder:", e);
             throw e;
         }
     }
@@ -46,30 +44,28 @@ class FileManager {
     /**
      * Get or create the image directory for generated images
      * Uses plugin data folder (same as logs, no permission needed)
+     * 每次都检查目录是否存在，防止目录被删除后缓存失效
      * @returns {Promise<Folder>}
      */
     async getImageFolder() {
-        if (this.imageDirPath) {
-            return this.imageDirPath;
-        }
-
         try {
             // Use getDataFolder() for generated images too
             // This ensures no permission issues
             const dataFolder = await fs.getDataFolder();
             
-            // Create GeneratedImages subfolder
+            // 尝试获取现有目录，如果不存在则创建
             try {
                 this.imageDirPath = await dataFolder.getEntry(this.imageDirName);
             } catch (e) {
-                // Folder doesn't exist, create it
+                // 目录不存在，创建新目录
+                console.log(`[FileManager] Image folder not found, creating: ${this.imageDirName}`);
                 this.imageDirPath = await dataFolder.createFolder(this.imageDirName);
             }
 
-            console.log("Image folder path:", this.imageDirPath.nativePath);
+            console.log("[FileManager] Image folder path:", this.imageDirPath.nativePath);
             return this.imageDirPath;
         } catch (e) {
-            console.error("Error getting image folder:", e);
+            console.error("[FileManager] Error getting image folder:", e);
             throw e;
         }
     }
