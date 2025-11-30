@@ -638,37 +638,39 @@ async function handleGenerateImage() {
                     console.log('[MAIN] Multi-image mode: Finding Source/Reference groups...');
                     const { sourceGroup, referenceGroup } = await PSOperations.findSourceReferenceGroups();
                     
-                    // 导出Source组
-                    if (sourceGroup) {
-                        console.log('[MAIN] Exporting Source group...');
-                        const sourceResult = await PSOperations.exportGroupAsWebP(
-                            sourceGroup,
-                            maxSize,
-                            quality,
-                            executionContext,
-                            region
-                        );
-                        sourceData = await fileManager.fileToBase64(sourceResult.file);
-                        console.log('[MAIN] Source group exported, base64 length:', sourceData?.length || 0);
-                    } else {
-                        console.warn('[MAIN] Source group not found');
+                    // 检查必需的组是否存在
+                    const missingGroups = [];
+                    if (!sourceGroup) missingGroups.push('Source');
+                    if (!referenceGroup) missingGroups.push('Reference');
+                    
+                    if (missingGroups.length > 0) {
+                        const missingGroupsText = missingGroups.join(' / ');
+                        throw new Error(`缺少必需的图层组: ${missingGroupsText}\n\n请创建 ${missingGroupsText} 组后再使用多图生图模式`);
                     }
                     
+                    // 导出Source组
+                    console.log('[MAIN] Exporting Source group...');
+                    const sourceResult = await PSOperations.exportGroupAsWebP(
+                        sourceGroup,
+                        maxSize,
+                        quality,
+                        executionContext,
+                        region
+                    );
+                    sourceData = await fileManager.fileToBase64(sourceResult.file);
+                    console.log('[MAIN] Source group exported, base64 length:', sourceData?.length || 0);
+                    
                     // 导出Reference组
-                    if (referenceGroup) {
-                        console.log('[MAIN] Exporting Reference group...');
-                        const referenceResult = await PSOperations.exportGroupAsWebP(
-                            referenceGroup,
-                            maxSize,
-                            quality,
-                            executionContext,
-                            region
-                        );
-                        referenceData = await fileManager.fileToBase64(referenceResult.file);
-                        console.log('[MAIN] Reference group exported, base64 length:', referenceData?.length || 0);
-                    } else {
-                        console.warn('[MAIN] Reference group not found');
-                    }
+                    console.log('[MAIN] Exporting Reference group...');
+                    const referenceResult = await PSOperations.exportGroupAsWebP(
+                        referenceGroup,
+                        maxSize,
+                        quality,
+                        executionContext,
+                        region
+                    );
+                    referenceData = await fileManager.fileToBase64(referenceResult.file);
+                    console.log('[MAIN] Reference group exported, base64 length:', referenceData?.length || 0);
                 }
                 // 单图模式: 导出所有可见图层
                 else if (mode === 'imgedit') {
