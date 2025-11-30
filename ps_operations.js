@@ -1074,6 +1074,115 @@ class PSOperations {
     }
 
     /**
+     * 创建或更新Reference和Source图层组并设置颜色
+     * Reference组 -> 紫色
+     * Source组 -> 绿色
+     * 必须在executeAsModal中调用
+     * @returns {Promise<Object>} - 返回创建/更新结果
+     */
+    static async ensureSourceReferenceGroups() {
+        try {
+            const doc = app.activeDocument;
+            if (!doc) {
+                throw new Error("No active document");
+            }
+
+            console.log('[PS] Checking for Reference/Source groups...');
+
+            // 查找现有的组
+            let referenceGroup = null;
+            let sourceGroup = null;
+
+            for (const layer of doc.layers) {
+                if (layer.kind === "group") {
+                    const layerName = layer.name.toLowerCase();
+                    if (layerName === "reference") {
+                        referenceGroup = layer;
+                    } else if (layerName === "source") {
+                        sourceGroup = layer;
+                    }
+                }
+            }
+
+            let referenceCreated = false;
+            let sourceCreated = false;
+
+            // 先创建Source组（如果不存在），因为后创建的会在上面
+            if (!sourceGroup) {
+                console.log('[PS] Creating Source group...');
+                sourceGroup = await doc.createLayerGroup({
+                    name: "Source"
+                });
+                sourceCreated = true;
+            }
+
+            // 后创建Reference组（如果不存在），这样Reference会在Source上面
+            if (!referenceGroup) {
+                console.log('[PS] Creating Reference group...');
+                referenceGroup = await doc.createLayerGroup({
+                    name: "Reference"
+                });
+                referenceCreated = true;
+            }
+
+            // 设置Reference组颜色为紫色
+            console.log('[PS] Setting Reference group color to violet...');
+            await batchPlay([{
+                "_obj": "set",
+                "_target": [{
+                    "_ref": "layer",
+                    "_id": referenceGroup.id
+                }],
+                "to": {
+                    "_obj": "layer",
+                    "color": {
+                        "_enum": "color",
+                        "_value": "violet"
+                    }
+                }
+            }], {
+                "synchronousExecution": true,
+                "modalBehavior": "wait"
+            });
+
+            // 设置Source组颜色为绿色
+            console.log('[PS] Setting Source group color to green...');
+            await batchPlay([{
+                "_obj": "set",
+                "_target": [{
+                    "_ref": "layer",
+                    "_id": sourceGroup.id
+                }],
+                "to": {
+                    "_obj": "layer",
+                    "color": {
+                        "_enum": "color",
+                        "_value": "green"
+                    }
+                }
+            }], {
+                "synchronousExecution": true,
+                "modalBehavior": "wait"
+            });
+
+            console.log('[PS] Reference/Source groups ready');
+
+            return {
+                success: true,
+                referenceCreated,
+                sourceCreated,
+                referenceGroup: referenceGroup.name,
+                sourceGroup: sourceGroup.name
+            };
+
+        } catch (e) {
+            console.error("[PS] Error ensuring source/reference groups:", e);
+            const errorMsg = e.message || String(e) || "Unknown error";
+            throw new Error(`Failed to ensure source/reference groups: ${errorMsg}`);
+        }
+    }
+
+    /**
      * 智能画布比例调整
      * 根据当前画布尺寸,找到最接近的标准比例并扩展画布
      * 不裁切内容,仅在需要时扩展画布

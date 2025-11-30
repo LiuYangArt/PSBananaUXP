@@ -91,6 +91,7 @@ function setupGenerateUI() {
     const btnGenerate = document.getElementById('btnGenerate');
     const btnTestImport = document.getElementById('btnTestImport');
     const btnTestExport = document.getElementById('btnTestExport');
+    const btnEnsureGroups = document.getElementById('btnEnsureGroups');
     const selectionModeCheckbox = document.getElementById('selectionModeCheckbox');
     const searchWebCheckbox = document.getElementById('searchWebCheckbox');
     const multiImageModeCheckbox = document.getElementById('multiImageModeCheckbox');
@@ -319,6 +320,11 @@ function setupGenerateUI() {
     // Test Export button
     btnTestExport.addEventListener('click', async () => {
         await handleTestExport();
+    });
+
+    // Ensure Groups button
+    btnEnsureGroups.addEventListener('click', async () => {
+        await handleEnsureGroups();
     });
 }
 
@@ -958,6 +964,62 @@ async function handleTestExport() {
         isGenerating = false;
         document.getElementById('btnGenerate').disabled = false;
         document.getElementById('btnTestExport').disabled = false;
+    }
+}
+
+/**
+ * 创建/更新Reference和Source组并设置颜色
+ */
+async function handleEnsureGroups() {
+    if (isGenerating) {
+        showGenerateStatus('正在处理中...', 'error');
+        return;
+    }
+
+    // 检查是否有打开的文档
+    if (!app.activeDocument) {
+        showGenerateStatus('❌ 请先打开一个文档', 'error');
+        return;
+    }
+
+    isGenerating = true;
+    const btnEnsureGroups = document.getElementById('btnEnsureGroups');
+    btnEnsureGroups.disabled = true;
+
+    try {
+        showGenerateStatus('🔧 正在创建/更新图层组...', 'info');
+
+        const result = await executeAsModal(async () => {
+            return await PSOperations.ensureSourceReferenceGroups();
+        }, { commandName: "Ensure Reference/Source Groups" });
+
+        if (result.success) {
+            const parts = [];
+            if (result.referenceCreated) {
+                parts.push('Reference组(紫色)');
+            }
+            if (result.sourceCreated) {
+                parts.push('Source组(绿色)');
+            }
+            
+            let message;
+            if (parts.length > 0) {
+                message = `✅ 已创建: ${parts.join(', ')}`;
+            } else {
+                message = '✅ Reference组(紫色)和Source组(绿色)已存在,颜色已更新';
+            }
+            
+            showGenerateStatus(message, 'success');
+            console.log('[UI] Groups ensured:', result);
+        }
+
+    } catch (e) {
+        console.error('[UI] Error ensuring groups:', e);
+        const errorMessage = e?.message || String(e) || 'Unknown error';
+        showGenerateStatus(`❌ 操作失败: ${errorMessage}`, 'error');
+    } finally {
+        isGenerating = false;
+        btnEnsureGroups.disabled = false;
     }
 }
 
