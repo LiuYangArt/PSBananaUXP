@@ -511,6 +511,12 @@ async function handleGenerateImage() {
         return;
     }
 
+    // 检查是否有打开的文档
+    if (!app.activeDocument) {
+        showGenerateStatus('❌ 请先打开一个文档', 'error');
+        return;
+    }
+
     // Validate inputs
     const prompt = document.getElementById('promptInput').value.trim();
     if (!prompt) {
