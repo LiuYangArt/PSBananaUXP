@@ -37,6 +37,9 @@ async function initializeApp() {
     // Setup Generate Tab UI
     setupGenerateUI();
 
+    // Setup Utilities Tab UI
+    setupUtilitiesUI();
+
     // Setup Settings Tab UI
     setupSettingsUI();
 
@@ -279,6 +282,78 @@ function getSelectedResolution() {
         }
     }
     return '1K';  // 默认值
+}
+
+function setupUtilitiesUI() {
+    const btnSmartCanvasRatio = document.getElementById('btnSmartCanvasRatio');
+    const canvasRatioStatus = document.getElementById('canvasRatioStatus');
+
+    // Smart Canvas Ratio 按钮
+    btnSmartCanvasRatio.addEventListener('click', async () => {
+        await handleSmartCanvasRatio();
+    });
+
+    /**
+     * 显示 Canvas Ratio 状态消息
+     */
+    function showCanvasRatioStatus(message, type) {
+        canvasRatioStatus.textContent = message;
+        canvasRatioStatus.className = 'status-message';
+
+        if (type === 'success') {
+            canvasRatioStatus.classList.add('status-success');
+        } else if (type === 'error') {
+            canvasRatioStatus.classList.add('status-error');
+        } else {
+            // info or other
+            canvasRatioStatus.style.backgroundColor = '#2d4050';
+            canvasRatioStatus.style.color = '#a8c5e0';
+        }
+
+        // Auto-clear after 5 seconds for success/error
+        if (type === 'success' || type === 'error') {
+            setTimeout(() => {
+                canvasRatioStatus.textContent = '';
+                canvasRatioStatus.className = '';
+            }, 5000);
+        }
+    }
+
+    /**
+     * 处理智能画布比例调整
+     */
+    async function handleSmartCanvasRatio() {
+        try {
+            showCanvasRatioStatus('正在分析画布比例...', 'info');
+            btnSmartCanvasRatio.disabled = true;
+
+            // 在 executeAsModal 中执行画布调整
+            const result = await executeAsModal(async () => {
+                return await PSOperations.applySmartCanvasRatio();
+            }, { commandName: "Smart Canvas Ratio" });
+
+            if (!result.changed) {
+                showCanvasRatioStatus(
+                    `✅ 画布已经是 ${result.targetRatio} 比例 (${result.newWidth}x${result.newHeight})`,
+                    'success'
+                );
+            } else {
+                showCanvasRatioStatus(
+                    `✅ 画布已调整到 ${result.targetRatio} 比例\n` +
+                    `原始: ${result.originalWidth}x${result.originalHeight} → ` +
+                    `新尺寸: ${result.newWidth}x${result.newHeight}`,
+                    'success'
+                );
+            }
+
+        } catch (e) {
+            console.error('Smart Canvas Ratio failed:', e);
+            const errorMessage = e?.message || String(e) || 'Unknown error';
+            showCanvasRatioStatus(`❌ 调整失败: ${errorMessage}`, 'error');
+        } finally {
+            btnSmartCanvasRatio.disabled = false;
+        }
+    }
 }
 
 function setupSettingsUI() {

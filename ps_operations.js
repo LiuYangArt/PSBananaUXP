@@ -475,6 +475,102 @@ class PSOperations {
             throw new Error(`Failed to export visible layers: ${errorMsg}`);
         }
     }
+    /**
+     * 智能画布比例调整
+     * 根据当前画布尺寸,找到最接近的标准比例并扩展画布
+     * 不裁切内容,仅在需要时扩展画布
+     * 必须在executeAsModal中调用
+     * @returns {Promise<Object>} - 返回原始尺寸、新尺寸和目标比例
+     */
+    static async applySmartCanvasRatio() {
+        try {
+            const doc = app.activeDocument;
+            if (!doc) {
+                throw new Error("No active document");
+            }
+
+            const currentWidth = doc.width;
+            const currentHeight = doc.height;
+            console.log(`[PS] Current canvas: ${currentWidth}x${currentHeight}`);
+
+            // 支持的标准比例列表
+            const standardRatios = [
+                { name: "1:1", ratio: 1/1 },
+                { name: "2:3", ratio: 2/3 },
+                { name: "3:2", ratio: 3/2 },
+                { name: "3:4", ratio: 3/4 },
+                { name: "4:3", ratio: 4/3 },
+                { name: "4:5", ratio: 4/5 },
+                { name: "5:4", ratio: 5/4 },
+                { name: "9:16", ratio: 9/16 },
+                { name: "16:9", ratio: 16/9 },
+                { name: "21:9", ratio: 21/9 }
+            ];
+
+            // 计算当前画布的宽高比
+            const currentRatio = currentWidth / currentHeight;
+            console.log(`[PS] Current ratio: ${currentRatio.toFixed(4)}`);
+
+            // 找到最接近的标准比例
+            let closestRatio = standardRatios[0];
+            let minDifference = Math.abs(currentRatio - closestRatio.ratio);
+
+            for (const standardRatio of standardRatios) {
+                const difference = Math.abs(currentRatio - standardRatio.ratio);
+                if (difference < minDifference) {
+                    minDifference = difference;
+                    closestRatio = standardRatio;
+                }
+            }
+
+            console.log(`[PS] Closest ratio: ${closestRatio.name} (${closestRatio.ratio.toFixed(4)})`);
+
+            // 计算新的画布尺寸(只扩展,不缩小)
+            let newWidth = currentWidth;
+            let newHeight = currentHeight;
+
+            const targetRatio = closestRatio.ratio;
+            if (currentRatio < targetRatio) {
+                // 当前太窄,需要扩展宽度
+                newWidth = Math.round(currentHeight * targetRatio);
+            } else if (currentRatio > targetRatio) {
+                // 当前太宽,需要扩展高度
+                newHeight = Math.round(currentWidth / targetRatio);
+            } else {
+                // 已经是目标比例
+                console.log(`[PS] Canvas already matches ${closestRatio.name}`);
+                return {
+                    originalWidth: currentWidth,
+                    originalHeight: currentHeight,
+                    newWidth: currentWidth,
+                    newHeight: currentHeight,
+                    targetRatio: closestRatio.name,
+                    changed: false
+                };
+            }
+
+            console.log(`[PS] New canvas size: ${newWidth}x${newHeight}`);
+
+            // 使用resizeCanvas扩展画布(居中,不裁切)
+            await doc.resizeCanvas(newWidth, newHeight, "center");
+
+            console.log(`[PS] Canvas resized successfully to ${closestRatio.name}`);
+
+            return {
+                originalWidth: currentWidth,
+                originalHeight: currentHeight,
+                newWidth: newWidth,
+                newHeight: newHeight,
+                targetRatio: closestRatio.name,
+                changed: true
+            };
+
+        } catch (e) {
+            console.error("[PS] Error applying smart canvas ratio:", e);
+            const errorMsg = e.message || String(e) || "Unknown error";
+            throw new Error(`Failed to apply smart canvas ratio: ${errorMsg}`);
+        }
+    }
 }
 
 module.exports = { PSOperations };

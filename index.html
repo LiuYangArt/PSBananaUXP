@@ -366,6 +366,7 @@
     <!-- Tab Navigation -->
     <div class="tab-nav">
         <button class="tab-button active" data-tab="generate">Generate</button>
+        <button class="tab-button" data-tab="utilities">Utilities</button>
         <button class="tab-button" data-tab="settings">Settings</button>
     </div>
 
@@ -417,6 +418,30 @@
 
         <!-- Status Display -->
         <div id="generateStatus"></div>
+    </div>
+
+    <!-- Utilities Tab -->
+    <div class="tab-content" id="utilitiesTab">
+        <h2 style="margin: 0 0 16px 0; font-size: 16px;">实用工具</h2>
+
+        <!-- Smart Canvas Ratio -->
+        <div class="settings-section">
+            <label>Smart Canvas Ratio (智能画布比例):</label>
+            <p style="font-size: 11px; color: #aaa; margin: 4px 0 12px 0;">
+                根据当前画布尺寸，自动调整到最接近的标准比例。不裁切内容，仅扩展画布。
+            </p>
+            <button id="btnSmartCanvasRatio" style="width: 100%;">应用 Smart Canvas Ratio</button>
+            <div id="canvasRatioStatus" class="status-message" style="margin-top: 8px;"></div>
+        </div>
+
+        <hr>
+
+        <div class="settings-section">
+            <label>支持的比例:</label>
+            <div style="font-size: 11px; color: #aaa; line-height: 1.6;">
+                1:1, 2:3, 3:2, 3:4, 4:3, 4:5, 5:4, 9:16, 16:9, 21:9
+            </div>
+        </div>
     </div>
 
     <!-- Settings Tab -->
