@@ -464,7 +464,7 @@ async function handleGenerateImage() {
         let exportedImageData = null;  // base64编码的图片数据
 
         try {
-            const exportData = await executeAsModal(async () => {
+            const exportData = await executeAsModal(async (executionContext) => {
                 const info = await PSOperations.getCanvasInfo();
                 
                 // 如果是image edit模式,导出当前可见图层
@@ -472,7 +472,7 @@ async function handleGenerateImage() {
                 if (mode === 'imgedit') {
                     const maxSize = settingsManager.get('export_max_size', 2048);
                     const quality = settingsManager.get('export_quality', 80);
-                    const exportResult = await PSOperations.exportVisibleLayersAsWebP(maxSize, quality);
+                    const exportResult = await PSOperations.exportVisibleLayersAsWebP(maxSize, quality, executionContext);
                     
                     // 转换为base64
                     const base64 = await fileManager.fileToBase64(exportResult.file);
@@ -638,8 +638,8 @@ async function handleTestExport() {
 
         console.log(`[TEST EXPORT] Exporting with maxSize=${maxSize}, quality=${quality}`);
 
-        const exportResult = await executeAsModal(async () => {
-            return await PSOperations.exportVisibleLayersAsWebP(maxSize, quality);
+        const exportResult = await executeAsModal(async (executionContext) => {
+            return await PSOperations.exportVisibleLayersAsWebP(maxSize, quality, executionContext);
         }, { commandName: "Test Export Layers" });
 
         console.log('[TEST EXPORT] Export completed:', exportResult);

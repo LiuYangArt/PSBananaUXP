@@ -343,9 +343,10 @@ class PSOperations {
      * 必须在executeAsModal中调用
      * @param {number} maxSize - 导出图片长边最大长度
      * @param {number} quality - 压缩质量 (0-100)
+     * @param {Object} executionContext - executeAsModal的执行上下文
      * @returns {Promise<Object>} - 包含file和token的对象
      */
-    static async exportVisibleLayersAsWebP(maxSize = 2048, quality = 80) {
+    static async exportVisibleLayersAsWebP(maxSize = 2048, quality = 80, executionContext = null) {
         try {
             const doc = app.activeDocument;
             if (!doc) {
@@ -373,32 +374,50 @@ class PSOperations {
 
             // 创建临时文件 - 放在ExportedImages文件夹下
             const dataFolder = await fs.getDataFolder();
-            const exportFolder = await dataFolder.createFolder('ExportedImages', { overwrite: false });
+            // 获取或创建ExportedImages文件夹
+            let exportFolder;
+            try {
+                exportFolder = await dataFolder.getEntry('ExportedImages');
+            } catch (e) {
+                // 文件夹不存在,创建新的
+                exportFolder = await dataFolder.createFolder('ExportedImages');
+            }
             const timestamp = Date.now();
             const webpFileName = `ps_export_${timestamp}.webp`;
             const webpFile = await exportFolder.createFile(webpFileName, { overwrite: true });
 
             console.log(`[PS] Export file path: ${webpFile.nativePath}`);
 
-            // 如果需要缩放,先复制文档
-            let targetDoc = doc;
-            let needsCleanup = false;
-            
-            if (maxDimension > maxSize) {
-                console.log('[PS] Creating duplicate document for resize...');
-                // 复制文档并合并图层
-                targetDoc = await doc.duplicate(`temp_export_${timestamp}`, true);
-                needsCleanup = true;
-                
-                // 调整图像大小 - 使用resizeImage而不是resizeCanvas
-                await targetDoc.resizeImage(exportWidth, exportHeight);
+            // 挂起历史记录,提升性能并避免污染用户的历史面板
+            let suspensionID = null;
+            if (executionContext && executionContext.hostControl) {
+                suspensionID = await executionContext.hostControl.suspendHistory({
+                    "documentID": doc.id,
+                    "name": "Banana Export"
+                });
+                console.log('[PS] History suspended for export operation');
             }
 
-            // 使用batchPlay保存WebP格式
-            // 必须先创建session token,因为batchPlay不接受直接的file对象
-            const fileToken = fs.createSessionToken(webpFile);
-            
-            await batchPlay([
+            try {
+                // 如果需要缩放,先复制文档
+                let targetDoc = doc;
+                let needsCleanup = false;
+                
+                if (maxDimension > maxSize) {
+                    console.log('[PS] Creating duplicate document for resize...');
+                    // 复制文档并合并图层
+                    targetDoc = await doc.duplicate(`temp_export_${timestamp}`, true);
+                    needsCleanup = true;
+                    
+                    // 调整图像大小 - 使用resizeImage而不是resizeCanvas
+                    await targetDoc.resizeImage(exportWidth, exportHeight);
+                }
+
+                // 使用batchPlay保存WebP格式
+                // 必须先创建session token,因为batchPlay不接受直接的file对象
+                const fileToken = fs.createSessionToken(webpFile);
+                
+                await batchPlay([
                 {
                     "_obj": "save",
                     "as": {
@@ -416,31 +435,39 @@ class PSOperations {
                         "_path": fileToken,  // 使用session token而不是nativePath
                         "_kind": "local"
                     },
-                    "copy": true,
+                    "copy": needsCleanup ? false : true,  // 临时文档无需copy,节省内存
                     "lowerCase": true,
                     "_isCommand": true
                 }
-            ], {
-                "synchronousExecution": true,
-                "modalBehavior": "wait"
-            });
+                ], {
+                    "synchronousExecution": true,
+                    "modalBehavior": "wait"
+                });
 
-            // 清理临时文档
-            if (needsCleanup) {
-                await targetDoc.closeWithoutSaving();
+                // 清理临时文档
+                if (needsCleanup) {
+                    await targetDoc.closeWithoutSaving();
+                }
+
+                console.log(`[PS] Export completed: ${webpFile.nativePath}`);
+
+                // 创建session token供后续使用
+                const token = fs.createSessionToken(webpFile);
+                
+                return {
+                    file: webpFile,
+                    token: token,
+                    width: exportWidth,
+                    height: exportHeight
+                };
+
+            } finally {
+                // 恢复历史记录
+                if (suspensionID !== null && executionContext && executionContext.hostControl) {
+                    await executionContext.hostControl.resumeHistory(suspensionID);
+                    console.log('[PS] History resumed');
+                }
             }
-
-            console.log(`[PS] Export completed: ${webpFile.nativePath}`);
-
-            // 创建session token供后续使用
-            const token = fs.createSessionToken(webpFile);
-            
-            return {
-                file: webpFile,
-                token: token,
-                width: exportWidth,
-                height: exportHeight
-            };
 
         } catch (e) {
             console.error("[PS] Error exporting visible layers:", e);
