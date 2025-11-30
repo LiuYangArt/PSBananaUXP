@@ -214,7 +214,7 @@
         }
 
         textarea {
-            resize: none;
+            resize: vertical;
             min-height: 80px;
             line-height: 1.4;
         }
@@ -227,7 +227,7 @@
 
         .resolution-buttons button {
             flex: 1;
-            padding: 8px 12px;
+            padding: 6px 12px;
             font-size: 12px;
             background-color: #2a2a2a;
             border: 1px solid #3a3a3a;
@@ -376,10 +376,7 @@
         <!-- Prompt Presets -->
         <div class="settings-section">
             <label>Prompt Presets:</label>
-            <button id="presetSelectButton" class="custom-select-button">
-                <span id="presetSelectText">-</span>
-                <span class="custom-select-arrow"></span>
-            </button>
+            <select id="presetSelect"></select>
             <div class="preset-buttons">
                 <button id="btnAddPreset" class="small" title="Add Preset">+</button>
                 <button id="btnSavePreset" class="small" title="Save Preset">Save</button>
@@ -391,7 +388,7 @@
         <!-- Prompt Input -->
         <div class="settings-section">
             <label>Prompt:</label>
-            <textarea id="promptInput" rows="6" placeholder="Enter your image generation prompt..."></textarea>
+            <textarea witch="500" id="promptInput" rows="6" placeholder="Enter your image generation prompt..."></textarea>
         </div>
 
         <!-- Resolution -->
@@ -405,7 +402,7 @@
         </div>
 
         <!-- Generate Button -->
-        <button id="btnGenerate">Generate Image</button>
+        <button id="btnGenerate" style="padding: 10px 16px; font-size: 14px; font-weight: 500;">Generate Image</button>
         <button id="btnTestImport" class="secondary" style="margin-top: 4px;">Test Import (最近的图)</button>
 
         <!-- Status Display -->
@@ -416,11 +413,7 @@
     <div class="tab-content" id="settingsTab">
         <div class="settings-section">
             <label>Provider:</label>
-            <button id="providerSelectButton" class="custom-select-button">
-                <span id="providerSelectText">-</span>
-                <span class="custom-select-arrow"></span>
-            </button>
-            <select id="providerSelect" style="display: none;"></select>
+            <select id="providerSelect"></select>
             <div class="preset-buttons">
                 <button id="btnAddProvider" class="small" title="Add New Provider">+</button>
                 <button id="btnSaveProvider" class="small">Save</button>
