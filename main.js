@@ -43,7 +43,7 @@ async function initializeApp() {
     // Setup Settings Tab UI
     setupSettingsUI();
 
-    // Load selected provider and preset
+    // Load selected provider
     const selectedProviderName = settingsManager.get('selected_provider');
     if (selectedProviderName) {
         const providerSelect = document.getElementById('providerSelect');
@@ -51,11 +51,11 @@ async function initializeApp() {
         loadProviderConfig(selectedProviderName);
     }
 
-    const selectedPresetName = settingsManager.get('selected_preset');
-    if (selectedPresetName) {
-        const presetSelect = document.getElementById('presetSelect');
-        presetSelect.value = selectedPresetName;
-        loadPreset(selectedPresetName);
+    // 恢复最近一次的prompt
+    const latestPrompt = settingsManager.get('latest_prompt', '');
+    if (latestPrompt) {
+        document.getElementById('promptInput').value = latestPrompt;
+        console.log(`[UI] Restored latest prompt: ${latestPrompt.substring(0, 50)}...`);
     }
 
     // 不在初始化时更新 Aspect Ratio，避免闪烁
@@ -202,10 +202,15 @@ function setupGenerateUI() {
     // Populate preset dropdown
     updatePresetDropdown();
 
+    // 默认选中第一个 preset
+    if (presetSelect.options.length > 0) {
+        presetSelect.selectedIndex = 0;
+        loadPreset(presetSelect.value);
+    }
+
     // Preset selection change
     presetSelect.addEventListener('change', (e) => {
         loadPreset(e.target.value);
-        settingsManager.set('selected_preset', e.target.value);
     });
 
     // Add preset
@@ -258,7 +263,6 @@ function setupGenerateUI() {
             updatePresetDropdown();
             presetSelect.value = newName;
             currentPreset = newName;
-            await settingsManager.set('selected_preset', newName);
             showGenerateStatus(result.message, 'success');
         } else {
             showGenerateStatus(result.message, 'error');
@@ -576,6 +580,10 @@ async function handleGenerateImage() {
     document.getElementById('btnGenerate').disabled = true;
 
     try {
+        // 保存当前的prompt到settings
+        await settingsManager.set('latest_prompt', prompt);
+        console.log(`[UI] Saved latest prompt: ${prompt.substring(0, 50)}...`);
+
         // STAGE 1: Get canvas info and export image if in image edit mode
         showGenerateStatus('获取画布信息...', 'info');
 
