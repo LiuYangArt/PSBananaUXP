@@ -814,6 +814,227 @@ class PSOperations {
         }
     }
     /**
+     * 查找Source和Reference组
+     * 大小写不敏感,只查找顶层组
+     * 必须在executeAsModal中调用
+     * @returns {Promise<Object>} - 返回 {sourceGroup, referenceGroup}
+     */
+    static async findSourceReferenceGroups() {
+        try {
+            const doc = app.activeDocument;
+            if (!doc) {
+                throw new Error("No active document");
+            }
+
+            let sourceGroup = null;
+            let referenceGroup = null;
+
+            // 遍历顶层图层查找Source和Reference组
+            for (const layer of doc.layers) {
+                if (layer.kind === "group") {
+                    const layerName = layer.name.toLowerCase();
+                    if (layerName === "source") {
+                        sourceGroup = layer;
+                    } else if (layerName === "reference") {
+                        referenceGroup = layer;
+                    }
+                }
+            }
+
+            console.log(`[PS] Found Source group: ${sourceGroup ? sourceGroup.name : 'None'}`);
+            console.log(`[PS] Found Reference group: ${referenceGroup ? referenceGroup.name : 'None'}`);
+
+            return { sourceGroup, referenceGroup };
+        } catch (e) {
+            console.error("Error finding source/reference groups:", e);
+            throw e;
+        }
+    }
+
+    /**
+     * 导出指定组中的可见图层为合并图片
+     * 支持选区模式
+     * 必须在executeAsModal中调用
+     * @param {LayerGroup} group - 要导出的组
+     * @param {number} maxSize - 导出图片长边最大长度
+     * @param {number} quality - 压缩质量 (0-100)
+     * @param {Object} executionContext - executeAsModal的执行上下文
+     * @param {Object} region - 可选,需要导出的区域 {left, top, width, height}
+     * @returns {Promise<Object>} - 包含file和base64的对象
+     */
+    static async exportGroupAsWebP(group, maxSize = 2048, quality = 80, executionContext = null, region = null) {
+        try {
+            const doc = app.activeDocument;
+            if (!doc || !group) {
+                throw new Error("Invalid document or group");
+            }
+
+            console.log(`[PS] Exporting group: ${group.name} (maxSize: ${maxSize}, quality: ${quality})`);
+
+            // 获取导出区域尺寸
+            let exportSourceWidth, exportSourceHeight;
+            if (region) {
+                exportSourceWidth = region.width;
+                exportSourceHeight = region.height;
+                console.log(`[PS] Export region: ${exportSourceWidth}x${exportSourceHeight}`);
+            } else {
+                exportSourceWidth = doc.width;
+                exportSourceHeight = doc.height;
+                console.log(`[PS] Export full canvas: ${exportSourceWidth}x${exportSourceHeight}`);
+            }
+
+            // 计算导出尺寸,保持宽高比
+            let exportWidth = exportSourceWidth;
+            let exportHeight = exportSourceHeight;
+            const maxDimension = Math.max(exportSourceWidth, exportSourceHeight);
+            
+            if (maxDimension > maxSize) {
+                const scale = maxSize / maxDimension;
+                exportWidth = Math.round(exportSourceWidth * scale);
+                exportHeight = Math.round(exportSourceHeight * scale);
+                console.log(`[PS] Scaled export size: ${exportWidth}x${exportHeight}`);
+            }
+
+            // 创建临时文件
+            const dataFolder = await fs.getDataFolder();
+            let exportFolder;
+            try {
+                exportFolder = await dataFolder.getEntry('ExportedImages');
+            } catch (e) {
+                exportFolder = await dataFolder.createFolder('ExportedImages');
+            }
+            const timestamp = Date.now();
+            const webpFileName = `ps_export_group_${group.name}_${timestamp}.webp`;
+            const webpFile = await exportFolder.createFile(webpFileName, { overwrite: true });
+
+            console.log(`[PS] Export file path: ${webpFile.nativePath}`);
+
+            // 挂起历史记录
+            let suspensionID = null;
+            if (executionContext && executionContext.hostControl) {
+                suspensionID = await executionContext.hostControl.suspendHistory({
+                    "documentID": doc.id,
+                    "name": "Banana Export Group"
+                });
+            }
+
+            try {
+                // 复制文档并只保留组内可见图层
+                console.log('[PS] Creating duplicate document for group export...');
+                console.log(`[PS] Original group name: ${group.name}, kind: ${group.kind}`);
+                
+                const tempDoc = await doc.duplicate(`temp_export_${group.name}_${timestamp}`);
+                console.log(`[PS] Temp document created: ${tempDoc.name}`);
+                console.log(`[PS] Temp document layers count: ${tempDoc.layers.length}`);
+                
+                // 在临时文档中找到对应的组
+                let targetGroup = null;
+                console.log('[PS] Searching for target group in duplicated document...');
+                for (const layer of tempDoc.layers) {
+                    console.log(`[PS] Checking layer: ${layer.name}, kind: ${layer.kind}`);
+                    if (layer.kind === "group" && layer.name.toLowerCase() === group.name.toLowerCase()) {
+                        targetGroup = layer;
+                        console.log(`[PS] Found target group: ${layer.name}`);
+                        break;
+                    }
+                }
+
+                if (!targetGroup) {
+                    console.error(`[PS] Target group '${group.name}' not found in duplicated document`);
+                    console.error(`[PS] Available layers:`);
+                    for (const layer of tempDoc.layers) {
+                        console.error(`  - ${layer.name} (${layer.kind})`);
+                    }
+                    await tempDoc.closeWithoutSaving();
+                    throw new Error(`Group '${group.name}' not found in duplicated document`);
+                }
+
+                // 隐藏所有其他图层,只保留目标组可见
+                console.log('[PS] Hiding other layers...');
+                for (const layer of tempDoc.layers) {
+                    if (layer.id !== targetGroup.id) {
+                        layer.visible = false;
+                    }
+                }
+
+                // 合并可见图层
+                console.log('[PS] Flattening document...');
+                await tempDoc.flatten();
+
+                // 如果有区域,裁切到区域
+                if (region) {
+                    console.log(`[PS] Cropping to region: ${region.left}, ${region.top}, ${region.right}, ${region.bottom}`);
+                    await tempDoc.crop({
+                        left: region.left,
+                        top: region.top,
+                        right: region.right,
+                        bottom: region.bottom
+                    });
+                    console.log(`[PS] Cropped to region: ${region.width}x${region.height}`);
+                }
+                
+                // 如果需要缩放
+                if (maxDimension > maxSize) {
+                    console.log(`[PS] Resizing to: ${exportWidth}x${exportHeight}`);
+                    await tempDoc.resizeImage(exportWidth, exportHeight);
+                    console.log(`[PS] Resized to: ${exportWidth}x${exportHeight}`);
+                }
+
+                // 保存为WebP
+                console.log('[PS] Saving as WebP...');
+                const fileToken = fs.createSessionToken(webpFile);
+                await batchPlay([{
+                    "_obj": "save",
+                    "as": {
+                        "_obj": "WebPFormat",
+                        "compression": {
+                            "_enum": "WebPCompression",
+                            "_value": "compressionLossy"
+                        },
+                        "quality": quality,
+                        "includeXMPData": false,
+                        "includeEXIFData": false,
+                        "includePsExtras": false
+                    },
+                    "in": {
+                        "_path": fileToken,
+                        "_kind": "local"
+                    },
+                    "copy": false,
+                    "lowerCase": true,
+                    "_isCommand": true
+                }], {
+                    "synchronousExecution": true,
+                    "modalBehavior": "wait"
+                });
+
+                // 关闭临时文档
+                console.log('[PS] Closing temp document...');
+                await tempDoc.closeWithoutSaving();
+
+                console.log(`[PS] Group export completed: ${webpFile.nativePath}`);
+
+                return {
+                    file: webpFile,
+                    width: exportWidth,
+                    height: exportHeight
+                };
+
+            } finally {
+                // 恢复历史记录
+                if (suspensionID !== null && executionContext && executionContext.hostControl) {
+                    await executionContext.hostControl.resumeHistory(suspensionID);
+                }
+            }
+
+        } catch (e) {
+            console.error("[PS] Error exporting group:", e);
+            const errorMsg = e.message || String(e) || "Unknown error during group export";
+            throw new Error(`Failed to export group: ${errorMsg}`);
+        }
+    }
+
+    /**
      * 智能画布比例调整
      * 根据当前画布尺寸,找到最接近的标准比例并扩展画布
      * 不裁切内容,仅在需要时扩展画布

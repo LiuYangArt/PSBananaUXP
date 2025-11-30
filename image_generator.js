@@ -17,10 +17,22 @@ class ImageGenerator {
      * @param {boolean} options.debugMode - Save debug files
      * @param {string} options.mode - Generation mode ('text2img' or 'imgedit')
      * @param {string} options.inputImage - Base64 encoded input image (for image edit mode)
+     * @param {string} options.sourceImage - Base64 encoded source image (多图模式)
+     * @param {string} options.referenceImage - Base64 encoded reference image (多图模式)
      * @returns {Promise<File>} - UXP File object of generated image
      */
     async generate(options) {
-        const { prompt, provider, aspectRatio, resolution, debugMode, mode = 'text2img', inputImage } = options;
+        const { 
+            prompt, 
+            provider, 
+            aspectRatio, 
+            resolution, 
+            debugMode, 
+            mode = 'text2img', 
+            inputImage,
+            sourceImage,
+            referenceImage
+        } = options;
 
         if (!provider || !provider.apiKey || !provider.baseUrl) {
             throw new Error("Invalid provider configuration");
@@ -32,7 +44,17 @@ class ImageGenerator {
         console.log(`[DEBUG] Generation mode: ${mode}`);
 
         // Build payload
-        const payload = this._buildPayload(prompt, aspectRatio, resolution, provider, providerType, mode, inputImage);
+        const payload = this._buildPayload(
+            prompt, 
+            aspectRatio, 
+            resolution, 
+            provider, 
+            providerType, 
+            mode, 
+            inputImage,
+            sourceImage,
+            referenceImage
+        );
         const apiUrl = this._buildApiUrl(provider, providerType);
         const headers = this._buildHeaders(provider, providerType);
 
@@ -155,22 +177,22 @@ class ImageGenerator {
     /**
      * Build request payload
      */
-    _buildPayload(prompt, aspectRatio, resolution, provider, providerType, mode = 'text2img', inputImage = null) {
+    _buildPayload(prompt, aspectRatio, resolution, provider, providerType, mode = 'text2img', inputImage = null, sourceImage = null, referenceImage = null) {
         if (providerType === "google_official") {
-            return this._buildGooglePayload(prompt, aspectRatio, resolution, mode, inputImage);
+            return this._buildGooglePayload(prompt, aspectRatio, resolution, mode, inputImage, sourceImage, referenceImage);
         } else if (providerType === "yunwu") {
-            return this._buildYunwuPayload(prompt, aspectRatio, resolution, mode, inputImage);
+            return this._buildYunwuPayload(prompt, aspectRatio, resolution, mode, inputImage, sourceImage, referenceImage);
         } else if (providerType === "gptgod") {
-            return this._buildGPTGodPayload(prompt, aspectRatio, resolution, provider, mode, inputImage);
+            return this._buildGPTGodPayload(prompt, aspectRatio, resolution, provider, mode, inputImage, sourceImage, referenceImage);
         } else if (providerType === "openrouter") {
-            return this._buildOpenRouterPayload(prompt, aspectRatio, resolution, provider, mode, inputImage);
+            return this._buildOpenRouterPayload(prompt, aspectRatio, resolution, provider, mode, inputImage, sourceImage, referenceImage);
         }
     }
 
     /**
      * Build Google Official Gemini API payload
      */
-    _buildGooglePayload(prompt, aspectRatio, resolution, mode = 'text2img', inputImage = null) {
+    _buildGooglePayload(prompt, aspectRatio, resolution, mode = 'text2img', inputImage = null, sourceImage = null, referenceImage = null) {
         const generationConfig = {
             response_modalities: ["IMAGE"],
             image_config: {
@@ -185,18 +207,57 @@ class ImageGenerator {
         // 构建content parts
         const parts = [];
         
-        // 如果是图片编辑模式,先添加输入图片
-        if (mode === 'imgedit' && inputImage) {
+        // 多图模式: 添加system prompt和多张图片
+        if (sourceImage || referenceImage) {
+            let systemPrompt = "";
+            let imageCount = 0;
+            
+            if (sourceImage) {
+                imageCount++;
+                systemPrompt += `Image ${imageCount} is the Source Layer (the content to be modified). `;
+            }
+            
+            if (referenceImage) {
+                imageCount++;
+                systemPrompt += `Image ${imageCount} is the Reference Layer (use this for style/content reference). `;
+            }
+            
+            // 添加system prompt和用户prompt
+            parts.push({ text: `System Instruction: ${systemPrompt}\n\nUser Prompt: ${prompt}` });
+            
+            // 添加图片（顺序: Source -> Reference）
+            if (sourceImage) {
+                parts.push({
+                    inlineData: {
+                        mimeType: "image/webp",
+                        data: sourceImage
+                    }
+                });
+            }
+            
+            if (referenceImage) {
+                parts.push({
+                    inlineData: {
+                        mimeType: "image/webp",
+                        data: referenceImage
+                    }
+                });
+            }
+        }
+        // 单图模式: 与之前一致
+        else if (mode === 'imgedit' && inputImage) {
             parts.push({
                 inlineData: {
                     mimeType: "image/png",
                     data: inputImage
                 }
             });
+            parts.push({ text: prompt });
         }
-        
-        // 添加文本prompt
-        parts.push({ text: prompt });
+        // 文本生图模式
+        else {
+            parts.push({ text: prompt });
+        }
 
         return {
             contents: [{
@@ -209,7 +270,7 @@ class ImageGenerator {
     /**
      * Build Yunwu/Gemini-compatible payload
      */
-    _buildYunwuPayload(prompt, aspectRatio, resolution, mode = 'text2img', inputImage = null) {
+    _buildYunwuPayload(prompt, aspectRatio, resolution, mode = 'text2img', inputImage = null, sourceImage = null, referenceImage = null) {
         const generationConfig = {
             responseModalities: ["image"],
             imageConfig: {
@@ -224,18 +285,57 @@ class ImageGenerator {
         // 构建content parts
         const parts = [];
         
-        // 如果是图片编辑模式,先添加输入图片
-        if (mode === 'imgedit' && inputImage) {
+        // 多图模式: 添加system prompt和多张图片
+        if (sourceImage || referenceImage) {
+            let systemPrompt = "";
+            let imageCount = 0;
+            
+            if (sourceImage) {
+                imageCount++;
+                systemPrompt += `Image ${imageCount} is the Source Layer (the content to be modified). `;
+            }
+            
+            if (referenceImage) {
+                imageCount++;
+                systemPrompt += `Image ${imageCount} is the Reference Layer (use this for style/content reference). `;
+            }
+            
+            // 添加system prompt和用户prompt
+            parts.push({ text: `System Instruction: ${systemPrompt}\n\nUser Prompt: ${prompt}` });
+            
+            // 添加图片（顺序: Source -> Reference）
+            if (sourceImage) {
+                parts.push({
+                    inlineData: {
+                        mimeType: "image/webp",
+                        data: sourceImage
+                    }
+                });
+            }
+            
+            if (referenceImage) {
+                parts.push({
+                    inlineData: {
+                        mimeType: "image/webp",
+                        data: referenceImage
+                    }
+                });
+            }
+        }
+        // 单图模式: 与之前一致
+        else if (mode === 'imgedit' && inputImage) {
             parts.push({
                 inlineData: {
                     mimeType: "image/png",
                     data: inputImage
                 }
             });
+            parts.push({ text: prompt });
         }
-        
-        // 添加文本prompt
-        parts.push({ text: prompt });
+        // 文本生图模式
+        else {
+            parts.push({ text: prompt });
+        }
 
         return {
             contents: [{
@@ -249,7 +349,7 @@ class ImageGenerator {
      * Build GPTGod payload (OpenAI-compatible)
      * Resolution handled via model switching
      */
-    _buildGPTGodPayload(prompt, aspectRatio, resolution, provider, mode = 'text2img', inputImage = null) {
+    _buildGPTGodPayload(prompt, aspectRatio, resolution, provider, mode = 'text2img', inputImage = null, sourceImage = null, referenceImage = null) {
         let model = provider.model;
 
         // Auto-switch model for resolution if using default gptgod model
@@ -270,18 +370,51 @@ class ImageGenerator {
         // 构建content
         const content = [];
         
-        // 如果是图片编辑模式,添加图片
-        if (mode === 'imgedit' && inputImage) {
+        // 多图模式: 添加图片注释到prompt并添加图片
+        if (sourceImage || referenceImage) {
+            let imageAnnotations = "";
+            let imageIndex = 0;
+            
+            // 按顺序添加图片
+            if (sourceImage) {
+                imageIndex++;
+                content.push({
+                    type: "image_url",
+                    image_url: {
+                        url: `data:image/webp;base64,${sourceImage}`
+                    }
+                });
+                imageAnnotations += `\n[Attached Image ${imageIndex}: Source]`;
+            }
+            
+            if (referenceImage) {
+                imageIndex++;
+                content.push({
+                    type: "image_url",
+                    image_url: {
+                        url: `data:image/webp;base64,${referenceImage}`
+                    }
+                });
+                imageAnnotations += `\n[Attached Image ${imageIndex}: Reference]`;
+            }
+            
+            // 添加文本prompt和图片注释
+            content.push({ type: "text", text: finalPrompt + imageAnnotations });
+        }
+        // 单图模式: 与之前一致
+        else if (mode === 'imgedit' && inputImage) {
             content.push({
                 type: "image_url",
                 image_url: {
                     url: `data:image/png;base64,${inputImage}`
                 }
             });
+            content.push({ type: "text", text: finalPrompt });
         }
-        
-        // 添加文本prompt
-        content.push({ type: "text", text: finalPrompt });
+        // 文本生图模式
+        else {
+            content.push({ type: "text", text: finalPrompt });
+        }
 
         return {
             model: model,
@@ -296,7 +429,7 @@ class ImageGenerator {
     /**
      * Build OpenRouter payload
      */
-    _buildOpenRouterPayload(prompt, aspectRatio, resolution, provider, mode = 'text2img', inputImage = null) {
+    _buildOpenRouterPayload(prompt, aspectRatio, resolution, provider, mode = 'text2img', inputImage = null, sourceImage = null, referenceImage = null) {
         const imageConfig = {
             aspect_ratio: aspectRatio
         };
@@ -308,8 +441,37 @@ class ImageGenerator {
         // 构建message content
         let messageContent;
         
-        if (mode === 'imgedit' && inputImage) {
-            // 图片编辑模式: 使用数组格式
+        // 多图模式: 使用数组格式
+        if (sourceImage || referenceImage) {
+            messageContent = [];
+            
+            // 添加图片
+            if (sourceImage) {
+                messageContent.push({
+                    type: "image_url",
+                    image_url: {
+                        url: `data:image/webp;base64,${sourceImage}`
+                    }
+                });
+            }
+            
+            if (referenceImage) {
+                messageContent.push({
+                    type: "image_url",
+                    image_url: {
+                        url: `data:image/webp;base64,${referenceImage}`
+                    }
+                });
+            }
+            
+            // 添加文本prompt
+            messageContent.push({
+                type: "text",
+                text: prompt
+            });
+        }
+        // 单图模式: 与之前一致
+        else if (mode === 'imgedit' && inputImage) {
             messageContent = [
                 {
                     type: "image_url",
@@ -322,8 +484,9 @@ class ImageGenerator {
                     text: prompt
                 }
             ];
-        } else {
-            // 文本生图模式: 直接使用字符串
+        }
+        // 文本生图模式: 直接使用字符串
+        else {
             messageContent = prompt;
         }
 

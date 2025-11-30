@@ -570,6 +570,7 @@ async function handleGenerateImage() {
     const debugMode = settingsManager.get('debug_mode', false);
     const mode = generationMode;  // 'text2img' 或 'imgedit'
     const selectionMode = settingsManager.get('selection_mode', false);
+    const multiImageMode = settingsManager.get('multi_image_mode', false);  // 多图生图模式
 
     isGenerating = true;
     document.getElementById('btnGenerate').disabled = true;
@@ -582,6 +583,8 @@ async function handleGenerateImage() {
         let canvasInfo = null;
         let exportedImageData = null;  // base64编码的图片数据
         let selectionRegion = null;     // 选区生图区域信息
+        let sourceImageData = null;     // 多图模式: source image
+        let referenceImageData = null;  // 多图模式: reference image
 
         try {
             const exportData = await executeAsModal(async (executionContext) => {
@@ -598,12 +601,51 @@ async function handleGenerateImage() {
                     }
                 }
                 
-                // 如果是image edit模式,导出当前可见图层
                 let imageData = null;
-                if (mode === 'imgedit') {
-                    const maxSize = settingsManager.get('export_max_size', 2048);
-                    const quality = settingsManager.get('export_quality', 80);
+                let sourceData = null;
+                let referenceData = null;
+                const maxSize = settingsManager.get('export_max_size', 2048);
+                const quality = settingsManager.get('export_quality', 80);
+                
+                // 多图模式: 导出Source和Reference组
+                if (mode === 'imgedit' && multiImageMode) {
+                    console.log('[MAIN] Multi-image mode: Finding Source/Reference groups...');
+                    const { sourceGroup, referenceGroup } = await PSOperations.findSourceReferenceGroups();
                     
+                    // 导出Source组
+                    if (sourceGroup) {
+                        console.log('[MAIN] Exporting Source group...');
+                        const sourceResult = await PSOperations.exportGroupAsWebP(
+                            sourceGroup,
+                            maxSize,
+                            quality,
+                            executionContext,
+                            region
+                        );
+                        sourceData = await fileManager.fileToBase64(sourceResult.file);
+                        console.log('[MAIN] Source group exported, base64 length:', sourceData?.length || 0);
+                    } else {
+                        console.warn('[MAIN] Source group not found');
+                    }
+                    
+                    // 导出Reference组
+                    if (referenceGroup) {
+                        console.log('[MAIN] Exporting Reference group...');
+                        const referenceResult = await PSOperations.exportGroupAsWebP(
+                            referenceGroup,
+                            maxSize,
+                            quality,
+                            executionContext,
+                            region
+                        );
+                        referenceData = await fileManager.fileToBase64(referenceResult.file);
+                        console.log('[MAIN] Reference group exported, base64 length:', referenceData?.length || 0);
+                    } else {
+                        console.warn('[MAIN] Reference group not found');
+                    }
+                }
+                // 单图模式: 导出所有可见图层
+                else if (mode === 'imgedit') {
                     // 如果有选区区域，导出该区域；否则导出整个画布
                     const exportResult = await PSOperations.exportVisibleLayersAsWebP(
                         maxSize, 
@@ -617,12 +659,14 @@ async function handleGenerateImage() {
                     imageData = base64;
                 }
                 
-                return { info, imageData, region };
+                return { info, imageData, region, sourceData, referenceData };
             }, { commandName: "Get Canvas Info and Export" });
 
             canvasInfo = exportData.info;
             exportedImageData = exportData.imageData;
             selectionRegion = exportData.region;
+            sourceImageData = exportData.sourceData;
+            referenceImageData = exportData.referenceData;
             
             // 如果有选区区域，使用选区区域的比例；否则使用整个画布的比例
             if (selectionRegion) {
@@ -642,8 +686,9 @@ async function handleGenerateImage() {
 
         // STAGE 2: AI generation (NOT in executeAsModal - UI stays responsive)
         const modeText = mode === 'imgedit' ? 'Image Edit' : 'Text to Image';
+        const modeDetail = multiImageMode && mode === 'imgedit' ? ' (多图模式)' : '';
         const aspectRatioText = aspectRatio || '1:1';  // 使用默认值避免undefined
-        showGenerateStatus(`正在生成图片... (${modeText}, ${resolution}, ${aspectRatioText})`, 'info');
+        showGenerateStatus(`正在生成图片... (${modeText}${modeDetail}, ${resolution}, ${aspectRatioText})`, 'info');
 
         const imageFile = await imageGenerator.generate({
             prompt,
@@ -652,7 +697,9 @@ async function handleGenerateImage() {
             resolution,
             debugMode,
             mode: mode,
-            inputImage: exportedImageData  // base64编码的输入图片(仅image edit模式)
+            inputImage: exportedImageData,      // base64编码的输入图片(仅单图image edit模式)
+            sourceImage: sourceImageData,        // base64编码的source图片(多图模式)
+            referenceImage: referenceImageData   // base64编码的reference图片(多图模式)
         });
 
         console.log('[MAIN] Image file generated:', imageFile);
@@ -808,10 +855,11 @@ async function handleTestExport() {
         const maxSize = settingsManager.get('export_max_size', 2048);
         const quality = settingsManager.get('export_quality', 80);
         const selectionMode = settingsManager.get('selection_mode', false);
+        const multiImageMode = settingsManager.get('multi_image_mode', false);
 
-        console.log(`[TEST EXPORT] Exporting with maxSize=${maxSize}, quality=${quality}, selectionMode=${selectionMode}`);
+        console.log(`[TEST EXPORT] Exporting with maxSize=${maxSize}, quality=${quality}, selectionMode=${selectionMode}, multiImageMode=${multiImageMode}`);
 
-        const exportResult = await executeAsModal(async (executionContext) => {
+        const exportResults = await executeAsModal(async (executionContext) => {
             let region = null;
             
             // 如果启用了选区模式，获取选区信息
@@ -826,15 +874,60 @@ async function handleTestExport() {
                 }
             }
             
-            return await PSOperations.exportVisibleLayersAsWebP(maxSize, quality, executionContext, region);
+            // 多图模式: 分别导出Source和Reference组
+            if (multiImageMode && generationMode === 'imgedit') {
+                console.log('[TEST EXPORT] Multi-image mode: Finding Source/Reference groups...');
+                const { sourceGroup, referenceGroup } = await PSOperations.findSourceReferenceGroups();
+                
+                const results = { mode: 'multi' };
+                
+                if (sourceGroup) {
+                    console.log('[TEST EXPORT] Exporting Source group...');
+                    results.source = await PSOperations.exportGroupAsWebP(sourceGroup, maxSize, quality, executionContext, region);
+                }
+                
+                if (referenceGroup) {
+                    console.log('[TEST EXPORT] Exporting Reference group...');
+                    results.reference = await PSOperations.exportGroupAsWebP(referenceGroup, maxSize, quality, executionContext, region);
+                }
+                
+                return results;
+            }
+            // 单图模式: 导出所有可见图层
+            else {
+                const result = await PSOperations.exportVisibleLayersAsWebP(maxSize, quality, executionContext, region);
+                return { mode: 'single', result };
+            }
         }, { commandName: "Test Export Layers" });
 
-        console.log('[TEST EXPORT] Export completed:', exportResult);
-        console.log('[TEST EXPORT] File path:', exportResult.file.nativePath);
-        console.log('[TEST EXPORT] Export size:', exportResult.width, 'x', exportResult.height);
-
+        // 显示结果
         const regionText = selectionMode ? ' (选区模式)' : '';
-        showGenerateStatus(`✅ 导出成功${regionText}！\n路径: ${exportResult.file.nativePath}\n尺寸: ${exportResult.width}x${exportResult.height}`, 'success');
+        
+        if (exportResults.mode === 'multi') {
+            let message = `✅ 多图导出成功${regionText}！\n`;
+            
+            if (exportResults.source) {
+                console.log('[TEST EXPORT] Source exported:', exportResults.source.file.nativePath);
+                message += `Source: ${exportResults.source.file.nativePath}\n尺寸: ${exportResults.source.width}x${exportResults.source.height}\n`;
+            }
+            
+            if (exportResults.reference) {
+                console.log('[TEST EXPORT] Reference exported:', exportResults.reference.file.nativePath);
+                message += `Reference: ${exportResults.reference.file.nativePath}\n尺寸: ${exportResults.reference.width}x${exportResults.reference.height}`;
+            }
+            
+            if (!exportResults.source && !exportResults.reference) {
+                message = `⚠️ 未找到Source/Reference组`;
+            }
+            
+            showGenerateStatus(message, 'success');
+        } else {
+            const result = exportResults.result;
+            console.log('[TEST EXPORT] Export completed:', result);
+            console.log('[TEST EXPORT] File path:', result.file.nativePath);
+            console.log('[TEST EXPORT] Export size:', result.width, 'x', result.height);
+            showGenerateStatus(`✅ 导出成功${regionText}！\n路径: ${result.file.nativePath}\n尺寸: ${result.width}x${result.height}`, 'success');
+        }
 
     } catch (e) {
         console.error('[TEST EXPORT] ERROR:', e);
