@@ -212,34 +212,35 @@ class ImageGenerator {
             let systemPrompt = "";
             let imageCount = 0;
             
-            if (sourceImage) {
-                imageCount++;
-                systemPrompt += `Image ${imageCount} is the Source Layer (the content to be modified). `;
-            }
-            
+            // 注意：图片顺序是 Reference -> Source
             if (referenceImage) {
                 imageCount++;
                 systemPrompt += `Image ${imageCount} is the Reference Layer (use this for style/content reference). `;
             }
             
-            // 添加system prompt和用户prompt
-            parts.push({ text: `System Instruction: ${systemPrompt}\n\nUser Prompt: ${prompt}` });
-            
-            // 添加图片（顺序: Source -> Reference）
             if (sourceImage) {
-                parts.push({
-                    inlineData: {
-                        mimeType: "image/webp",
-                        data: sourceImage
-                    }
-                });
+                imageCount++;
+                systemPrompt += `Image ${imageCount} is the Source Layer (the content to be modified). `;
             }
             
+            // 添加system prompt和用户prompt（prompt在最前面）
+            parts.push({ text: `System Instruction: ${systemPrompt}\n\nUser Prompt: ${prompt}` });
+            
+            // 添加图片（顺序: Reference -> Source）
             if (referenceImage) {
                 parts.push({
                     inlineData: {
                         mimeType: "image/webp",
                         data: referenceImage
+                    }
+                });
+            }
+            
+            if (sourceImage) {
+                parts.push({
+                    inlineData: {
+                        mimeType: "image/webp",
+                        data: sourceImage
                     }
                 });
             }
@@ -290,34 +291,35 @@ class ImageGenerator {
             let systemPrompt = "";
             let imageCount = 0;
             
-            if (sourceImage) {
-                imageCount++;
-                systemPrompt += `Image ${imageCount} is the Source Layer (the content to be modified). `;
-            }
-            
+            // 注意：图片顺序是 Reference -> Source
             if (referenceImage) {
                 imageCount++;
                 systemPrompt += `Image ${imageCount} is the Reference Layer (use this for style/content reference). `;
             }
             
-            // 添加system prompt和用户prompt
-            parts.push({ text: `System Instruction: ${systemPrompt}\n\nUser Prompt: ${prompt}` });
-            
-            // 添加图片（顺序: Source -> Reference）
             if (sourceImage) {
-                parts.push({
-                    inlineData: {
-                        mimeType: "image/webp",
-                        data: sourceImage
-                    }
-                });
+                imageCount++;
+                systemPrompt += `Image ${imageCount} is the Source Layer (the content to be modified). `;
             }
             
+            // 添加system prompt和用户prompt（prompt在最前面）
+            parts.push({ text: `System Instruction: ${systemPrompt}\n\nUser Prompt: ${prompt}` });
+            
+            // 添加图片（顺序: Reference -> Source）
             if (referenceImage) {
                 parts.push({
                     inlineData: {
                         mimeType: "image/webp",
                         data: referenceImage
+                    }
+                });
+            }
+            
+            if (sourceImage) {
+                parts.push({
+                    inlineData: {
+                        mimeType: "image/webp",
+                        data: sourceImage
                     }
                 });
             }
@@ -375,31 +377,39 @@ class ImageGenerator {
             let imageAnnotations = "";
             let imageIndex = 0;
             
-            // 按顺序添加图片
+            // 注意：图片顺序是 Reference -> Source
+            // 先添加文本prompt和图片注释（在最前面）
+            if (referenceImage) {
+                imageIndex++;
+                imageAnnotations += `\n[Attached Image ${imageIndex}: Reference]`;
+            }
+            
             if (sourceImage) {
                 imageIndex++;
-                content.push({
-                    type: "image_url",
-                    image_url: {
-                        url: `data:image/webp;base64,${sourceImage}`
-                    }
-                });
                 imageAnnotations += `\n[Attached Image ${imageIndex}: Source]`;
             }
             
+            // 添加文本prompt和图片注释（在最前面）
+            content.push({ type: "text", text: finalPrompt + imageAnnotations });
+            
+            // 按顺序添加图片（Reference -> Source）
             if (referenceImage) {
-                imageIndex++;
                 content.push({
                     type: "image_url",
                     image_url: {
                         url: `data:image/webp;base64,${referenceImage}`
                     }
                 });
-                imageAnnotations += `\n[Attached Image ${imageIndex}: Reference]`;
             }
             
-            // 添加文本prompt和图片注释
-            content.push({ type: "text", text: finalPrompt + imageAnnotations });
+            if (sourceImage) {
+                content.push({
+                    type: "image_url",
+                    image_url: {
+                        url: `data:image/webp;base64,${sourceImage}`
+                    }
+                });
+            }
         }
         // 单图模式: 与之前一致
         else if (mode === 'imgedit' && inputImage) {
@@ -445,16 +455,13 @@ class ImageGenerator {
         if (sourceImage || referenceImage) {
             messageContent = [];
             
-            // 添加图片
-            if (sourceImage) {
-                messageContent.push({
-                    type: "image_url",
-                    image_url: {
-                        url: `data:image/webp;base64,${sourceImage}`
-                    }
-                });
-            }
+            // 先添加文本prompt（在最前面）
+            messageContent.push({
+                type: "text",
+                text: prompt
+            });
             
+            // 注意：图片顺序是 Reference -> Source
             if (referenceImage) {
                 messageContent.push({
                     type: "image_url",
@@ -464,11 +471,14 @@ class ImageGenerator {
                 });
             }
             
-            // 添加文本prompt
-            messageContent.push({
-                type: "text",
-                text: prompt
-            });
+            if (sourceImage) {
+                messageContent.push({
+                    type: "image_url",
+                    image_url: {
+                        url: `data:image/webp;base64,${sourceImage}`
+                    }
+                });
+            }
         }
         // 单图模式: 与之前一致
         else if (mode === 'imgedit' && inputImage) {
