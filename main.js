@@ -92,6 +92,8 @@ function setupGenerateUI() {
     const btnTestImport = document.getElementById('btnTestImport');
     const btnTestExport = document.getElementById('btnTestExport');
     const selectionModeCheckbox = document.getElementById('selectionModeCheckbox');
+    const multiImageModeCheckbox = document.getElementById('multiImageModeCheckbox');
+    const multiImageModeSection = document.getElementById('multiImageModeSection');
 
     // 选区模式复选框
     const savedSelectionMode = settingsManager.get('selection_mode', false);
@@ -101,6 +103,16 @@ function setupGenerateUI() {
     selectionModeCheckbox.addEventListener('change', async (e) => {
         await settingsManager.set('selection_mode', e.target.checked);
         console.log(`[UI] Selection mode switched to: ${e.target.checked}`);
+    });
+
+    // 多图生图模式复选框（仅在Image Edit模式下有效）
+    const savedMultiImageMode = settingsManager.get('multi_image_mode', false);
+    multiImageModeCheckbox.checked = savedMultiImageMode;
+    console.log(`[UI] Restored multi-image mode: ${savedMultiImageMode}`);
+
+    multiImageModeCheckbox.addEventListener('change', async (e) => {
+        await settingsManager.set('multi_image_mode', e.target.checked);
+        console.log(`[UI] Multi-image mode switched to: ${e.target.checked}`);
     });
 
     // 生图模式按钮
@@ -121,6 +133,13 @@ function setupGenerateUI() {
         }
     });
     
+    // 根据当前模式显示/隐藏多图生图模式开关
+    if (generationMode === 'imgedit') {
+        multiImageModeSection.style.display = 'flex';
+    } else {
+        multiImageModeSection.style.display = 'none';
+    }
+    
     console.log(`[UI] Restored generation mode: ${generationMode}`);
 
     // 生图模式按钮点击事件
@@ -134,6 +153,13 @@ function setupGenerateUI() {
             generationMode = btn.dataset.mode;
             await settingsManager.set('generation_mode', generationMode);
             console.log(`[UI] Generation mode switched to: ${generationMode}`);
+            
+            // 根据模式显示/隐藏多图生图模式开关
+            if (generationMode === 'imgedit') {
+                multiImageModeSection.style.display = 'flex';
+            } else {
+                multiImageModeSection.style.display = 'none';
+            }
         });
     });
 
