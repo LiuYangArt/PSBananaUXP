@@ -383,6 +383,56 @@ class FileManager {
             throw new Error(`Cannot access file from token - ${e.message}`);
         }
     }
+
+    /**
+     * 将图片文件转换为Base64编码
+     * @param {File} file - UXP File对象
+     * @returns {Promise<string>} Base64字符串(不包含data:image前缀)
+     */
+    async fileToBase64(file) {
+        try {
+            console.log(`[FileManager] Converting file to base64: ${file.name}`);
+            
+            // 读取文件为二进制
+            const arrayBuffer = await file.read({ format: require("uxp").storage.formats.binary });
+            const bytes = new Uint8Array(arrayBuffer);
+            
+            // 转换为base64
+            let binaryString = '';
+            for (let i = 0; i < bytes.length; i++) {
+                binaryString += String.fromCharCode(bytes[i]);
+            }
+            const base64 = btoa(binaryString);
+            
+            console.log(`[FileManager] Base64 conversion complete, length: ${base64.length}`);
+            return base64;
+        } catch (e) {
+            console.error("[FileManager] Error converting file to base64:", e);
+            throw e;
+        }
+    }
+
+    /**
+     * 将图片文件转换为Data URL(包含mime type)
+     * @param {File} file - UXP File对象
+     * @returns {Promise<string>} Data URL字符串
+     */
+    async fileToDataURL(file) {
+        try {
+            const base64 = await this.fileToBase64(file);
+            
+            // 根据文件扩展名确定mime type
+            const ext = file.name.split('.').pop().toLowerCase();
+            let mimeType = 'image/png';
+            if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
+            else if (ext === 'webp') mimeType = 'image/webp';
+            
+            return `data:${mimeType};base64,${base64}`;
+        } catch (e) {
+            console.error("[FileManager] Error converting file to data URL:", e);
+            throw e;
+        }
+    }
 }
 
 module.exports = { FileManager };

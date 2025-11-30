@@ -15,10 +15,12 @@ class ImageGenerator {
      * @param {string} options.aspectRatio - Aspect ratio (e.g., "16:9")
      * @param {string} options.resolution - Resolution (1K, 2K, 4K)
      * @param {boolean} options.debugMode - Save debug files
+     * @param {string} options.mode - Generation mode ('text2img' or 'imgedit')
+     * @param {string} options.inputImage - Base64 encoded input image (for image edit mode)
      * @returns {Promise<File>} - UXP File object of generated image
      */
     async generate(options) {
-        const { prompt, provider, aspectRatio, resolution, debugMode } = options;
+        const { prompt, provider, aspectRatio, resolution, debugMode, mode = 'text2img', inputImage } = options;
 
         if (!provider || !provider.apiKey || !provider.baseUrl) {
             throw new Error("Invalid provider configuration");
@@ -27,9 +29,10 @@ class ImageGenerator {
         // Detect provider type
         const providerType = this._detectProviderType(provider);
         console.log(`[DEBUG] Provider type detected: ${providerType}`);
+        console.log(`[DEBUG] Generation mode: ${mode}`);
 
         // Build payload
-        const payload = this._buildPayload(prompt, aspectRatio, resolution, provider, providerType);
+        const payload = this._buildPayload(prompt, aspectRatio, resolution, provider, providerType, mode, inputImage);
         const apiUrl = this._buildApiUrl(provider, providerType);
         const headers = this._buildHeaders(provider, providerType);
 
@@ -152,22 +155,22 @@ class ImageGenerator {
     /**
      * Build request payload
      */
-    _buildPayload(prompt, aspectRatio, resolution, provider, providerType) {
+    _buildPayload(prompt, aspectRatio, resolution, provider, providerType, mode = 'text2img', inputImage = null) {
         if (providerType === "google_official") {
-            return this._buildGooglePayload(prompt, aspectRatio, resolution);
+            return this._buildGooglePayload(prompt, aspectRatio, resolution, mode, inputImage);
         } else if (providerType === "yunwu") {
-            return this._buildYunwuPayload(prompt, aspectRatio, resolution);
+            return this._buildYunwuPayload(prompt, aspectRatio, resolution, mode, inputImage);
         } else if (providerType === "gptgod") {
-            return this._buildGPTGodPayload(prompt, aspectRatio, resolution, provider);
+            return this._buildGPTGodPayload(prompt, aspectRatio, resolution, provider, mode, inputImage);
         } else if (providerType === "openrouter") {
-            return this._buildOpenRouterPayload(prompt, aspectRatio, resolution, provider);
+            return this._buildOpenRouterPayload(prompt, aspectRatio, resolution, provider, mode, inputImage);
         }
     }
 
     /**
      * Build Google Official Gemini API payload
      */
-    _buildGooglePayload(prompt, aspectRatio, resolution) {
+    _buildGooglePayload(prompt, aspectRatio, resolution, mode = 'text2img', inputImage = null) {
         const generationConfig = {
             response_modalities: ["IMAGE"],
             image_config: {
@@ -179,9 +182,25 @@ class ImageGenerator {
             generationConfig.image_config.image_size = resolution;
         }
 
+        // 构建content parts
+        const parts = [];
+        
+        // 如果是图片编辑模式,先添加输入图片
+        if (mode === 'imgedit' && inputImage) {
+            parts.push({
+                inlineData: {
+                    mimeType: "image/png",
+                    data: inputImage
+                }
+            });
+        }
+        
+        // 添加文本prompt
+        parts.push({ text: prompt });
+
         return {
             contents: [{
-                parts: [{ text: prompt }]
+                parts: parts
             }],
             generationConfig: generationConfig
         };
@@ -190,7 +209,7 @@ class ImageGenerator {
     /**
      * Build Yunwu/Gemini-compatible payload
      */
-    _buildYunwuPayload(prompt, aspectRatio, resolution) {
+    _buildYunwuPayload(prompt, aspectRatio, resolution, mode = 'text2img', inputImage = null) {
         const generationConfig = {
             responseModalities: ["image"],
             imageConfig: {
@@ -202,9 +221,25 @@ class ImageGenerator {
             generationConfig.imageConfig.imageSize = resolution;
         }
 
+        // 构建content parts
+        const parts = [];
+        
+        // 如果是图片编辑模式,先添加输入图片
+        if (mode === 'imgedit' && inputImage) {
+            parts.push({
+                inlineData: {
+                    mimeType: "image/png",
+                    data: inputImage
+                }
+            });
+        }
+        
+        // 添加文本prompt
+        parts.push({ text: prompt });
+
         return {
             contents: [{
-                parts: [{ text: prompt }]
+                parts: parts
             }],
             generationConfig: generationConfig
         };
@@ -214,7 +249,7 @@ class ImageGenerator {
      * Build GPTGod payload (OpenAI-compatible)
      * Resolution handled via model switching
      */
-    _buildGPTGodPayload(prompt, aspectRatio, resolution, provider) {
+    _buildGPTGodPayload(prompt, aspectRatio, resolution, provider, mode = 'text2img', inputImage = null) {
         let model = provider.model;
 
         // Auto-switch model for resolution if using default gptgod model
@@ -232,11 +267,27 @@ class ImageGenerator {
             finalPrompt += "\nAspect Ratio: " + aspectRatio;
         }
 
+        // 构建content
+        const content = [];
+        
+        // 如果是图片编辑模式,添加图片
+        if (mode === 'imgedit' && inputImage) {
+            content.push({
+                type: "image_url",
+                image_url: {
+                    url: `data:image/png;base64,${inputImage}`
+                }
+            });
+        }
+        
+        // 添加文本prompt
+        content.push({ type: "text", text: finalPrompt });
+
         return {
             model: model,
             messages: [{
                 role: "user",
-                content: [{ type: "text", text: finalPrompt }]
+                content: content
             }],
             stream: false
         };
@@ -245,7 +296,7 @@ class ImageGenerator {
     /**
      * Build OpenRouter payload
      */
-    _buildOpenRouterPayload(prompt, aspectRatio, resolution, provider) {
+    _buildOpenRouterPayload(prompt, aspectRatio, resolution, provider, mode = 'text2img', inputImage = null) {
         const imageConfig = {
             aspect_ratio: aspectRatio
         };
@@ -254,11 +305,33 @@ class ImageGenerator {
             imageConfig.image_size = resolution;
         }
 
+        // 构建message content
+        let messageContent;
+        
+        if (mode === 'imgedit' && inputImage) {
+            // 图片编辑模式: 使用数组格式
+            messageContent = [
+                {
+                    type: "image_url",
+                    image_url: {
+                        url: `data:image/png;base64,${inputImage}`
+                    }
+                },
+                {
+                    type: "text",
+                    text: prompt
+                }
+            ];
+        } else {
+            // 文本生图模式: 直接使用字符串
+            messageContent = prompt;
+        }
+
         return {
             model: provider.model,
             messages: [{
                 role: "user",
-                content: prompt
+                content: messageContent
             }],
             modalities: ["image", "text"],
             image_config: imageConfig

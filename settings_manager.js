@@ -7,7 +7,9 @@ class SettingsManager {
             debug_mode: false,
             save_generated_images: false,
             selected_provider: null,
-            selected_preset: null
+            selected_preset: null,
+            export_max_size: 2048,  // 导出图片长边最大长度
+            export_quality: 80      // WebP压缩质量
         };
         this.loaded = false;
     }

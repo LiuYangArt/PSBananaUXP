@@ -18,6 +18,7 @@ const imageGenerator = new ImageGenerator(fileManager);
 let currentProvider = null;
 let currentPreset = null;
 let isGenerating = false;
+let generationMode = 'text2img';  // 'text2img' 或 'imgedit'
 
 // Wait for DOM to load
 document.addEventListener('DOMContentLoaded', async () => {
@@ -86,6 +87,25 @@ function setupGenerateUI() {
     const promptInput = document.getElementById('promptInput');
     const btnGenerate = document.getElementById('btnGenerate');
     const btnTestImport = document.getElementById('btnTestImport');
+    const btnTestExport = document.getElementById('btnTestExport');
+
+    // 生图模式按钮
+    const btnModeText2Img = document.getElementById('btnModeText2Img');
+    const btnModeImgEdit = document.getElementById('btnModeImgEdit');
+    const modeButtons = [btnModeText2Img, btnModeImgEdit];
+
+    // 生图模式按钮点击事件
+    modeButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // 移除所有 active 状态
+            modeButtons.forEach(b => b.classList.remove('active'));
+            // 添加当前 active 状态
+            btn.classList.add('active');
+            // 保存选中的模式
+            generationMode = btn.dataset.mode;
+            console.log(`[UI] Generation mode switched to: ${generationMode}`);
+        });
+    });
 
     // 分辨率按钮
     const btnRes1K = document.getElementById('btnRes1K');
@@ -207,6 +227,11 @@ function setupGenerateUI() {
     btnTestImport.addEventListener('click', async () => {
         await handleTestImport();
     });
+
+    // Test Export button
+    btnTestExport.addEventListener('click', async () => {
+        await handleTestExport();
+    });
 }
 
 /**
@@ -228,6 +253,8 @@ function setupSettingsUI() {
     const inputModelId = document.getElementById('inputModelId');
     const debugModeCheckbox = document.getElementById('debugModeCheckbox');
     const debugFolderPathInput = document.getElementById('debugFolderPath');
+    const inputMaxSize = document.getElementById('inputMaxSize');
+    const inputQuality = document.getElementById('inputQuality');
 
     // Populate provider dropdown
     updateProviderDropdown();
@@ -235,12 +262,29 @@ function setupSettingsUI() {
     // Load debug mode setting
     debugModeCheckbox.checked = settingsManager.get('debug_mode', false);
     
+    // Load export settings
+    inputMaxSize.value = settingsManager.get('export_max_size', 2048);
+    inputQuality.value = settingsManager.get('export_quality', 80);
+    
     // Display debug folder path when debug mode is enabled
     updateDebugFolderPath();
     
     debugModeCheckbox.addEventListener('change', async (e) => {
         await settingsManager.set('debug_mode', e.target.checked);
         updateDebugFolderPath();
+    });
+
+    // Save export settings on change
+    inputMaxSize.addEventListener('change', async (e) => {
+        const value = parseInt(e.target.value) || 2048;
+        await settingsManager.set('export_max_size', value);
+        console.log(`[Settings] Export max size set to: ${value}`);
+    });
+
+    inputQuality.addEventListener('change', async (e) => {
+        const value = parseInt(e.target.value) || 80;
+        await settingsManager.set('export_quality', value);
+        console.log(`[Settings] Export quality set to: ${value}`);
     });
 
     // Provider selection change
@@ -367,37 +411,62 @@ async function handleGenerateImage() {
 
     const resolution = getSelectedResolution();
     const debugMode = settingsManager.get('debug_mode', false);
+    const mode = generationMode;  // 'text2img' 或 'imgedit'
 
     isGenerating = true;
     document.getElementById('btnGenerate').disabled = true;
 
     try {
-        // STAGE 1: Get canvas info (needs executeAsModal)
+        // STAGE 1: Get canvas info and export image if in image edit mode
         showGenerateStatus('获取画布信息...', 'info');
 
         let aspectRatio = '1:1';
         let canvasInfo = null;
+        let exportedImageData = null;  // base64编码的图片数据
 
         try {
-            canvasInfo = await executeAsModal(async () => {
-                return await PSOperations.getCanvasInfo();
-            }, { commandName: "Get Canvas Info" });
+            const exportData = await executeAsModal(async () => {
+                const info = await PSOperations.getCanvasInfo();
+                
+                // 如果是image edit模式,导出当前可见图层
+                let imageData = null;
+                if (mode === 'imgedit') {
+                    const maxSize = settingsManager.get('export_max_size', 2048);
+                    const quality = settingsManager.get('export_quality', 80);
+                    const exportResult = await PSOperations.exportVisibleLayersAsWebP(maxSize, quality);
+                    
+                    // 转换为base64
+                    const base64 = await fileManager.fileToBase64(exportResult.file);
+                    imageData = base64;
+                }
+                
+                return { info, imageData };
+            }, { commandName: "Get Canvas Info and Export" });
 
+            canvasInfo = exportData.info;
+            exportedImageData = exportData.imageData;
             aspectRatio = calculateAspectRatio(canvasInfo.width, canvasInfo.height);
+            
+            if (mode === 'imgedit') {
+                console.log('[MAIN] Image exported, base64 length:', exportedImageData?.length || 0);
+            }
         } catch (e) {
             console.warn('Could not get canvas info:', e);
-            showGenerateStatus('警告: 无法获取画布信息，使用默认比例 1:1', 'info');
+            showGenerateStatus('警告: 无法获取画布信息,使用默认比例 1:1', 'info');
         }
 
         // STAGE 2: AI generation (NOT in executeAsModal - UI stays responsive)
-        showGenerateStatus(`正在生成图片... (${resolution}, ${aspectRatio})`, 'info');
+        const modeText = mode === 'imgedit' ? 'Image Edit' : 'Text to Image';
+        showGenerateStatus(`正在生成图片... (${modeText}, ${resolution}, ${aspectRatio})`, 'info');
 
         const imageFile = await imageGenerator.generate({
             prompt,
             provider: currentProvider,
             aspectRatio,
             resolution,
-            debugMode
+            debugMode,
+            mode: mode,
+            inputImage: exportedImageData  // base64编码的输入图片(仅image edit模式)
         });
 
         console.log('[MAIN] Image file generated:', imageFile);
@@ -416,7 +485,7 @@ async function handleGenerateImage() {
         showGenerateStatus('正在导入图片到Photoshop...', 'info');
 
         const layerName = await executeAsModal(async () => {
-            // 使用 token 方式导入，和 Test Import 一致
+            // 使用 token 方式导入,和 Test Import 一致
             return await PSOperations.importImageByToken(imageToken);
         }, { commandName: "Import Generated Image" });
 
@@ -434,6 +503,7 @@ async function handleGenerateImage() {
                 const errorLog = `=== Error Log ===
 Time: ${new Date().toISOString()}
 Provider: ${currentProvider?.name || 'Unknown'}
+Mode: ${mode}
 Prompt: ${prompt}
 Resolution: ${resolution}
 Aspect Ratio: ${aspectRatio || '1:1'}
@@ -504,6 +574,48 @@ async function handleTestImport() {
         isGenerating = false;
         document.getElementById('btnGenerate').disabled = false;
         document.getElementById('btnTestImport').disabled = false;
+    }
+}
+
+/**
+ * Test export - 测试导出当前可见图层
+ */
+async function handleTestExport() {
+    if (isGenerating) {
+        showGenerateStatus('正在处理中...', 'error');
+        return;
+    }
+
+    isGenerating = true;
+    document.getElementById('btnGenerate').disabled = true;
+    document.getElementById('btnTestExport').disabled = true;
+
+    try {
+        showGenerateStatus('📤 正在导出图层...', 'info');
+
+        const maxSize = settingsManager.get('export_max_size', 2048);
+        const quality = settingsManager.get('export_quality', 80);
+
+        console.log(`[TEST EXPORT] Exporting with maxSize=${maxSize}, quality=${quality}`);
+
+        const exportResult = await executeAsModal(async () => {
+            return await PSOperations.exportVisibleLayersAsWebP(maxSize, quality);
+        }, { commandName: "Test Export Layers" });
+
+        console.log('[TEST EXPORT] Export completed:', exportResult);
+        console.log('[TEST EXPORT] File path:', exportResult.file.nativePath);
+        console.log('[TEST EXPORT] Export size:', exportResult.width, 'x', exportResult.height);
+
+        showGenerateStatus(`✅ 导出成功！\n路径: ${exportResult.file.nativePath}\n尺寸: ${exportResult.width}x${exportResult.height}`, 'success');
+
+    } catch (e) {
+        console.error('[TEST EXPORT] ERROR:', e);
+        const errorMessage = e?.message || String(e) || 'Unknown error';
+        showGenerateStatus(`❌ 导出失败: ${errorMessage}`, 'error');
+    } finally {
+        isGenerating = false;
+        document.getElementById('btnGenerate').disabled = false;
+        document.getElementById('btnTestExport').disabled = false;
     }
 }
 

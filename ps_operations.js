@@ -337,6 +337,116 @@ class PSOperations {
             console.error("Error moving layer to top:", e);
         }
     }
+
+    /**
+     * 导出所有可见图层的合并结果为PNG/WebP图片
+     * 必须在executeAsModal中调用
+     * @param {number} maxSize - 导出图片长边最大长度
+     * @param {number} quality - 压缩质量 (0-100)
+     * @returns {Promise<Object>} - 包含file和token的对象
+     */
+    static async exportVisibleLayersAsWebP(maxSize = 2048, quality = 80) {
+        try {
+            const doc = app.activeDocument;
+            if (!doc) {
+                throw new Error("No active document");
+            }
+
+            console.log(`[PS] Exporting visible layers as WebP (maxSize: ${maxSize}, quality: ${quality})`);
+
+            // 获取画布尺寸
+            const canvasWidth = doc.width;
+            const canvasHeight = doc.height;
+            console.log(`[PS] Original canvas size: ${canvasWidth}x${canvasHeight}`);
+
+            // 计算导出尺寸,保持宽高比
+            let exportWidth = canvasWidth;
+            let exportHeight = canvasHeight;
+            const maxDimension = Math.max(canvasWidth, canvasHeight);
+            
+            if (maxDimension > maxSize) {
+                const scale = maxSize / maxDimension;
+                exportWidth = Math.round(canvasWidth * scale);
+                exportHeight = Math.round(canvasHeight * scale);
+                console.log(`[PS] Scaled export size: ${exportWidth}x${exportHeight}`);
+            }
+
+            // 创建临时文件 - 使用plugin data folder,不需要权限
+            const dataFolder = await fs.getDataFolder();
+            const timestamp = Date.now();
+            const webpFileName = `ps_export_${timestamp}.webp`;
+            const webpFile = await dataFolder.createFile(webpFileName, { overwrite: true });
+
+            console.log(`[PS] Export file path: ${webpFile.nativePath}`);
+
+            // 如果需要缩放,先复制文档
+            let targetDoc = doc;
+            let needsCleanup = false;
+            
+            if (maxDimension > maxSize) {
+                console.log('[PS] Creating duplicate document for resize...');
+                // 复制文档并合并图层
+                targetDoc = await doc.duplicate(`temp_export_${timestamp}`, true);
+                needsCleanup = true;
+                
+                // 调整图像大小 - 使用resizeImage而不是resizeCanvas
+                await targetDoc.resizeImage(exportWidth, exportHeight);
+            }
+
+            // 使用batchPlay保存WebP格式
+            // 必须先创建session token,因为batchPlay不接受直接的file对象
+            const fileToken = fs.createSessionToken(webpFile);
+            
+            await batchPlay([
+                {
+                    "_obj": "save",
+                    "as": {
+                        "_obj": "WebPFormat",
+                        "compression": {
+                            "_enum": "WebPCompression",
+                            "_value": "compressionLossy"
+                        },
+                        "quality": quality,
+                        "includeXMPData": false,
+                        "includeEXIFData": false,
+                        "includePsExtras": false
+                    },
+                    "in": {
+                        "_path": fileToken,  // 使用session token而不是nativePath
+                        "_kind": "local"
+                    },
+                    "copy": true,
+                    "lowerCase": true,
+                    "_isCommand": true
+                }
+            ], {
+                "synchronousExecution": true,
+                "modalBehavior": "wait"
+            });
+
+            // 清理临时文档
+            if (needsCleanup) {
+                await targetDoc.closeWithoutSaving();
+            }
+
+            console.log(`[PS] Export completed: ${webpFile.nativePath}`);
+
+            // 创建session token供后续使用
+            const token = fs.createSessionToken(webpFile);
+            
+            return {
+                file: webpFile,
+                token: token,
+                width: exportWidth,
+                height: exportHeight
+            };
+
+        } catch (e) {
+            console.error("[PS] Error exporting visible layers:", e);
+            const errorMsg = e.message || String(e) || "Unknown error during export";
+            throw new Error(`Failed to export visible layers: ${errorMsg}`);
+        }
+    }
 }
 
 module.exports = { PSOperations };
