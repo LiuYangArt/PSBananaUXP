@@ -226,10 +226,10 @@ class ImageGenerator {
             }
         }
 
-        // Append aspect ratio to prompt if not 1:1
+        // Append aspect ratio to prompt (GPTGod requires newline + "Aspect Ratio:" format)
         let finalPrompt = prompt;
-        if (aspectRatio !== "1:1") {
-            finalPrompt += ` --aspect-ratio ${aspectRatio}`;
+        if (aspectRatio && aspectRatio !== "1:1") {
+            finalPrompt += "\nAspect Ratio: " + aspectRatio;
         }
 
         return {
