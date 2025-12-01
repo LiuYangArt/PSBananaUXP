@@ -604,7 +604,9 @@ async function handleGenerateImage() {
     const multiImageMode = settingsManager.get('multi_image_mode', false);
 
     isGenerating = true;
-    document.getElementById('btnGenerate').disabled = true;
+    const btnGenerate = document.getElementById('btnGenerate');
+    btnGenerate.disabled = true;
+    btnGenerate.classList.add('shine-effect');
 
     try {
         await settingsManager.set('latest_prompt', prompt);
@@ -729,7 +731,9 @@ async function handleGenerateImage() {
         showGenerateStatus(`❌ 生成失败: ${errorMessage}`, 'error');
     } finally {
         isGenerating = false;
-        document.getElementById('btnGenerate').disabled = false;
+        const btnGenerate = document.getElementById('btnGenerate');
+        btnGenerate.disabled = false;
+        btnGenerate.classList.remove('shine-effect');
     }
 }
 
@@ -754,7 +758,7 @@ async function promptUser(message, defaultValue = '') {
         input.className = 'dialog-input';
         input.size = 'S';
         input.setAttribute('placeholder', '输入名称...');
-        
+
         // 支持回车确认
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
@@ -798,7 +802,7 @@ async function promptUser(message, defaultValue = '') {
 
         document.body.appendChild(dialog);
         dialog.showModal();
-        
+
         // 自动聚焦输入框
         setTimeout(() => {
             input.focus();
@@ -1050,7 +1054,7 @@ async function handleEnsureGroups() {
 function setupResizableTextarea() {
     const promptInput = document.getElementById('promptInput');
     const resizeHandler = document.getElementById('promptResizeHandler');
-    
+
     if (!promptInput || !resizeHandler) {
         console.error('[Resizable Textarea] 无法找到 promptInput 或 resizeHandler 元素');
         return;
@@ -1067,7 +1071,7 @@ function setupResizableTextarea() {
         startY = e.clientY;
         startHeight = promptInput.offsetHeight;
         resizeHandler.classList.add('resizing');
-        
+
         // 阻止默认行为，避免文本选择
         e.preventDefault();
     });
@@ -1113,7 +1117,7 @@ entrypoints.setup({
     },
     panels: {
         psbanana: {
-            show({node} = {}) {
+            show({ node } = {}) {
                 // 面板显示时的处理
                 // 单面板应用不需要特殊处理，index.html 会自动加载
                 console.log('[Panel] PS Banana panel shown');

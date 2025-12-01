@@ -258,6 +258,37 @@
         .dialog-button {
             flex: 1;
         }
+
+        /* Generate 按钮刷光动画效果 */
+        #btnGenerate.shine-effect {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(90deg, #1473E6 0%, #0D66D0 100%);
+        }
+
+        #btnGenerate.shine-effect::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg,
+                    transparent 0%,
+                    rgba(255, 255, 255, 0.3) 50%,
+                    transparent 100%);
+            animation: shine 1.5s infinite;
+        }
+
+        @keyframes shine {
+            0% {
+                left: -100%;
+            }
+
+            100% {
+                left: 100%;
+            }
+        }
     </style>
 </head>
 
