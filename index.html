@@ -109,18 +109,8 @@
             width: 100%;
         }
 
-        sp-textarea {
-            resize: vertical;
-            /* Allow vertical resizing */
-            min-height: 80px;
-        }
 
-        /* Attempt to override border-radius for less round buttons */
-        sp-button,
-        sp-action-button {
-            --spectrum-button-border-radius: 4px;
-            /* Some UXP versions might not respect this variable, but worth a try */
-        }
+
 
         /* Utility classes */
         .hidden {
@@ -191,31 +181,32 @@
             <!-- Prompt Presets -->
             <div class="section">
                 <sp-label>Prompt Presets</sp-label>
-                <sp-dropdown id="presetSelect" placeholder="Select a preset...">
+                <sp-dropdown size="s" id="presetSelect" placeholder="Select a preset...">
                     <sp-menu slot="options"></sp-menu>
                 </sp-dropdown>
                 <div class="row-end">
                     <!-- Changed to text buttons for better visibility -->
-                    <sp-button id="btnAddPreset" variant="secondary" size="s">Add</sp-button>
-                    <sp-button id="btnSavePreset" variant="secondary" size="s">Save</sp-button>
-                    <sp-button id="btnRenamePreset" variant="secondary" size="s">Rename</sp-button>
-                    <sp-button id="btnDeletePreset" variant="secondary" size="s">Del</sp-button>
+                    <sp-action-button id="btnAddPreset" size="s"><Add</sp-action-button>
+                    <sp-action-button id="btnSavePreset" size="s">Save</sp-action-button>
+                    <sp-action-button id="btnRenamePreset" size="s">Rename</sp-action-button>
+                    <sp-action-button id="btnDeletePreset" size="s">Del</sp-action-button>
                 </div>
             </div>
 
             <!-- Prompt Input -->
             <div class="section">
                 <sp-label>Prompt</sp-label>
-                <sp-textarea id="promptInput" placeholder="Enter your image generation prompt..."></sp-textarea>
+                <sp-textarea size="s" id="promptInput" placeholder="Enter your image generation prompt..."></sp-textarea>
             </div>
+            <sp-divider size="small"></sp-divider>
 
             <!-- Resolution & Smart Ratio -->
             <div class="row" style="align-items: flex-end;">
-                <div style="flex: 0 0 auto;">
-                    <sp-label>Resolution</sp-label>
+                <div style="flex: 0 0 auto; margin:0 5px 0 0;">
+                    <sp-label size="s">Resolution:</sp-label>
                 </div>
                 <div style="flex: 1;">
-                    <sp-dropdown id="resolutionSelect" placeholder="Select" style="width: 100%;">
+                    <sp-dropdown size="s" id="resolutionSelect" placeholder="Select" style="width: 100%;">
                         <sp-menu slot="options">
                             <sp-menu-item value="1K" selected>1K</sp-menu-item>
                             <sp-menu-item value="2K">2K</sp-menu-item>
@@ -223,19 +214,19 @@
                         </sp-menu>
                     </sp-dropdown>
                 </div>
-                <div style="flex: 1;">
-                    <sp-button id="btnSmartCanvasRatio" variant="secondary" style="width: 100%;">Smart Ratio</sp-button>
+                <div style="flex: 1.8; margin: 0 0 0 10px;">
+                    <sp-action-button size="s" id="btnSmartCanvasRatio" style="width: 100%;"> Smart Ratio </sp-action-button>
                 </div>
             </div>
 
             <!-- Toggles -->
             <div class="section">
-                <sp-checkbox id="searchWebCheckbox">Search Web (Experimental)</sp-checkbox>
-                <sp-checkbox id="selectionModeCheckbox">Generate Only Selection Area</sp-checkbox>
+                <sp-checkbox size="s" id="searchWebCheckbox">Search Web (Experimental)</sp-checkbox>
+                <sp-checkbox size="s" id="selectionModeCheckbox">Generate Only Selection Area</sp-checkbox>
             </div>
 
             <!-- Generate Button -->
-            <sp-button id="btnGenerate" variant="cta" class="full-width" size="l">Generate Image</sp-button>
+            <sp-action-button id="btnGenerate" class="full-width" size="l">Generate Image</sp-action-button>
 
             <!-- Generation Mode Radio Group -->
             <div class="section" id="generationModeRadio">
@@ -248,9 +239,9 @@
 
             <!-- Multi-Image Mode (Hidden by default) -->
             <div id="multiImageModeSection" class="section hidden">
-                <sp-checkbox id="multiImageModeCheckbox">Use Multi-Image Mode</sp-checkbox>
-                <sp-button id="btnEnsureGroups" variant="secondary" class="full-width">New Reference/Source
-                    Group</sp-button>
+                <sp-checkbox size="s" id="multiImageModeCheckbox">Use Multi-Image Mode</sp-checkbox>
+                <sp-action-button size="m" id="btnEnsureGroups" class="full-width">New Reference/Source
+                    Group</sp-action-button>
             </div>
 
             <!-- Status -->
@@ -263,30 +254,30 @@
             <!-- Provider Settings -->
             <div class="section">
                 <sp-label>Provider</sp-label>
-                <sp-dropdown id="providerSelect" placeholder="Select Provider">
+                <sp-dropdown size="s" id="providerSelect" placeholder="Select Provider">
                     <sp-menu slot="options"></sp-menu>
                 </sp-dropdown>
                 <div class="row-end">
-                    <sp-button id="btnAddProvider" variant="secondary" size="s">Add</sp-button>
-                    <sp-button id="btnSaveProvider" variant="secondary" size="s">Save</sp-button>
-                    <sp-button id="btnDeleteProvider" variant="secondary" size="s">Del</sp-button>
-                    <sp-button id="btnTestConnection" variant="secondary" size="s">Test Connection</sp-button>
+                    <sp-action-button id="btnAddProvider" size="s">Add</sp-action-button>
+                    <sp-action-button id="btnSaveProvider" size="s">Save</sp-action-button>
+                    <sp-action-button id="btnDeleteProvider" size="s">Del</sp-action-button>
+                    <sp-action-button id="btnTestConnection" size="s">Test Connection</sp-action-button>
                 </div>
             </div>
 
             <div id="connectionStatus" class="status-message"></div>
 
-            <sp-divider size="small"></sp-divider>
+            <!-- <sp-divider size="small"></sp-divider> -->
 
             <!-- API Config -->
             <div class="section">
-                <sp-textfield id="inputApiKey" type="password" placeholder="Enter API Key">
+                <sp-textfield size="s" id="inputApiKey" type="password" placeholder="Enter API Key">
                     <sp-label slot="label">API Key</sp-label>
                 </sp-textfield>
-                <sp-textfield id="inputBaseUrl" placeholder="https://...">
+                <sp-textfield size="s" id="inputBaseUrl" placeholder="https://...">
                     <sp-label slot="label">Base URL</sp-label>
                 </sp-textfield>
-                <sp-textfield id="inputModelId" placeholder="model-name">
+                <sp-textfield size="s" id="inputModelId" placeholder="model-name">
                     <sp-label slot="label">Model ID</sp-label>
                 </sp-textfield>
             </div>
@@ -295,13 +286,13 @@
 
             <!-- Export Settings -->
             <div class="section">
-                <sp-heading size="XXS">Image to Generator Export Settings</sp-heading>
+                <sp-label>Image to Generator Export Settings</sp-label>
                 <div class="row">
-                    <sp-textfield id="inputMaxSize" type="number" placeholder="2048" min="512" max="8192" step="256"
+                    <sp-textfield size="s" id="inputMaxSize" type="number" placeholder="2048" min="512" max="8192" step="256"
                         style="flex:1;">
                         <sp-label slot="label">Max Size</sp-label>
                     </sp-textfield>
-                    <sp-textfield id="inputQuality" type="number" placeholder="80" min="0" max="100" step="1"
+                    <sp-textfield size="s" id="inputQuality" type="number" placeholder="80" min="0" max="100" step="1"
                         style="flex:1;">
                         <sp-label slot="label">Quality</sp-label>
                     </sp-textfield>
@@ -312,15 +303,15 @@
 
             <!-- Debug Settings -->
             <div class="section">
-                <sp-checkbox id="debugModeCheckbox">Debug Mode</sp-checkbox>
+                <sp-checkbox size="s" id="debugModeCheckbox">Debug Mode</sp-checkbox>
                 <div id="debugDetailsSection" class="section hidden">
-                    <sp-textfield id="debugFolderPath" readonly placeholder="Log path will appear here" quiet disabled>
+                    <sp-textfield  size="s" id="debugFolderPath" readonly placeholder="Log path will appear here" quiet>
                         <sp-label slot="label">Log File Path</sp-label>
                     </sp-textfield>
                     <!-- Debug Buttons -->
                     <div class="row" style="gap: 8px;">
-                        <sp-button id="btnTestExport" variant="secondary" style="flex: 1;">Test Export</sp-button>
-                        <sp-button id="btnTestImport" variant="secondary" style="flex: 1;">Test Import</sp-button>
+                        <sp-action-button size="s" id="btnTestExport" style="flex: 1;">Test Export</sp-action-button>
+                        <sp-action-button size="s" id="btnTestImport" style="flex: 1;">Test Import</sp-action-button>
                     </div>
                 </div>
             </div>
