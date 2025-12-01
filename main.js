@@ -736,49 +736,65 @@ async function handleGenerateImage() {
 async function promptUser(message, defaultValue = '') {
     return new Promise((resolve) => {
         const dialog = document.createElement('dialog');
-        dialog.style.backgroundColor = '#323232';
-        dialog.style.color = '#ffffff';
-        dialog.style.border = '1px solid #4a4a4a';
-        dialog.style.borderRadius = '6px';
+        dialog.style.backgroundColor = '#2b2b2b';
+        dialog.style.color = '#e8e8e8';
+        dialog.style.border = '1px solid #555555';
+        dialog.style.borderRadius = '4px';
         dialog.style.padding = '0';
-        dialog.style.minWidth = '400px';
+        dialog.style.minWidth = '360px';
+        dialog.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.5)';
 
         const container = document.createElement('div');
-        container.style.padding = '20px';
+        container.style.padding = '20px 24px';
 
-        const title = document.createElement('h3');
+        // 使用 sp-heading
+        const title = document.createElement('sp-heading');
         title.textContent = message;
+        title.setAttribute('size', 'S');
         title.style.margin = '0 0 16px 0';
-        title.style.fontSize = '14px';
-        title.style.fontWeight = 'normal';
         container.appendChild(title);
 
+        // 使用 sp-textfield
         const input = document.createElement('sp-textfield');
         input.value = defaultValue;
         input.style.width = '100%';
-        input.style.marginBottom = '16px';
+        input.style.marginBottom = '20px';
+        input.setAttribute('placeholder', '输入名称...');
+        
+        // 支持回车确认
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const value = input.value.trim();
+                dialog.close();
+                document.body.removeChild(dialog);
+                resolve(value || null);
+            }
+        });
         container.appendChild(input);
 
+        // 使用 sp-action-button
         const buttonContainer = document.createElement('div');
         buttonContainer.style.display = 'flex';
         buttonContainer.style.gap = '8px';
         buttonContainer.style.justifyContent = 'flex-end';
 
-        const cancelBtn = document.createElement('sp-button');
+        const cancelBtn = document.createElement('sp-action-button');
         cancelBtn.textContent = 'Cancel';
-        cancelBtn.variant = 'secondary';
+        cancelBtn.style.flex = '1';
         cancelBtn.addEventListener('click', () => {
             dialog.close();
+            document.body.removeChild(dialog);
             resolve(null);
         });
         buttonContainer.appendChild(cancelBtn);
 
-        const okBtn = document.createElement('sp-button');
+        const okBtn = document.createElement('sp-action-button');
         okBtn.textContent = 'OK';
-        okBtn.variant = 'cta';
+        okBtn.style.flex = '1';
         okBtn.addEventListener('click', () => {
             const value = input.value.trim();
             dialog.close();
+            document.body.removeChild(dialog);
             resolve(value || null);
         });
         buttonContainer.appendChild(okBtn);
@@ -788,6 +804,11 @@ async function promptUser(message, defaultValue = '') {
 
         document.body.appendChild(dialog);
         dialog.showModal();
+        
+        // 自动聚焦输入框
+        setTimeout(() => {
+            input.focus();
+        }, 100);
     });
 }
 
@@ -795,36 +816,59 @@ async function confirmUser(message) {
     try {
         return new Promise((resolve) => {
             const dialog = document.createElement('dialog');
-            dialog.style.backgroundColor = '#323232';
-            dialog.style.color = '#ffffff';
-            dialog.style.border = '1px solid #4a4a4a';
-            dialog.style.borderRadius = '6px';
-            dialog.style.padding = '20px';
-            dialog.style.minWidth = '300px';
+            dialog.style.backgroundColor = '#2b2b2b';
+            dialog.style.color = '#e8e8e8';
+            dialog.style.border = '1px solid #555555';
+            dialog.style.borderRadius = '4px';
+            dialog.style.padding = '0';
+            dialog.style.minWidth = '360px';
+            dialog.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.5)';
 
-            const text = document.createElement('div');
+            const container = document.createElement('div');
+            container.style.padding = '20px 24px';
+
+            // 使用 sp-heading
+            const title = document.createElement('sp-heading');
+            title.textContent = '确认操作';
+            title.setAttribute('size', 'S');
+            title.style.margin = '0 0 16px 0';
+            container.appendChild(title);
+
+            // 使用 sp-body 显示消息
+            const text = document.createElement('sp-body');
             text.textContent = message;
+            text.style.display = 'block';
             text.style.marginBottom = '20px';
-            dialog.appendChild(text);
+            container.appendChild(text);
 
+            // 使用 sp-action-button
             const btnContainer = document.createElement('div');
             btnContainer.style.display = 'flex';
             btnContainer.style.justifyContent = 'flex-end';
-            btnContainer.style.gap = '10px';
+            btnContainer.style.gap = '8px';
 
-            const cancelBtn = document.createElement('sp-button');
-            cancelBtn.variant = 'secondary';
+            const cancelBtn = document.createElement('sp-action-button');
             cancelBtn.textContent = 'Cancel';
-            cancelBtn.onclick = () => { dialog.close(); resolve(false); };
-
-            const okBtn = document.createElement('sp-button');
-            okBtn.variant = 'cta';
-            okBtn.textContent = 'OK';
-            okBtn.onclick = () => { dialog.close(); resolve(true); };
-
+            cancelBtn.style.flex = '1';
+            cancelBtn.addEventListener('click', () => {
+                dialog.close();
+                document.body.removeChild(dialog);
+                resolve(false);
+            });
             btnContainer.appendChild(cancelBtn);
+
+            const okBtn = document.createElement('sp-action-button');
+            okBtn.textContent = 'OK';
+            okBtn.style.flex = '1';
+            okBtn.addEventListener('click', () => {
+                dialog.close();
+                document.body.removeChild(dialog);
+                resolve(true);
+            });
             btnContainer.appendChild(okBtn);
-            dialog.appendChild(btnContainer);
+
+            container.appendChild(btnContainer);
+            dialog.appendChild(container);
 
             document.body.appendChild(dialog);
             dialog.showModal();
