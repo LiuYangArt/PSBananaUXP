@@ -350,6 +350,12 @@
             margin: 8px 0;
         }
 
+        h1 {
+            font-size: 16px;
+            font-weight: 400;
+            text-align: right;
+        }
+
         .status-message {
             font-size: 12px;
             padding: 6px 8px;
@@ -411,7 +417,7 @@
 
         <!-- Smart Canvas Ratio -->
         <div class="settings-section">
-            <button id="btnSmartCanvasRatio" style="width: 100%;">应用 Smart Canvas Ratio</button>
+            <button id="btnSmartCanvasRatio" style="width: 100%;">Smart Canvas Ratio</button>
             <div id="canvasRatioStatus" class="status-message" style="margin-top: 8px;"></div>
         </div>
 
@@ -419,7 +425,7 @@
         <div class="settings-section">
             <label style="display: flex; align-items: center; cursor: pointer;">
                 <input type="checkbox" id="searchWebCheckbox" style="width: auto; margin-right: 8px;">
-                <span>搜索网络 (Search Web)</span>
+                <span>Search Web (Experimental)</span>
             </label>
         </div>
 
@@ -427,12 +433,14 @@
         <div class="settings-section">
             <label style="display: flex; align-items: center; cursor: pointer;">
                 <input type="checkbox" id="selectionModeCheckbox" style="width: auto; margin-right: 8px;">
-                <span>使用选区区域生图 (Generate in Selection)</span>
+                <span>Generate Only Selection Area)</span>
             </label>
         </div>
 
         <!-- Generate Button -->
-        <button id="btnGenerate" class="primary" style="padding: 10px 16px; font-size: 14px; font-weight: 500;">Generate Image</button>
+        <button id="btnGenerate" class="primary" style="padding: 10px 16px; font-size: 16px; font-weight: 500;">Generate Image</button>
+
+        <!-- debug buttons -->
         <button id="btnTestExport" class="secondary" style="margin-top: 4px; display: none;">Test Export (测试导出)</button>
         <button id="btnTestImport" class="secondary" style="margin-top: 4px; display: none;">Test Import (最近的图)</button>
 
@@ -449,9 +457,9 @@
         <div class="settings-section" id="multiImageModeSection" style="display: none;">
             <label style="display: flex; align-items: center; cursor: pointer;">
                 <input type="checkbox" id="multiImageModeCheckbox" style="width: auto; margin-right: 8px;">
-                <span>多图生图模式 (Multi-Image Generation)</span>
+                <span>Use Multi-Image Mode</span>
             </label>
-            <button id="btnEnsureGroups" class="secondary" style="margin-top: 8px; width: 100%;">创建/更新 Reference/Source 组</button>
+            <button id="btnEnsureGroups" class="secondary" style="margin-top: 8px; width: 100%;">New Reference/Source Group</button>
         </div>
 
         <!-- Status Display -->
@@ -491,12 +499,12 @@
         <hr>
 
         <div class="settings-section">
-            <label>Export Settings:</label>
+            <label>Export Settings: (Images  send to AI )</label>
             
-            <label>Max Size (导出图片长边最大长度):</label>
+            <label>Max Size:</label>
             <input type="number" id="inputMaxSize" placeholder="2048" min="512" max="8192" step="256">
             
-            <label>Quality (WebP压缩质量 0-100):</label>
+            <label>Quality:</label>
             <input type="number" id="inputQuality" placeholder="80" min="0" max="100" step="1">
         </div>
 
@@ -505,10 +513,10 @@
         <div class="settings-section">
             <label style="display: flex; align-items: center; cursor: pointer;">
                 <input type="checkbox" id="debugModeCheckbox" style="width: auto; margin-right: 8px;">
-                <span>Debug Mode (保存调试日志)</span>
+                <span>Debug Mode </span>
             </label>
             <div style="margin-top: 8px;">
-                <label>📁 调试文件保存在（可复制）：</label>
+                <label>📁 Log File Path</label>
                 <input type="text" id="debugFolderPath" 
                        style="font-size: 11px; color: #aaa;"
                        placeholder="启用 Debug Mode 后显示路径">
