@@ -81,9 +81,8 @@ function setupTabs() {
     tabGenerate.addEventListener('click', () => switchTab('generate'));
     tabSettings.addEventListener('click', () => switchTab('settings'));
 
-    // Setup Generation Mode Tabs
-    const tabText2Img = document.getElementById('tabText2Img');
-    const tabImgEdit = document.getElementById('tabImgEdit');
+    // Setup Generation Mode Radio Group
+    const generationModeGroup = document.getElementById('generationModeGroup');
     const multiImageModeSection = document.getElementById('multiImageModeSection');
 
     const savedMode = settingsManager.get('generation_mode', 'text2img');
@@ -92,26 +91,27 @@ function setupTabs() {
     function updateModeUI(mode) {
         generationMode = mode;
         if (mode === 'text2img') {
-            tabText2Img.classList.add('selected');
-            tabImgEdit.classList.remove('selected');
             multiImageModeSection.classList.add('hidden');
         } else {
-            tabText2Img.classList.remove('selected');
-            tabImgEdit.classList.add('selected');
             multiImageModeSection.classList.remove('hidden');
         }
     }
 
-    updateModeUI(savedMode);
+    // 设置初始选中状态
+    setTimeout(() => {
+        const radios = generationModeGroup.querySelectorAll('sp-radio');
+        radios.forEach(radio => {
+            if (radio.value === savedMode) {
+                radio.checked = true;
+            }
+        });
+        updateModeUI(savedMode);
+    }, 100);
 
-    tabText2Img.addEventListener('click', async () => {
-        updateModeUI('text2img');
-        await settingsManager.set('generation_mode', 'text2img');
-    });
-
-    tabImgEdit.addEventListener('click', async () => {
-        updateModeUI('imgedit');
-        await settingsManager.set('generation_mode', 'imgedit');
+    generationModeGroup.addEventListener('change', async (e) => {
+        const mode = e.target.value;
+        updateModeUI(mode);
+        await settingsManager.set('generation_mode', mode);
     });
 }
 

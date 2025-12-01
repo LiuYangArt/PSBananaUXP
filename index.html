@@ -131,11 +131,6 @@
             width: 100%;
         }
 
-        /* Generation Mode Tabs - shown only in Generate tab */
-        #generationModeTabs {
-            margin-top: 12px; /* 与 Generate Image 按钮的间距 */
-        }
-
         sp-divider {
             margin: 4px 0;
         }
@@ -242,10 +237,13 @@
             <!-- Generate Button -->
             <sp-button id="btnGenerate" variant="cta" class="full-width">Generate Image</sp-button>
 
-            <!-- Generation Mode Tabs -->
-            <div class="sp-tabs" id="generationModeTabs">
-                <div class="sp-tab selected" id="tabText2Img"><sp-label>Text to Image</sp-label></div>
-                <div class="sp-tab" id="tabImgEdit"><sp-label>Image Edit</sp-label></div>
+            <!-- Generation Mode Radio Group -->
+            <div class="section" id="generationModeRadio">
+                <sp-label>Generation Mode</sp-label>
+                <sp-radio-group id="generationModeGroup">
+                    <sp-radio value="text2img" checked>Text to Image</sp-radio>
+                    <sp-radio value="imgedit">Image Edit</sp-radio>
+                </sp-radio-group>
             </div>
 
             <!-- Multi-Image Mode (Hidden by default) -->
