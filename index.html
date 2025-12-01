@@ -86,6 +86,22 @@
             min-height: 80px;
         }
 
+        /* Attempt to override border-radius for less round buttons */
+        sp-button,
+        sp-action-button {
+            --spectrum-button-border-radius: 4px;
+            /* Some UXP versions might not respect this variable, but worth a try */
+        }
+
+        /* Fallback: if variables don't work, we rely on standard look. 
+           But user asked for less round. 
+           Note: UXP Spectrum components are shadow DOM encapsulated, 
+           so direct CSS on internal parts is limited. 
+           However, we can try to use 'quiet' or different variants if needed. 
+           For now, let's stick to standard components but maybe use action-buttons 
+           which are often squarer, or just accept the limitation if CSS var doesn't work.
+        */
+
         /* Utility classes */
         .hidden {
             display: none !important;
@@ -158,12 +174,11 @@
                     <sp-menu slot="options"></sp-menu>
                 </sp-dropdown>
                 <div class="row-end">
-                    <sp-action-button id="btnAddPreset" quiet title="Add Preset">
-                        <sp-icon slot="icon" name="ui:Plus"></sp-icon>
-                    </sp-action-button>
-                    <sp-action-button id="btnSavePreset" quiet title="Save Preset">Save</sp-action-button>
-                    <sp-action-button id="btnRenamePreset" quiet title="Rename Preset">Rename</sp-action-button>
-                    <sp-action-button id="btnDeletePreset" quiet title="Delete Preset">Del</sp-action-button>
+                    <!-- Changed to text buttons for better visibility -->
+                    <sp-button id="btnAddPreset" variant="secondary" size="s">Add</sp-button>
+                    <sp-button id="btnSavePreset" variant="secondary" size="s">Save</sp-button>
+                    <sp-button id="btnRenamePreset" variant="secondary" size="s">Rename</sp-button>
+                    <sp-button id="btnDeletePreset" variant="secondary" size="s">Del</sp-button>
                 </div>
             </div>
 
@@ -174,10 +189,12 @@
             </div>
 
             <!-- Resolution & Smart Ratio -->
-            <div class="row">
-                <div class="section" style="flex: 1;">
+            <div class="row" style="align-items: flex-end;">
+                <div style="flex: 0 0 auto;">
                     <sp-label>Resolution</sp-label>
-                    <sp-dropdown id="resolutionSelect" placeholder="Select Resolution">
+                </div>
+                <div style="flex: 1;">
+                    <sp-dropdown id="resolutionSelect" placeholder="Select" style="width: 100%;">
                         <sp-menu slot="options">
                             <sp-menu-item value="1K" selected>1K</sp-menu-item>
                             <sp-menu-item value="2K">2K</sp-menu-item>
@@ -185,7 +202,7 @@
                         </sp-menu>
                     </sp-dropdown>
                 </div>
-                <div class="section" style="flex: 1; justify-content: flex-end;">
+                <div style="flex: 1;">
                     <sp-button id="btnSmartCanvasRatio" variant="secondary" style="width: 100%;">Smart Ratio</sp-button>
                 </div>
             </div>
@@ -235,11 +252,9 @@
                     <sp-menu slot="options"></sp-menu>
                 </sp-dropdown>
                 <div class="row-end">
-                    <sp-action-button id="btnAddProvider" quiet title="Add Provider">
-                        <sp-icon slot="icon" name="ui:Plus"></sp-icon>
-                    </sp-action-button>
-                    <sp-action-button id="btnSaveProvider" quiet>Save</sp-action-button>
-                    <sp-action-button id="btnDeleteProvider" quiet variant="warning">Del</sp-action-button>
+                    <sp-button id="btnAddProvider" variant="secondary" size="s">Add</sp-button>
+                    <sp-button id="btnSaveProvider" variant="secondary" size="s">Save</sp-button>
+                    <sp-button id="btnDeleteProvider" variant="secondary" size="s">Del</sp-button>
                 </div>
             </div>
 
