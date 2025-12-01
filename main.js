@@ -344,7 +344,6 @@ function getSelectedResolution() {
 
 function setupUtilitiesUI() {
     const btnSmartCanvasRatio = document.getElementById('btnSmartCanvasRatio');
-    const canvasRatioStatus = document.getElementById('canvasRatioStatus');
 
     // Smart Canvas Ratio 按钮
     btnSmartCanvasRatio.addEventListener('click', async () => {
@@ -352,29 +351,10 @@ function setupUtilitiesUI() {
     });
 
     /**
-     * 显示 Canvas Ratio 状态消息
+     * 显示 Canvas Ratio 状态消息（使用 generateStatus）
      */
     function showCanvasRatioStatus(message, type) {
-        canvasRatioStatus.textContent = message;
-        canvasRatioStatus.className = 'status-message';
-
-        if (type === 'success') {
-            canvasRatioStatus.classList.add('status-success');
-        } else if (type === 'error') {
-            canvasRatioStatus.classList.add('status-error');
-        } else {
-            // info or other
-            canvasRatioStatus.style.backgroundColor = '#2d4050';
-            canvasRatioStatus.style.color = '#a8c5e0';
-        }
-
-        // Auto-clear after 5 seconds for success/error
-        if (type === 'success' || type === 'error') {
-            setTimeout(() => {
-                canvasRatioStatus.textContent = '';
-                canvasRatioStatus.className = '';
-            }, 5000);
-        }
+        showGenerateStatus(message, type);
     }
 
     /**
