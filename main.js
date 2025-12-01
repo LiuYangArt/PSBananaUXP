@@ -310,19 +310,19 @@ function setupSettingsUI() {
         await settingsManager.set('debug_mode', e.target.checked);
         updateDebugFolderPath();
 
-        // Show/Hide debug buttons in Generate tab
-        const debugButtons = document.getElementById('debugButtons');
+        // Show/Hide debug details section (log path + debug buttons)
+        const debugDetailsSection = document.getElementById('debugDetailsSection');
         if (e.target.checked) {
-            debugButtons.classList.remove('hidden');
+            debugDetailsSection.classList.remove('hidden');
         } else {
-            debugButtons.classList.add('hidden');
+            debugDetailsSection.classList.add('hidden');
         }
     });
 
-    // Initialize debug buttons visibility
-    const debugButtons = document.getElementById('debugButtons');
+    // Initialize debug details section visibility
+    const debugDetailsSection = document.getElementById('debugDetailsSection');
     if (debugModeCheckbox.checked) {
-        debugButtons.classList.remove('hidden');
+        debugDetailsSection.classList.remove('hidden');
     }
 
     // Export Settings

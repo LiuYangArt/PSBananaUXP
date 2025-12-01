@@ -257,12 +257,6 @@
 
             <!-- Status -->
             <div id="generateStatus" class="status-message"></div>
-
-            <!-- Debug Buttons (Hidden) -->
-            <div id="debugButtons" class="section hidden">
-                <sp-button id="btnTestExport" variant="secondary">Test Export</sp-button>
-                <sp-button id="btnTestImport" variant="secondary">Test Import</sp-button>
-            </div>
         </div>
 
         <!-- Settings Tab Content (Hidden by default) -->
@@ -321,9 +315,16 @@
             <!-- Debug Settings -->
             <div class="section">
                 <sp-checkbox id="debugModeCheckbox">Debug Mode</sp-checkbox>
-                <sp-textfield id="debugFolderPath" readonly placeholder="Log path will appear here" quiet disabled>
-                    <sp-label slot="label">Log File Path</sp-label>
-                </sp-textfield>
+                <div id="debugDetailsSection" class="section hidden">
+                    <sp-textfield id="debugFolderPath" readonly placeholder="Log path will appear here" quiet disabled>
+                        <sp-label slot="label">Log File Path</sp-label>
+                    </sp-textfield>
+                    <!-- Debug Buttons -->
+                    <div class="row" style="gap: 8px;">
+                        <sp-button id="btnTestExport" variant="secondary" style="flex: 1;">Test Export</sp-button>
+                        <sp-button id="btnTestImport" variant="secondary" style="flex: 1;">Test Import</sp-button>
+                    </div>
+                </div>
             </div>
         </div>
 
