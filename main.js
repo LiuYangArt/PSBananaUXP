@@ -1015,3 +1015,29 @@ async function handleEnsureGroups() {
         btnEnsureGroups.disabled = false;
     }
 }
+
+// ================= Reload Plugin 功能 =================
+// 用于开发调试时快速重载插件，无需重启Photoshop
+
+function reloadPlugin() {
+    console.log('[Reload] 正在重新加载插件...');
+    window.location.reload();
+}
+
+// 设置 entrypoints - 定义 Reload Plugin 命令和面板
+const { entrypoints } = require('uxp');
+entrypoints.setup({
+    commands: {
+        // 注册重载插件命令 - 会出现在插件菜单中
+        reloadPlugin: () => reloadPlugin()
+    },
+    panels: {
+        psbanana: {
+            show({node} = {}) {
+                // 面板显示时的处理
+                // 单面板应用不需要特殊处理，index.html 会自动加载
+                console.log('[Panel] PS Banana panel shown');
+            }
+        }
+    }
+});
