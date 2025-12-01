@@ -198,6 +198,49 @@
             border-color: #cfcfcf;
             cursor: ns-resize;
         }
+
+        /* 弹窗样式 */
+        .custom-dialog {
+            background-color: #2b2b2b;
+            color: #e8e8e8;
+            border: 1px solid #555555;
+            border-radius: 4px;
+            padding: 0;
+            min-width: 360px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        .custom-dialog::backdrop {
+            background-color: rgba(0, 0, 0, 0.6);
+        }
+
+        .dialog-container {
+            padding: 20px 24px;
+        }
+
+        .dialog-title {
+            margin: 0 0 16px 0;
+        }
+
+        .dialog-input {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .dialog-text {
+            display: block;
+            margin-bottom: 20px;
+        }
+
+        .dialog-buttons {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .dialog-button {
+            flex: 1;
+        }
     </style>
 </head>
 

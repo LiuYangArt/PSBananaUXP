@@ -736,31 +736,23 @@ async function handleGenerateImage() {
 async function promptUser(message, defaultValue = '') {
     return new Promise((resolve) => {
         const dialog = document.createElement('dialog');
-        dialog.style.backgroundColor = '#2b2b2b';
-        dialog.style.color = '#e8e8e8';
-        dialog.style.border = 'none';
-        // dialog.style.border = '1px solid #555555';
-        // dialog.style.borderRadius = '2px';
-        dialog.style.padding = '0';
-        dialog.style.minWidth = '360px';
-        // dialog.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.5)';
+        dialog.className = 'custom-dialog';
 
         const container = document.createElement('div');
-        container.style.padding = '20px 24px';
+        container.className = 'dialog-container';
 
         // 使用 sp-label
         const title = document.createElement('sp-label');
         title.textContent = message;
         title.setAttribute('size', 'S');
-        title.style.margin = '0';
+        title.className = 'dialog-title';
         container.appendChild(title);
 
         // 使用 sp-textfield
         const input = document.createElement('sp-textfield');
         input.value = defaultValue;
-        input.style.width = '100%';
+        input.className = 'dialog-input';
         input.size = 'S';
-        input.style.marginBottom = '20px';
         input.setAttribute('placeholder', '输入名称...');
         
         // 支持回车确认
@@ -776,13 +768,11 @@ async function promptUser(message, defaultValue = '') {
 
         // 使用 sp-action-button
         const buttonContainer = document.createElement('div');
-        buttonContainer.style.display = 'flex';
-        buttonContainer.style.gap = '8px';
-        buttonContainer.style.justifyContent = 'flex-end';
+        buttonContainer.className = 'dialog-buttons';
 
         const cancelBtn = document.createElement('sp-action-button');
         cancelBtn.textContent = 'Cancel';
-        cancelBtn.style.flex = '1';
+        cancelBtn.className = 'dialog-button';
         cancelBtn.size = 'S';
         cancelBtn.addEventListener('click', () => {
             dialog.close();
@@ -793,8 +783,7 @@ async function promptUser(message, defaultValue = '') {
 
         const okBtn = document.createElement('sp-action-button');
         okBtn.textContent = 'OK';
-        okBtn.style.flex = '1';
-        okBtn.style.marginLeft = '10px';
+        okBtn.className = 'dialog-button';
         okBtn.size = 'S';
         okBtn.addEventListener('click', () => {
             const value = input.value.trim();
@@ -821,44 +810,26 @@ async function confirmUser(message) {
     try {
         return new Promise((resolve) => {
             const dialog = document.createElement('dialog');
-            dialog.style.backgroundColor = '#2b2b2b';
-            dialog.style.color = '#e8e8e8';
-            dialog.style.border = 'none';
-            // dialog.style.border = '1px solid #555555';
-            // dialog.style.borderRadius = '2px';
-            dialog.style.padding = '0';
-            dialog.style.minWidth = '360px';
-            dialog.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.5)';
+            dialog.className = 'custom-dialog';
 
             const container = document.createElement('div');
-            container.style.padding = '20px 24px';
+            container.className = 'dialog-container';
 
-            // // 使用 sp-label
-            // const title = document.createElement('sp-label');
-            // title.textContent = '确认操作';
-            // title.setAttribute('size', 'S');
-            // title.style.margin = '0 0 16px 0';
-            // container.appendChild(title);
-
-            // 使用 sp-body 显示消息
+            // 使用 sp-label 显示消息
             const text = document.createElement('sp-label');
             text.textContent = message;
             text.size = 'S';
-            // text.setAttribute('size', 'S');
-            text.style.display = 'block';
-            text.style.marginBottom = '20px';
+            text.className = 'dialog-text';
             container.appendChild(text);
 
             // 使用 sp-action-button
             const btnContainer = document.createElement('div');
-            btnContainer.style.display = 'flex';
-            btnContainer.style.justifyContent = 'flex-end';
-            btnContainer.style.gap = '8px';
+            btnContainer.className = 'dialog-buttons';
 
             const cancelBtn = document.createElement('sp-action-button');
             cancelBtn.size = 'S';
             cancelBtn.textContent = 'Cancel';
-            cancelBtn.style.flex = '1';
+            cancelBtn.className = 'dialog-button';
             cancelBtn.addEventListener('click', () => {
                 dialog.close();
                 document.body.removeChild(dialog);
@@ -869,8 +840,7 @@ async function confirmUser(message) {
             const okBtn = document.createElement('sp-action-button');
             okBtn.textContent = 'OK';
             okBtn.size = 'S';
-            okBtn.style.flex = '1';
-            okBtn.style.marginLeft = '10px';
+            okBtn.className = 'dialog-button';
             okBtn.addEventListener('click', () => {
                 dialog.close();
                 document.body.removeChild(dialog);
