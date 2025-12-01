@@ -80,6 +80,39 @@ function setupTabs() {
 
     tabGenerate.addEventListener('click', () => switchTab('generate'));
     tabSettings.addEventListener('click', () => switchTab('settings'));
+
+    // Setup Generation Mode Tabs
+    const tabText2Img = document.getElementById('tabText2Img');
+    const tabImgEdit = document.getElementById('tabImgEdit');
+    const multiImageModeSection = document.getElementById('multiImageModeSection');
+
+    const savedMode = settingsManager.get('generation_mode', 'text2img');
+    generationMode = savedMode;
+
+    function updateModeUI(mode) {
+        generationMode = mode;
+        if (mode === 'text2img') {
+            tabText2Img.classList.add('selected');
+            tabImgEdit.classList.remove('selected');
+            multiImageModeSection.classList.add('hidden');
+        } else {
+            tabText2Img.classList.remove('selected');
+            tabImgEdit.classList.add('selected');
+            multiImageModeSection.classList.remove('hidden');
+        }
+    }
+
+    updateModeUI(savedMode);
+
+    tabText2Img.addEventListener('click', async () => {
+        updateModeUI('text2img');
+        await settingsManager.set('generation_mode', 'text2img');
+    });
+
+    tabImgEdit.addEventListener('click', async () => {
+        updateModeUI('imgedit');
+        await settingsManager.set('generation_mode', 'imgedit');
+    });
 }
 
 function setupGenerateUI() {
@@ -125,38 +158,6 @@ function setupGenerateUI() {
     multiImageModeCheckbox.addEventListener('change', async (e) => {
         await settingsManager.set('multi_image_mode', e.target.checked);
         console.log(`[UI] Multi-image mode switched to: ${e.target.checked}`);
-    });
-
-    // Generation Mode Buttons
-    const btnModeText2Img = document.getElementById('btnModeText2Img');
-    const btnModeImgEdit = document.getElementById('btnModeImgEdit');
-
-    const savedMode = settingsManager.get('generation_mode', 'text2img');
-    generationMode = savedMode;
-
-    function updateModeUI(mode) {
-        generationMode = mode;
-        if (mode === 'text2img') {
-            btnModeText2Img.selected = true;
-            btnModeImgEdit.selected = false;
-            multiImageModeSection.classList.add('hidden');
-        } else {
-            btnModeText2Img.selected = false;
-            btnModeImgEdit.selected = true;
-            multiImageModeSection.classList.remove('hidden');
-        }
-    }
-
-    updateModeUI(savedMode);
-
-    btnModeText2Img.addEventListener('click', async () => {
-        updateModeUI('text2img');
-        await settingsManager.set('generation_mode', 'text2img');
-    });
-
-    btnModeImgEdit.addEventListener('click', async () => {
-        updateModeUI('imgedit');
-        await settingsManager.set('generation_mode', 'imgedit');
     });
 
     // Resolution Dropdown

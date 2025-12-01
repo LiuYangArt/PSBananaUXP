@@ -131,6 +131,11 @@
             width: 100%;
         }
 
+        /* Generation Mode Tabs - shown only in Generate tab */
+        #generationModeTabs {
+            margin-top: 12px; /* 与 Generate Image 按钮的间距 */
+        }
+
         sp-divider {
             margin: 4px 0;
         }
@@ -177,7 +182,7 @@
     <div class="main-container">
         <!-- Header & Tabs -->
         <div class="header">
-            <sp-heading size="S" style="margin: 0;">PS Banana</sp-heading>
+            <sp-heading size="S" style="margin: 0; text-align: right; font-size: 13px;">PS Banana by LiuYang</sp-heading>
         </div>
 
         <div class="sp-tabs">
@@ -237,13 +242,10 @@
             <!-- Generate Button -->
             <sp-button id="btnGenerate" variant="cta" class="full-width">Generate Image</sp-button>
 
-            <!-- Generation Mode -->
-            <div class="section">
-                <sp-label>Generation Mode</sp-label>
-                <div class="row">
-                    <sp-action-button id="btnModeText2Img" selected style="flex:1;">Text to Image</sp-action-button>
-                    <sp-action-button id="btnModeImgEdit" style="flex:1;">Image Edit</sp-action-button>
-                </div>
+            <!-- Generation Mode Tabs -->
+            <div class="sp-tabs" id="generationModeTabs">
+                <div class="sp-tab selected" id="tabText2Img"><sp-label>Text to Image</sp-label></div>
+                <div class="sp-tab" id="tabImgEdit"><sp-label>Image Edit</sp-label></div>
             </div>
 
             <!-- Multi-Image Mode (Hidden by default) -->
