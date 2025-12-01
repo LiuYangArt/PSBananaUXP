@@ -16,18 +16,19 @@
             overflow: hidden;
         }
 
-        /* Main Container */
+        /* Main Container - Kitchen Sink Style */
         .main-container {
-            width: 320px;
-            /* Fixed width as requested */
-            margin: 0 auto;
-            padding: 12px;
-            box-sizing: border-box;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100vh;
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            height: 100%;
-            overflow-y: auto;
+            padding: 12px;
+            box-sizing: border-box;
         }
 
         /* Header / Tabs */
@@ -77,6 +78,22 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
+        }
+
+        /* Tab Content Pages - Scrollable */
+        #contentGenerate,
+        #contentSettings {
+            flex: 1 1 auto;
+            overflow: auto;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        #contentGenerate>*,
+        #contentSettings>* {
+            flex: 0 0 auto;
         }
 
         .row {
@@ -279,7 +296,8 @@
                 <!-- <sp-label>Prompt</sp-label> -->
                 <div class="textarea-container">
                     <div class="textarea-wrapper">
-                        <sp-textarea size="s" id="promptInput" placeholder="Enter your image generation prompt..." style="height: 120px;"></sp-textarea>
+                        <sp-textarea size="s" id="promptInput" placeholder="Enter your image generation prompt..."
+                            style="height: 120px;"></sp-textarea>
                     </div>
                     <div class="resize-handler" id="promptResizeHandler"></div>
                 </div>
@@ -301,7 +319,8 @@
                     </sp-dropdown>
                 </div>
                 <div style="flex: 1.8; margin: 0 0 0 10px;">
-                    <sp-action-button size="s" id="btnSmartCanvasRatio" style="width: 100%;"> Smart Ratio </sp-action-button>
+                    <sp-action-button size="s" id="btnSmartCanvasRatio" style="width: 100%;"> Smart Ratio
+                    </sp-action-button>
                 </div>
             </div>
 
@@ -344,10 +363,11 @@
                     <sp-menu slot="options"></sp-menu>
                 </sp-dropdown>
                 <div class="row-end">
-                    <sp-action-button id="btnAddProvider" size="s" >Add</sp-action-button>
+                    <sp-action-button id="btnAddProvider" size="s">Add</sp-action-button>
                     <sp-action-button id="btnSaveProvider" size="s" style="margin-left: 5px;">Save</sp-action-button>
                     <sp-action-button id="btnDeleteProvider" size="s" style="margin-left: 5px;">Del</sp-action-button>
-                    <sp-action-button id="btnTestConnection" size="s" style="margin-left: 5px;">Test Connection</sp-action-button>
+                    <sp-action-button id="btnTestConnection" size="s" style="margin-left: 5px;">Test
+                        Connection</sp-action-button>
                 </div>
             </div>
 
@@ -374,8 +394,8 @@
             <div class="section">
                 <sp-label>Image to Generator Export Settings</sp-label>
                 <div class="row">
-                    <sp-textfield size="s" id="inputMaxSize" type="number" placeholder="2048" min="512" max="8192" step="256"
-                        style="flex:1;">
+                    <sp-textfield size="s" id="inputMaxSize" type="number" placeholder="2048" min="512" max="8192"
+                        step="256" style="flex:1;">
                         <sp-label slot="label">Max Size</sp-label>
                     </sp-textfield>
                     <sp-textfield size="s" id="inputQuality" type="number" placeholder="80" min="0" max="100" step="1"
@@ -391,7 +411,7 @@
             <div class="section">
                 <sp-checkbox size="s" id="debugModeCheckbox">Debug Mode</sp-checkbox>
                 <div id="debugDetailsSection" class="section hidden">
-                    <sp-textfield  size="s" id="debugFolderPath" readonly placeholder="Log path will appear here" quiet>
+                    <sp-textfield size="s" id="debugFolderPath" readonly placeholder="Log path will appear here" quiet>
                         <sp-label slot="label">Log File Path</sp-label>
                     </sp-textfield>
                     <!-- Debug Buttons -->
