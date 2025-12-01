@@ -235,11 +235,11 @@
             </div>
 
             <!-- Generate Button -->
-            <sp-button id="btnGenerate" variant="cta" class="full-width">Generate Image</sp-button>
+            <sp-button id="btnGenerate" variant="cta" class="full-width" size="l">Generate Image</sp-button>
 
             <!-- Generation Mode Radio Group -->
             <div class="section" id="generationModeRadio">
-                <sp-label>Generation Mode</sp-label>
+                <!-- <sp-label>Generation Mode</sp-label> -->
                 <sp-radio-group id="generationModeGroup">
                     <sp-radio value="text2img" checked>Text to Image</sp-radio>
                     <sp-radio value="imgedit">Image Edit</sp-radio>
@@ -270,10 +270,10 @@
                     <sp-button id="btnAddProvider" variant="secondary" size="s">Add</sp-button>
                     <sp-button id="btnSaveProvider" variant="secondary" size="s">Save</sp-button>
                     <sp-button id="btnDeleteProvider" variant="secondary" size="s">Del</sp-button>
+                    <sp-button id="btnTestConnection" variant="secondary" size="s">Test Connection</sp-button>
                 </div>
             </div>
 
-            <sp-button id="btnTestConnection" variant="secondary" class="full-width">Test Connection</sp-button>
             <div id="connectionStatus" class="status-message"></div>
 
             <sp-divider size="small"></sp-divider>
@@ -295,7 +295,7 @@
 
             <!-- Export Settings -->
             <div class="section">
-                <sp-heading size="XXS">Export Settings</sp-heading>
+                <sp-heading size="XXS">Image to Generator Export Settings</sp-heading>
                 <div class="row">
                     <sp-textfield id="inputMaxSize" type="number" placeholder="2048" min="512" max="8192" step="256"
                         style="flex:1;">
