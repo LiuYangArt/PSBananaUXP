@@ -66,13 +66,13 @@ function setupTabs() {
 
     function switchTab(tabId) {
         if (tabId === 'generate') {
-            tabGenerate.selected = true;
-            tabSettings.selected = false;
+            tabGenerate.classList.add('selected');
+            tabSettings.classList.remove('selected');
             contentGenerate.classList.remove('hidden');
             contentSettings.classList.add('hidden');
         } else {
-            tabGenerate.selected = false;
-            tabSettings.selected = true;
+            tabGenerate.classList.remove('selected');
+            tabSettings.classList.add('selected');
             contentGenerate.classList.add('hidden');
             contentSettings.classList.remove('hidden');
         }

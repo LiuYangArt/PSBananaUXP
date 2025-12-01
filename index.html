@@ -38,9 +38,38 @@
             margin-bottom: 8px;
         }
 
-        .tab-buttons {
+        /* Tabs - Kitchen Sink Style */
+        .sp-tabs {
+            flex: 0 0 auto;
             display: flex;
-            gap: 4px;
+            flex-direction: row;
+            border-bottom: 2px solid #3E3E3E;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+
+        .sp-tab {
+            margin-right: 12px;
+            cursor: pointer;
+            padding-bottom: 6px;
+        }
+
+        .sp-tab sp-label {
+            color: rgba(255, 255, 255, 0.75);
+            cursor: pointer;
+        }
+
+        .sp-tab:hover sp-label {
+            color: white;
+        }
+
+        .sp-tab.selected {
+            border-bottom: 2px solid white;
+            margin-bottom: -2px;
+        }
+
+        .sp-tab.selected sp-label {
+            color: white;
         }
 
         /* Sections */
@@ -92,15 +121,6 @@
             --spectrum-button-border-radius: 4px;
             /* Some UXP versions might not respect this variable, but worth a try */
         }
-
-        /* Fallback: if variables don't work, we rely on standard look. 
-           But user asked for less round. 
-           Note: UXP Spectrum components are shadow DOM encapsulated, 
-           so direct CSS on internal parts is limited. 
-           However, we can try to use 'quiet' or different variants if needed. 
-           For now, let's stick to standard components but maybe use action-buttons 
-           which are often squarer, or just accept the limitation if CSS var doesn't work.
-        */
 
         /* Utility classes */
         .hidden {
@@ -158,10 +178,11 @@
         <!-- Header & Tabs -->
         <div class="header">
             <sp-heading size="S" style="margin: 0;">PS Banana</sp-heading>
-            <div class="tab-buttons">
-                <sp-action-button id="tabGenerate" selected>Generate</sp-action-button>
-                <sp-action-button id="tabSettings">Settings</sp-action-button>
-            </div>
+        </div>
+
+        <div class="sp-tabs">
+            <div class="sp-tab selected" id="tabGenerate"><sp-label>Generate</sp-label></div>
+            <div class="sp-tab" id="tabSettings"><sp-label>Settings</sp-label></div>
         </div>
 
         <!-- Generate Tab Content -->
