@@ -133,6 +133,9 @@ function setupGenerateUI() {
     const resolutionSelect = document.getElementById('resolutionSelect');
     const btnSmartCanvasRatio = document.getElementById('btnSmartCanvasRatio');
 
+    // 初始化可拖拽调整大小的 Prompt 文本框
+    setupResizableTextarea();
+
     // Selection Mode
     const savedSelectionMode = settingsManager.get('selection_mode', false);
     selectionModeCheckbox.checked = savedSelectionMode;
@@ -1014,6 +1017,58 @@ async function handleEnsureGroups() {
         isGenerating = false;
         btnEnsureGroups.disabled = false;
     }
+}
+
+// ================= 可拖拽调整大小的 Textarea 功能 =================
+// 实现 Prompt 文本框可以通过拖拽手柄调整高度
+
+function setupResizableTextarea() {
+    const promptInput = document.getElementById('promptInput');
+    const resizeHandler = document.getElementById('promptResizeHandler');
+    
+    if (!promptInput || !resizeHandler) {
+        console.error('[Resizable Textarea] 无法找到 promptInput 或 resizeHandler 元素');
+        return;
+    }
+
+    const MIN_HEIGHT = 50; // 最小高度 50px
+    let isResizing = false;
+    let startY = 0;
+    let startHeight = 0;
+
+    // 开始拖拽
+    resizeHandler.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        startY = e.clientY;
+        startHeight = promptInput.offsetHeight;
+        resizeHandler.classList.add('resizing');
+        
+        // 阻止默认行为，避免文本选择
+        e.preventDefault();
+    });
+
+    // 拖拽中
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+
+        const deltaY = e.clientY - startY;
+        const newHeight = startHeight + deltaY;
+
+        // 限制最小高度
+        if (newHeight >= MIN_HEIGHT) {
+            promptInput.style.height = newHeight + 'px';
+        }
+    });
+
+    // 结束拖拽
+    document.addEventListener('mouseup', () => {
+        if (isResizing) {
+            isResizing = false;
+            resizeHandler.classList.remove('resizing');
+        }
+    });
+
+    console.log('[Resizable Textarea] 初始化完成');
 }
 
 // ================= Reload Plugin 功能 =================
