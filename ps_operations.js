@@ -795,6 +795,55 @@ class PSOperations {
                         await doc.resizeImage(exportWidth, exportHeight);
                     }
                 }
+                
+                // 在导出前，将透明背景填充为白色
+                console.log('[PS] Flattening image with white background...');
+                // 先创建白色背景层
+                await batchPlay([{
+                    "_obj": "make",
+                    "_target": [{ "_ref": "layer" }],
+                    "layerID": 2,
+                    "_isCommand": true
+                }], {
+                    "synchronousExecution": true,
+                    "modalBehavior": "wait"
+                });
+                
+                // 填充白色
+                await batchPlay([{
+                    "_obj": "fill",
+                    "using": {
+                        "_enum": "fillContents",
+                        "_value": "white"
+                    },
+                    "_isCommand": true
+                }], {
+                    "synchronousExecution": true,
+                    "modalBehavior": "wait"
+                });
+                
+                // 将白色背景层移到最底层
+                await batchPlay([{
+                    "_obj": "move",
+                    "_target": [{
+                        "_ref": "layer",
+                        "_enum": "ordinal",
+                        "_value": "targetEnum"
+                    }],
+                    "to": {
+                        "_ref": "layer",
+                        "_enum": "ordinal",
+                        "_value": "back"
+                    },
+                    "_isCommand": true
+                }], {
+                    "synchronousExecution": true,
+                    "modalBehavior": "wait"
+                });
+                
+                // 展平图像（合并所有图层，消除透明度）
+                await doc.flatten();
+                console.log('[PS] Image flattened with white background');
 
                 // 使用batchPlay保存WebP格式
                 console.log('[PS] Saving WebP file...');
@@ -1002,6 +1051,55 @@ class PSOperations {
                     console.log(`[PS] Resizing to: ${exportWidth}x${exportHeight}`);
                     await doc.resizeImage(exportWidth, exportHeight);
                 }
+                
+                // 在导出前，将透明背景填充为白色
+                console.log('[PS] Flattening image with white background...');
+                // 先创建白色背景层
+                await batchPlay([{
+                    "_obj": "make",
+                    "_target": [{ "_ref": "layer" }],
+                    "layerID": 2,
+                    "_isCommand": true
+                }], {
+                    "synchronousExecution": true,
+                    "modalBehavior": "wait"
+                });
+                
+                // 填充白色
+                await batchPlay([{
+                    "_obj": "fill",
+                    "using": {
+                        "_enum": "fillContents",
+                        "_value": "white"
+                    },
+                    "_isCommand": true
+                }], {
+                    "synchronousExecution": true,
+                    "modalBehavior": "wait"
+                });
+                
+                // 将白色背景层移到最底层
+                await batchPlay([{
+                    "_obj": "move",
+                    "_target": [{
+                        "_ref": "layer",
+                        "_enum": "ordinal",
+                        "_value": "targetEnum"
+                    }],
+                    "to": {
+                        "_ref": "layer",
+                        "_enum": "ordinal",
+                        "_value": "back"
+                    },
+                    "_isCommand": true
+                }], {
+                    "synchronousExecution": true,
+                    "modalBehavior": "wait"
+                });
+                
+                // 展平图像（合并所有图层，消除透明度）
+                await doc.flatten();
+                console.log('[PS] Image flattened with white background');
 
                 // 保存为WebP
                 console.log('[PS] Saving as WebP...');
