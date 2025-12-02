@@ -12,4 +12,18 @@
 - 解压放到 C:\Program Files\Adobe\Adobe Photoshop 202x\Plug-ins\
 <img width="1051" height="240" alt="image" src="https://github.com/user-attachments/assets/c8353ef4-0ff2-4db6-a699-c48efd0765c4" />
 - plugins>PSBanana
-<img width="1072" height="396" alt="image" src="https://github.com/user-attachments/assets/451513f8-da4b-4b26-9232-36701bbdb479" />
+<img width="481" height="178" alt="image" src="https://github.com/user-attachments/assets/451513f8-da4b-4b26-9232-36701bbdb479" />
+
+<img width="481" height="925" alt="image" src="https://github.com/user-attachments/assets/594c51fe-ef4e-4d82-a294-3bc1aba5d711" />
+
+
+
+## 使用
+- 在Settings页面填入API。目前只在yunwu/gptgod/openrouter跑通，google 官方的API我这边没有条件测。
+  [yunwu](https://yunwu.ai/register?aff=VE3i) | [gptgod](https://gptgod.site/#/register?invite_code=5ax35dxlk4bys0j7jnzqypwkc)
+
+## 功能
+- 支持图层模式， 使用 source  / reference  命名图层组， 可以得到类似chat中发送两张图的效果
+- 文生图，图生图
+- 选区模式，可只把选区区域发送给ai进行生图
+- Prompt预设
