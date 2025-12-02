@@ -289,6 +289,28 @@
                 left: 100%;
             }
         }
+
+        /* Tooltip Styles */
+        .tooltip {
+            position: relative;
+            display: inline-flex;
+            width: fit-content;
+        }
+
+        .tooltip sp-tooltip {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            /* left: 50%; */
+            /* transform: translateX(-50%); */
+            margin-bottom: 5px;
+            z-index: 100;
+            /* white-space: nowrap; */
+        }
+
+        .tooltip:hover sp-tooltip {
+            display: block;
+        }
     </style>
 </head>
 
@@ -357,12 +379,20 @@
 
             <!-- Toggles -->
             <div class="section">
-                <sp-checkbox size="s" id="searchWebCheckbox">Search Web (Experimental)</sp-checkbox>
-                <sp-checkbox size="s" id="selectionModeCheckbox">Generate Only Selection Area</sp-checkbox>
+                <div class="tooltip">
+                    <sp-checkbox size="s" id="searchWebCheckbox">Search Web (Experimental)</sp-checkbox>
+                    <sp-tooltip open placement="top" variant="info">Only works for google/yunwu api
+                        provider</sp-tooltip>
+                </div>
+                <div class="tooltip">
+                    <sp-checkbox size="s" id="selectionModeCheckbox">Generate by Selection Mask</sp-checkbox>
+                    <sp-tooltip open placement="top" variant="info">Generate selection area only</sp-tooltip>
+                </div>
             </div>
 
             <!-- Generate Button -->
-            <sp-action-button id="btnGenerate" class="full-width" size="l" style="margin-top: 10px; margin-bottom: 10px;">Generate Image</sp-action-button>
+            <sp-action-button id="btnGenerate" class="full-width" size="l"
+                style="margin-top: 10px; margin-bottom: 10px;">Generate Image</sp-action-button>
 
             <!-- Generation Mode Radio Group -->
             <div class="section" id="generationModeRadio">
@@ -376,7 +406,11 @@
 
             <!-- Multi-Image Mode (Hidden by default) -->
             <div id="multiImageModeSection" class="section hidden">
-                <sp-checkbox size="s" id="multiImageModeCheckbox">Use Layer Groups</sp-checkbox>
+                <div class="tooltip">
+                    <sp-checkbox size="s" id="multiImageModeCheckbox">Use Layer Groups</sp-checkbox>
+                    <sp-tooltip open placement="top" variant="info">Ref / Source group will export 1 image each for
+                        server to generate image</sp-tooltip>
+                </div>
                 <sp-action-button size="s" id="btnEnsureGroups" class="full-width">Add Reference/Source
                     Group</sp-action-button>
             </div>
