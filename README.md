@@ -11,8 +11,7 @@
 ### 手动安装
 - 解压放到 C:\Program Files\Adobe\Adobe Photoshop 202x\Plug-ins\
 <img width="1051" height="240" alt="image" src="https://github.com/user-attachments/assets/c8353ef4-0ff2-4db6-a699-c48efd0765c4" />
-- plugins>PSBanana
-<img width="481" height="178" alt="image" src="https://github.com/user-attachments/assets/451513f8-da4b-4b26-9232-36701bbdb479" />
+- plugins>PSBanana<img width="481" height="178" alt="image" src="https://github.com/user-attachments/assets/451513f8-da4b-4b26-9232-36701bbdb479" />
 
 <img width="481" height="925" alt="image" src="https://github.com/user-attachments/assets/594c51fe-ef4e-4d82-a294-3bc1aba5d711" />
 
