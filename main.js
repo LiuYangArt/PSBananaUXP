@@ -51,11 +51,11 @@ async function initializeApp() {
     }
 
     // Restore latest prompt
-    const latestPrompt = settingsManager.get('latest_prompt', '');
-    if (latestPrompt) {
-        document.getElementById('promptInput').value = latestPrompt;
-        console.log(`[UI] Restored latest prompt: ${latestPrompt.substring(0, 50)}...`);
-    }
+    // const latestPrompt = settingsManager.get('latest_prompt', '');
+    // if (latestPrompt) {
+    //     document.getElementById('promptInput').value = latestPrompt;
+    //     console.log(`[UI] Restored latest prompt: ${latestPrompt.substring(0, 50)}...`);
+    // }
 }
 
 function setupTabs() {
@@ -186,8 +186,9 @@ function setupGenerateUI() {
     setTimeout(() => {
         const options = presetSelect.querySelectorAll('sp-menu-item');
         if (options.length > 0) {
+            // Don't auto-select preset content, just set the dropdown value
             presetSelect.value = options[0].value;
-            loadPreset(options[0].value);
+            // loadPreset(options[0].value); // Disable auto-load content
         }
     }, 100);
 
