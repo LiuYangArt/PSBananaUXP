@@ -751,51 +751,56 @@ class PSOperations {
 
             console.log(`[PS] Export file path: ${webpFile.nativePath}`);
 
-            // 挂起历史记录,提升性能并避免污染用户的历史面板
+            // 挂起历史记录,将所有操作合并为一个历史状态,避免界面闪烁
             let suspensionID = null;
             if (executionContext && executionContext.hostControl) {
                 suspensionID = await executionContext.hostControl.suspendHistory({
                     "documentID": doc.id,
-                    "name": "Banana Export"
+                    "name": "导出图片"
                 });
-                console.log('[PS] History suspended for export operation');
+                console.log('[PS] History suspended - all export operations will be combined');
             }
 
             try {
-                // 如果需要裁切区域或缩放,先复制文档
-                let targetDoc = doc;
-                let needsCleanup = false;
-                
+                // 如果需要裁切区域或缩放,在原文档上操作
+                // 操作完成后会回滚,避免创建新文档产生闪烁
                 if (region || maxDimension > maxSize) {
-                    console.log('[PS] Creating duplicate document for crop/resize...');
-                    // 复制文档并合并图层
-                    targetDoc = await doc.duplicate(`temp_export_${timestamp}`, true);
-                    needsCleanup = true;
+                    console.log('[PS] Performing temporary modifications on original document...');
+                    
+                    // 合并可见图层到新图层
+                    console.log('[PS] Merging visible layers...');
+                    await batchPlay([{
+                        "_obj": "mergeVisible",
+                        "duplicate": true,
+                        "_isCommand": true
+                    }], {
+                        "synchronousExecution": true,
+                        "modalBehavior": "wait"
+                    });
                     
                     // 如果有区域，先裁切到区域
                     if (region) {
-                        await targetDoc.crop({
+                        console.log(`[PS] Cropping to region: ${region.width}x${region.height}`);
+                        await doc.crop({
                             left: region.left,
                             top: region.top,
                             right: region.right,
                             bottom: region.bottom
                         });
-                        console.log(`[PS] Cropped to region: ${region.width}x${region.height}`);
                     }
                     
                     // 如果需要缩放
                     if (maxDimension > maxSize) {
-                        await targetDoc.resizeImage(exportWidth, exportHeight);
-                        console.log(`[PS] Resized to: ${exportWidth}x${exportHeight}`);
+                        console.log(`[PS] Resizing to: ${exportWidth}x${exportHeight}`);
+                        await doc.resizeImage(exportWidth, exportHeight);
                     }
                 }
 
                 // 使用batchPlay保存WebP格式
-                // 必须先创建session token,因为batchPlay不接受直接的file对象
+                console.log('[PS] Saving WebP file...');
                 const fileToken = fs.createSessionToken(webpFile);
                 
-                await batchPlay([
-                {
+                await batchPlay([{
                     "_obj": "save",
                     "as": {
                         "_obj": "WebPFormat",
@@ -809,22 +814,16 @@ class PSOperations {
                         "includePsExtras": false
                     },
                     "in": {
-                        "_path": fileToken,  // 使用session token而不是nativePath
+                        "_path": fileToken,
                         "_kind": "local"
                     },
-                    "copy": needsCleanup ? false : true,  // 临时文档无需copy,节省内存
+                    "copy": true,
                     "lowerCase": true,
                     "_isCommand": true
-                }
-                ], {
+                }], {
                     "synchronousExecution": true,
                     "modalBehavior": "wait"
                 });
-
-                // 清理临时文档
-                if (needsCleanup) {
-                    await targetDoc.closeWithoutSaving();
-                }
 
                 console.log(`[PS] Export completed: ${webpFile.nativePath}`);
 
@@ -839,10 +838,11 @@ class PSOperations {
                 };
 
             } finally {
-                // 恢复历史记录
+                // 回滚所有历史记录,恢复文档到导出前的状态
+                // commit=false表示不提交更改,相当于撤销所有操作
                 if (suspensionID !== null && executionContext && executionContext.hostControl) {
-                    await executionContext.hostControl.resumeHistory(suspensionID);
-                    console.log('[PS] History resumed');
+                    await executionContext.hostControl.resumeHistory(suspensionID, false);
+                    console.log('[PS] History rolled back - document restored to original state');
                 }
             }
 
@@ -948,75 +948,59 @@ class PSOperations {
 
             console.log(`[PS] Export file path: ${webpFile.nativePath}`);
 
-            // 挂起历史记录
+            // 挂起历史记录,将所有操作合并为一个历史状态,避免界面闪烁
             let suspensionID = null;
             if (executionContext && executionContext.hostControl) {
                 suspensionID = await executionContext.hostControl.suspendHistory({
                     "documentID": doc.id,
-                    "name": "Banana Export Group"
+                    "name": `导出组: ${group.name}`
                 });
+                console.log('[PS] History suspended - all export operations will be combined');
             }
 
             try {
-                // 复制文档并只保留组内可见图层
-                console.log('[PS] Creating duplicate document for group export...');
-                console.log(`[PS] Original group name: ${group.name}, kind: ${group.kind}`);
-                
-                const tempDoc = await doc.duplicate(`temp_export_${group.name}_${timestamp}`);
-                console.log(`[PS] Temp document created: ${tempDoc.name}`);
-                console.log(`[PS] Temp document layers count: ${tempDoc.layers.length}`);
-                
-                // 在临时文档中找到对应的组
-                let targetGroup = null;
-                console.log('[PS] Searching for target group in duplicated document...');
-                for (const layer of tempDoc.layers) {
-                    console.log(`[PS] Checking layer: ${layer.name}, kind: ${layer.kind}`);
-                    if (layer.kind === "group" && layer.name.toLowerCase() === group.name.toLowerCase()) {
-                        targetGroup = layer;
-                        console.log(`[PS] Found target group: ${layer.name}`);
-                        break;
-                    }
+                // 保存当前图层可见性状态
+                const layerVisibilityStates = new Map();
+                for (const layer of doc.layers) {
+                    layerVisibilityStates.set(layer.id, layer.visible);
                 }
-
-                if (!targetGroup) {
-                    console.error(`[PS] Target group '${group.name}' not found in duplicated document`);
-                    console.error(`[PS] Available layers:`);
-                    for (const layer of tempDoc.layers) {
-                        console.error(`  - ${layer.name} (${layer.kind})`);
-                    }
-                    await tempDoc.closeWithoutSaving();
-                    throw new Error(`Group '${group.name}' not found in duplicated document`);
-                }
-
+                
                 // 隐藏所有其他图层,只保留目标组可见
-                console.log('[PS] Hiding other layers...');
-                for (const layer of tempDoc.layers) {
-                    if (layer.id !== targetGroup.id) {
+                console.log('[PS] Setting layer visibility for group export...');
+                for (const layer of doc.layers) {
+                    if (layer.id !== group.id) {
                         layer.visible = false;
+                    } else {
+                        layer.visible = true;
                     }
                 }
 
-                // 合并可见图层
-                console.log('[PS] Flattening document...');
-                await tempDoc.flatten();
-
+                // 合并可见图层到新图层
+                console.log('[PS] Merging visible layers in group...');
+                await batchPlay([{
+                    "_obj": "mergeVisible",
+                    "duplicate": true,
+                    "_isCommand": true
+                }], {
+                    "synchronousExecution": true,
+                    "modalBehavior": "wait"
+                });
+                
                 // 如果有区域,裁切到区域
                 if (region) {
-                    console.log(`[PS] Cropping to region: ${region.left}, ${region.top}, ${region.right}, ${region.bottom}`);
-                    await tempDoc.crop({
+                    console.log(`[PS] Cropping to region: ${region.width}x${region.height}`);
+                    await doc.crop({
                         left: region.left,
                         top: region.top,
                         right: region.right,
                         bottom: region.bottom
                     });
-                    console.log(`[PS] Cropped to region: ${region.width}x${region.height}`);
                 }
                 
                 // 如果需要缩放
                 if (maxDimension > maxSize) {
                     console.log(`[PS] Resizing to: ${exportWidth}x${exportHeight}`);
-                    await tempDoc.resizeImage(exportWidth, exportHeight);
-                    console.log(`[PS] Resized to: ${exportWidth}x${exportHeight}`);
+                    await doc.resizeImage(exportWidth, exportHeight);
                 }
 
                 // 保存为WebP
@@ -1039,17 +1023,13 @@ class PSOperations {
                         "_path": fileToken,
                         "_kind": "local"
                     },
-                    "copy": false,
+                    "copy": true,
                     "lowerCase": true,
                     "_isCommand": true
                 }], {
                     "synchronousExecution": true,
                     "modalBehavior": "wait"
                 });
-
-                // 关闭临时文档
-                console.log('[PS] Closing temp document...');
-                await tempDoc.closeWithoutSaving();
 
                 console.log(`[PS] Group export completed: ${webpFile.nativePath}`);
 
@@ -1060,9 +1040,11 @@ class PSOperations {
                 };
 
             } finally {
-                // 恢复历史记录
+                // 回滚所有历史记录,恢复文档到导出前的状态
+                // commit=false表示不提交更改,相当于撤销所有操作
                 if (suspensionID !== null && executionContext && executionContext.hostControl) {
-                    await executionContext.hostControl.resumeHistory(suspensionID);
+                    await executionContext.hostControl.resumeHistory(suspensionID, false);
+                    console.log('[PS] History rolled back - document restored to original state');
                 }
             }
 
