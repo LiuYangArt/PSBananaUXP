@@ -405,14 +405,11 @@ class PSOperations {
 
             console.log(`[PS] Canvas: ${canvasWidth}x${canvasHeight}, Layer: ${layerWidth}x${layerHeight}`);
 
-            // Calculate scale to fill canvas
-            const scaleX = (canvasWidth / layerWidth) * 100;
-            const scaleY = (canvasHeight / layerHeight) * 100;
+            // 使用高度进行缩放计算（测试表明这样最准确）
+            // 例如: 目标1800x2048，1K生成896x1024，应使用1024->2048的比例
+            const scale = (canvasHeight / layerHeight) * 100;
 
-            // Use the larger scale to ensure it fills
-            const scale = Math.max(scaleX, scaleY);
-
-            console.log(`[PS] Scaling layer to ${scale.toFixed(2)}%`);
+            console.log(`[PS] Scaling layer by height: ${scale.toFixed(2)}%`);
 
             // Transform layer using batchPlay
             await batchPlay([
@@ -473,14 +470,11 @@ class PSOperations {
 
             console.log(`[PS] Region: ${region.width}x${region.height}, Layer: ${layerWidth}x${layerHeight}`);
 
-            // 计算缩放比例以填充区域
-            const scaleX = (region.width / layerWidth) * 100;
-            const scaleY = (region.height / layerHeight) * 100;
+            // 使用高度进行缩放计算（测试表明这样最准确）
+            // 例如: 目标1800x2048，1K生成896x1024，应使用1024->2048的比例
+            const scale = (region.height / layerHeight) * 100;
 
-            // 使用较大的缩放比例确保填充
-            const scale = Math.max(scaleX, scaleY);
-
-            console.log(`[PS] Scaling layer to ${scale.toFixed(2)}%`);
+            console.log(`[PS] Scaling layer by height: ${scale.toFixed(2)}%`);
 
             // 缩放图层
             await batchPlay([
