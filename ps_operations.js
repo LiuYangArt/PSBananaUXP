@@ -276,6 +276,8 @@ class PSOperations {
             // 直接在 batchPlay 中使用 session token
             // 根据 UXP 文档，session token 可以直接作为 _path 使用
             console.log(`[PS] Calling batchPlay with session token`);
+            
+            // 先导入图片（会导入到当前活动图层的位置）
             const result = await batchPlay([
                 {
                     "_obj": "placeEvent",
@@ -304,13 +306,13 @@ class PSOperations {
 
             newLayer.name = layerName;
             console.log(`[PS] Layer created successfully: ${layerName}`);
+            
+            // 立即将图层移到最顶层（在缩放之前），确保不会被困在组内
+            await this.moveLayerToTop(newLayer);
+            console.log(`[PS] Layer moved to top of document`);
 
             // Resize to canvas size
             await this.resizeLayerToCanvas(newLayer);
-            
-            // 将图层移到最顶层（所有组之外）
-            await this.moveLayerToTop(newLayer);
-            console.log(`[PS] Layer moved to top of document`);
 
             return layerName;
         } catch (e) {
@@ -372,13 +374,13 @@ class PSOperations {
 
             newLayer.name = layerName;
             console.log(`[PS] Layer created: ${layerName}`);
+            
+            // 立即将图层移到最顶层（在缩放之前），确保不会被困在组内
+            await this.moveLayerToTop(newLayer);
+            console.log(`[PS] Layer moved to top of document`);
 
             // 调整图层到区域大小和位置
             await this.resizeLayerToRegion(newLayer, region);
-            
-            // 将图层移到最顶层（所有组之外）
-            await this.moveLayerToTop(newLayer);
-            console.log(`[PS] Layer moved to top of document`);
 
             return layerName;
         } catch (e) {
@@ -632,33 +634,47 @@ class PSOperations {
             const doc = app.activeDocument;
             
             // 先将图层移出组（如果在组内）
-            if (layer.parent && layer.parent.typename === "LayerSet") {
-                console.log(`[PS] Layer is inside group '${layer.parent.name}', moving out...`);
-                // 将图层移到文档根层级
-                await batchPlay([
-                    {
-                        "_obj": "move",
-                        "_target": [
-                            {
-                                "_ref": "layer",
+            // 多次检查，确保完全移出所有嵌套组
+            let maxAttempts = 5;  // 最多尝试5次，处理深度嵌套的情况
+            for (let i = 0; i < maxAttempts; i++) {
+                if (layer.parent && layer.parent.typename === "LayerSet") {
+                    console.log(`[PS] Layer is inside group '${layer.parent.name}' (depth ${i+1}), moving out...`);
+                    // 将图层移到文档根层级
+                    await batchPlay([
+                        {
+                            "_obj": "move",
+                            "_target": [
+                                {
+                                    "_ref": "layer",
+                                    "_enum": "ordinal",
+                                    "_value": "targetEnum"
+                                }
+                            ],
+                            "to": {
+                                "_ref": "document",
                                 "_enum": "ordinal",
                                 "_value": "targetEnum"
-                            }
-                        ],
-                        "to": {
-                            "_ref": "document",
-                            "_enum": "ordinal",
-                            "_value": "targetEnum"
-                        },
-                        "_isCommand": true
+                            },
+                            "_isCommand": true
+                        }
+                    ], {
+                        "synchronousExecution": true,
+                        "modalBehavior": "wait"
+                    });
+                    
+                    // 重新获取图层引用（移动后可能需要刷新）
+                    const currentLayers = doc.activeLayers;
+                    if (currentLayers && currentLayers.length > 0) {
+                        layer = currentLayers[0];
                     }
-                ], {
-                    "synchronousExecution": true,
-                    "modalBehavior": "wait"
-                });
+                } else {
+                    console.log(`[PS] Layer is already at document root level`);
+                    break;
+                }
             }
             
             // 然后移到最顶层
+            console.log(`[PS] Moving layer to front of all layers...`);
             await batchPlay([
                 {
                     "_obj": "move",
@@ -680,8 +696,11 @@ class PSOperations {
                 "synchronousExecution": true,
                 "modalBehavior": "wait"
             });
+            
+            console.log(`[PS] Layer successfully moved to top`);
         } catch (e) {
             console.error("Error moving layer to top:", e);
+            throw e;  // 抛出错误，让调用者知道移动失败
         }
     }
 
