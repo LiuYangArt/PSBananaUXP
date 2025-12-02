@@ -607,6 +607,8 @@ async function handleGenerateImage() {
     const btnGenerate = document.getElementById('btnGenerate');
     btnGenerate.disabled = true;
     btnGenerate.classList.add('shine-effect');
+    const originalBtnText = btnGenerate.textContent;
+    btnGenerate.textContent = 'Generating';
 
     try {
         await settingsManager.set('latest_prompt', prompt);
@@ -734,6 +736,7 @@ async function handleGenerateImage() {
         const btnGenerate = document.getElementById('btnGenerate');
         btnGenerate.disabled = false;
         btnGenerate.classList.remove('shine-effect');
+        btnGenerate.textContent = 'Generate Image';
     }
 }
 
