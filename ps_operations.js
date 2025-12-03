@@ -472,11 +472,26 @@ class PSOperations {
 
             console.log(`[PS] Region: ${region.width}x${region.height}, Layer: ${layerWidth}x${layerHeight}`);
 
-            // 使用高度进行缩放计算（测试表明这样最准确）
-            // 例如: 目标1800x2048，1K生成896x1024，应使用1024->2048的比例
-            const scale = (region.height / layerHeight) * 100;
-
-            console.log(`[PS] Scaling layer by height: ${scale.toFixed(2)}%`);
+            // 计算region和layer的宽高比
+            const regionRatio = region.width / region.height;
+            const layerRatio = layerWidth / layerHeight;
+            
+            console.log(`[PS] Region ratio: ${regionRatio.toFixed(4)}, Layer ratio: ${layerRatio.toFixed(4)}`);
+            
+            // 根据宽高比关系决定缩放基准：
+            // - 如果region比layer更宽（regionRatio > layerRatio），按高度缩放
+            // - 如果region比layer更窄（regionRatio < layerRatio），按宽度缩放
+            // - 这样可以确保图片完全填充region
+            let scale;
+            if (regionRatio > layerRatio) {
+                // region更宽，按高度缩放
+                scale = (region.height / layerHeight) * 100;
+                console.log(`[PS] Scaling by height (region is wider): ${scale.toFixed(2)}%`);
+            } else {
+                // region更窄或相等，按宽度缩放
+                scale = (region.width / layerWidth) * 100;
+                console.log(`[PS] Scaling by width (region is narrower): ${scale.toFixed(2)}%`);
+            }
 
             // 缩放图层
             await batchPlay([
