@@ -866,7 +866,7 @@ async function confirmUser(message) {
 
             const cancelBtn = document.createElement('sp-action-button');
             cancelBtn.size = 'S';
-            cancelBtn.textContent = 'Cancel';
+            cancelBtn.textContent = getText('dialog_cancel');
             cancelBtn.className = 'dialog-button';
             cancelBtn.addEventListener('click', () => {
                 dialog.close();
@@ -876,7 +876,7 @@ async function confirmUser(message) {
             btnContainer.appendChild(cancelBtn);
 
             const okBtn = document.createElement('sp-action-button');
-            okBtn.textContent = 'OK';
+            okBtn.textContent = getText('dialog_ok');
             okBtn.size = 'S';
             okBtn.className = 'dialog-button';
             okBtn.addEventListener('click', () => {
