@@ -551,7 +551,9 @@ class ImageGenerator {
      */
     async _processGeminiResponse(responseData) {
         if (!responseData.candidates || !responseData.candidates[0]) {
-            throw new Error("No image in response");
+            // 提取服务器返回的文字内容
+            const serverMessage = this._extractServerMessage(responseData);
+            throw new Error(`No image generated. ${serverMessage}`);
         }
 
         const parts = responseData.candidates[0].content.parts;
@@ -565,7 +567,10 @@ class ImageGenerator {
             }
         }
 
-        throw new Error("No image found in response");
+        // 如果有parts但没有图片，尝试提取文字内容
+        const textContent = this._extractTextFromParts(parts);
+        const errorMsg = textContent ? `No image. AI response: ${textContent}` : "No image generated";
+        throw new Error(errorMsg);
     }
 
     /**
@@ -596,10 +601,17 @@ class ImageGenerator {
                     imageUrl = plainUrlMatch[1];
                 }
             }
+
+            // 如果没有找到URL，尝试从content中提取文字信息
+            if (!imageUrl && typeof content === 'string') {
+                const serverMessage = this._extractServerMessage(responseData);
+                throw new Error(`No image generated. ${serverMessage}`);
+            }
         }
 
         if (!imageUrl) {
-            throw new Error("No image URL found in response");
+            const serverMessage = this._extractServerMessage(responseData);
+            throw new Error(`No image generated. ${serverMessage}`);
         }
 
         // Download image
@@ -611,7 +623,8 @@ class ImageGenerator {
      */
     async _processOpenRouterResponse(responseData) {
         if (!responseData.choices || !responseData.choices.length === 0) {
-            throw new Error("No image in response");
+            const serverMessage = this._extractServerMessage(responseData);
+            throw new Error(`No image generated. ${serverMessage}`);
         }
 
         const message = responseData.choices[0].message;
@@ -634,7 +647,8 @@ class ImageGenerator {
             }
         }
 
-        throw new Error("No image found in response");
+        const serverMessage = this._extractServerMessage(responseData);
+        throw new Error(`No image generated. ${serverMessage}`);
     }
 
     /**
@@ -644,6 +658,60 @@ class ImageGenerator {
         if (mimeType.includes("webp")) return "webp";
         if (mimeType.includes("jpeg") || mimeType.includes("jpg")) return "jpg";
         return "png";
+    }
+
+    /**
+     * Extract text content from parts array (Gemini/Yunwu format)
+     */
+    _extractTextFromParts(parts) {
+        if (!parts || !Array.isArray(parts)) return '';
+        
+        const textParts = parts
+            .filter(part => part.text)
+            .map(part => part.text)
+            .join(' ');
+        
+        return textParts.trim();
+    }
+
+    /**
+     * Extract server message from response data
+     * 从响应数据中提取服务器返回的文字内容
+     */
+    _extractServerMessage(responseData) {
+        try {
+            // Gemini/Yunwu format: candidates[0].content.parts[].text
+            if (responseData.candidates && responseData.candidates[0]) {
+                const parts = responseData.candidates[0].content?.parts;
+                if (parts) {
+                    const textContent = this._extractTextFromParts(parts);
+                    if (textContent) return `Server message: ${textContent}`;
+                }
+            }
+
+            // OpenAI/GPTGod format: choices[0].message.content
+            if (responseData.choices && responseData.choices[0]) {
+                const content = responseData.choices[0].message?.content;
+                if (content && typeof content === 'string') {
+                    return `Server message: ${content}`;
+                }
+            }
+
+            // Error message in response
+            if (responseData.error) {
+                const errorMsg = typeof responseData.error === 'string' 
+                    ? responseData.error 
+                    : responseData.error.message || JSON.stringify(responseData.error);
+                return `Error: ${errorMsg}`;
+            }
+
+            // Fallback: return truncated JSON
+            const jsonStr = JSON.stringify(responseData);
+            const truncated = jsonStr.length > 200 ? jsonStr.substring(0, 200) + '...' : jsonStr;
+            return `Response: ${truncated}`;
+        } catch (e) {
+            return 'Unable to parse server response';
+        }
     }
 }
 

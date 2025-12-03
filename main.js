@@ -545,7 +545,7 @@ async function handleSmartCanvasRatio() {
     }
 
     try {
-        showCanvasRatioStatus('正在分析画布比例...', 'info');
+        showCanvasRatioStatus('Analyzing canvas ratio...', 'info');
         btnSmartCanvasRatio.disabled = true;
 
         const result = await executeAsModal(async () => {
@@ -554,14 +554,14 @@ async function handleSmartCanvasRatio() {
 
         if (!result.changed) {
             showCanvasRatioStatus(
-                `✅ 画布已经是 ${result.targetRatio} 比例 (${result.newWidth}x${result.newHeight})`,
+                `✅ Canvas is already ${result.targetRatio} ratio (${result.newWidth}x${result.newHeight})`,
                 'success'
             );
         } else {
             showCanvasRatioStatus(
-                `✅ 画布已调整到 ${result.targetRatio} 比例\n` +
-                `原始: ${result.originalWidth}x${result.originalHeight} → ` +
-                `新尺寸: ${result.newWidth}x${result.newHeight}`,
+                `✅ Canvas adjusted to ${result.targetRatio} ratio\n` +
+                `Original: ${result.originalWidth}x${result.originalHeight} → ` +
+                `New: ${result.newWidth}x${result.newHeight}`,
                 'success'
             );
         }
@@ -569,7 +569,7 @@ async function handleSmartCanvasRatio() {
     } catch (e) {
         console.error('Smart Canvas Ratio failed:', e);
         const errorMessage = e?.message || String(e) || 'Unknown error';
-        showCanvasRatioStatus(`❌ 调整失败: ${errorMessage}`, 'error');
+        showCanvasRatioStatus(`❌ Adjustment failed: ${errorMessage}`, 'error');
     } finally {
         btnSmartCanvasRatio.disabled = false;
     }
@@ -582,7 +582,7 @@ async function handleGenerateImage() {
     }
 
     if (!app.activeDocument) {
-        showGenerateStatus('❌ 请先打开一个文档', 'error');
+        showGenerateStatus('❌ Please open a document first', 'error');
         return;
     }
 
@@ -614,7 +614,7 @@ async function handleGenerateImage() {
     try {
         await settingsManager.set('latest_prompt', prompt);
 
-        showGenerateStatus('获取画布信息...', 'info');
+        showGenerateStatus('Getting canvas info...', 'info');
 
         let aspectRatio = '1:1';
         let canvasInfo = null;
@@ -649,7 +649,7 @@ async function handleGenerateImage() {
                     if (!referenceGroup) missingGroups.push('Reference');
 
                     if (missingGroups.length > 0) {
-                        throw new Error(`缺少必需的图层组: ${missingGroups.join(' / ')}`);
+                        throw new Error(`Missing required layer groups: ${missingGroups.join(' / ')}`);
                     }
 
                     const sourceResult = await PSOperations.exportGroupAsWebP(sourceGroup, maxSize, quality, executionContext, region);
@@ -684,7 +684,7 @@ async function handleGenerateImage() {
         }
 
         const modeText = mode === 'imgedit' ? 'Image Edit' : 'Text to Image';
-        showGenerateStatus(`正在生成图片... (${modeText}, ${resolution}, ${aspectRatio})`, 'info');
+        showGenerateStatus(`Generating image... (${modeText}, ${resolution}, ${aspectRatio})`, 'info');
 
         const imageFile = await imageGenerator.generate({
             prompt,
@@ -706,7 +706,7 @@ async function handleGenerateImage() {
         const fs = require('uxp').storage.localFileSystem;
         const imageToken = fs.createSessionToken(imageFile);
 
-        showGenerateStatus('正在导入图片到Photoshop...', 'info');
+        showGenerateStatus('Importing image to Photoshop...', 'info');
 
         const layerName = await executeAsModal(async () => {
             if (selectionRegion) {
@@ -716,7 +716,7 @@ async function handleGenerateImage() {
             }
         }, { commandName: "Import Generated Image" });
 
-        showGenerateStatus(`✅ 完成！图层: ${layerName}`, 'success');
+        showGenerateStatus(`✅ Complete! Layer: ${layerName}`, 'success');
 
     } catch (e) {
         console.error('Generation failed:', e);
@@ -731,7 +731,7 @@ async function handleGenerateImage() {
             }
         }
 
-        showGenerateStatus(`❌ 生成失败: ${errorMessage}`, 'error');
+        showGenerateStatus(`❌ Generation failed: ${errorMessage}`, 'error');
     } finally {
         isGenerating = false;
         const btnGenerate = document.getElementById('btnGenerate');
@@ -761,7 +761,7 @@ async function promptUser(message, defaultValue = '') {
         input.value = defaultValue;
         input.className = 'dialog-input';
         input.size = 'S';
-        input.setAttribute('placeholder', '输入名称...');
+        input.setAttribute('placeholder', 'Enter name...');
 
         // 支持回车确认
         input.addEventListener('keydown', (e) => {
@@ -874,7 +874,7 @@ async function updateDebugFolderPath() {
 
     if (!debugModeEnabled) {
         pathInput.value = '';
-        pathInput.placeholder = '启用 Debug Mode 后显示路径';
+        pathInput.placeholder = 'Enable Debug Mode to show path';
         return;
     }
 
@@ -885,13 +885,13 @@ async function updateDebugFolderPath() {
     } catch (e) {
         console.error('Failed to get debug folder path:', e);
         pathInput.value = '';
-        pathInput.placeholder = `⚠️ 无法获取路径: ${e.message}`;
+        pathInput.placeholder = `⚠️ Unable to get path: ${e.message}`;
     }
 }
 
 async function handleTestImport() {
     if (isGenerating) {
-        showGenerateStatus('正在处理中...', 'error');
+        showGenerateStatus('Processing...', 'error');
         return;
     }
 
@@ -900,17 +900,17 @@ async function handleTestImport() {
     document.getElementById('btnTestImport').disabled = true;
 
     try {
-        showGenerateStatus('🔍 查找最近生成的图片...', 'info');
+        showGenerateStatus('🔍 Finding latest generated image...', 'info');
         const token = await fileManager.getLatestImageToken();
 
         if (!token) {
-            showGenerateStatus('⚠️ 没有找到生成的图片，请先生成一张图', 'error');
+            showGenerateStatus('⚠️ No generated image found, please generate one first', 'error');
             return;
         }
 
         const selectionMode = settingsManager.get('selection_mode', false);
-        const regionText = selectionMode ? ' (选区模式)' : '';
-        showGenerateStatus(`📥 正在导入图片${regionText}...`, 'info');
+        const regionText = selectionMode ? ' (Selection Mode)' : '';
+        showGenerateStatus(`📥 Importing image${regionText}...`, 'info');
 
         const layerName = await executeAsModal(async () => {
             let region = null;
@@ -931,12 +931,12 @@ async function handleTestImport() {
             }
         }, { commandName: "Test Import Image" });
 
-        showGenerateStatus(`✅ 测试导入成功${regionText}！图层: ${layerName}`, 'success');
+        showGenerateStatus(`✅ Test import successful${regionText}! Layer: ${layerName}`, 'success');
 
     } catch (e) {
         console.error('[TEST] ERROR:', e);
         const errorMessage = e?.message || String(e) || 'Unknown error';
-        showGenerateStatus(`❌ 导入失败: ${errorMessage}`, 'error');
+        showGenerateStatus(`❌ Import failed: ${errorMessage}`, 'error');
     } finally {
         isGenerating = false;
         document.getElementById('btnGenerate').disabled = false;
@@ -946,7 +946,7 @@ async function handleTestImport() {
 
 async function handleTestExport() {
     if (isGenerating) {
-        showGenerateStatus('正在处理中...', 'error');
+        showGenerateStatus('Processing...', 'error');
         return;
     }
 
@@ -955,7 +955,7 @@ async function handleTestExport() {
     document.getElementById('btnTestExport').disabled = true;
 
     try {
-        showGenerateStatus('📤 正在导出图层...', 'info');
+        showGenerateStatus('📤 Exporting layers...', 'info');
 
         const maxSize = settingsManager.get('export_max_size', 2048);
         const quality = settingsManager.get('export_quality', 80);
@@ -991,23 +991,23 @@ async function handleTestExport() {
             }
         }, { commandName: "Test Export Layers" });
 
-        const regionText = selectionMode ? ' (选区模式)' : '';
+        const regionText = selectionMode ? ' (Selection Mode)' : '';
 
         if (exportResults.mode === 'multi') {
-            let message = `✅ 多图导出成功${regionText}！\n`;
+            let message = `✅ Multi-image export successful${regionText}!\n`;
             if (exportResults.source) message += `Source: ${exportResults.source.width}x${exportResults.source.height}\n`;
             if (exportResults.reference) message += `Reference: ${exportResults.reference.width}x${exportResults.reference.height}`;
-            if (!exportResults.source && !exportResults.reference) message = `⚠️ 未找到Source/Reference组`;
+            if (!exportResults.source && !exportResults.reference) message = `⚠️ Source/Reference groups not found`;
             showGenerateStatus(message, 'success');
         } else {
             const result = exportResults.result;
-            showGenerateStatus(`✅ 导出成功${regionText}！\n尺寸: ${result.width}x${result.height}`, 'success');
+            showGenerateStatus(`✅ Export successful${regionText}!\nSize: ${result.width}x${result.height}`, 'success');
         }
 
     } catch (e) {
         console.error('[TEST EXPORT] ERROR:', e);
         const errorMessage = e?.message || String(e) || 'Unknown error';
-        showGenerateStatus(`❌ 导出失败: ${errorMessage}`, 'error');
+        showGenerateStatus(`❌ Export failed: ${errorMessage}`, 'error');
     } finally {
         isGenerating = false;
         document.getElementById('btnGenerate').disabled = false;
@@ -1017,12 +1017,12 @@ async function handleTestExport() {
 
 async function handleEnsureGroups() {
     if (isGenerating) {
-        showGenerateStatus('正在处理中...', 'error');
+        showGenerateStatus('Processing...', 'error');
         return;
     }
 
     if (!app.activeDocument) {
-        showGenerateStatus('❌ 请先打开一个文档', 'error');
+        showGenerateStatus('❌ Please open a document first', 'error');
         return;
     }
 
@@ -1031,21 +1031,21 @@ async function handleEnsureGroups() {
     btnEnsureGroups.disabled = true;
 
     try {
-        showGenerateStatus('🔧 正在创建/更新图层组...', 'info');
+        showGenerateStatus('🔧 Creating/updating layer groups...', 'info');
 
         const result = await executeAsModal(async () => {
             return await PSOperations.ensureSourceReferenceGroups();
         }, { commandName: "Ensure Reference/Source Groups" });
 
         if (result.success) {
-            let message = '✅ Reference组(紫色)和Source组(绿色)已存在/更新';
+            let message = '✅ Reference (purple) and Source (green) groups exist/updated';
             showGenerateStatus(message, 'success');
         }
 
     } catch (e) {
         console.error('[UI] Error ensuring groups:', e);
         const errorMessage = e?.message || String(e) || 'Unknown error';
-        showGenerateStatus(`❌ 操作失败: ${errorMessage}`, 'error');
+        showGenerateStatus(`❌ Operation failed: ${errorMessage}`, 'error');
     } finally {
         isGenerating = false;
         btnEnsureGroups.disabled = false;
@@ -1060,7 +1060,7 @@ function setupResizableTextarea() {
     const resizeHandler = document.getElementById('promptResizeHandler');
 
     if (!promptInput || !resizeHandler) {
-        console.error('[Resizable Textarea] 无法找到 promptInput 或 resizeHandler 元素');
+        console.error('[Resizable Textarea] Cannot find promptInput or resizeHandler element');
         return;
     }
 
@@ -1101,14 +1101,14 @@ function setupResizableTextarea() {
         }
     });
 
-    console.log('[Resizable Textarea] 初始化完成');
+    console.log('[Resizable Textarea] Initialization complete');
 }
 
 // ================= Reload Plugin 功能 =================
 // 用于开发调试时快速重载插件，无需重启Photoshop
 
 function reloadPlugin() {
-    console.log('[Reload] 正在重新加载插件...');
+    console.log('[Reload] Reloading plugin...');
     window.location.reload();
 }
 
