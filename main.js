@@ -6,6 +6,19 @@ const { ImageGenerator } = require('./image_generator');
 const { FileManager } = require('./file_manager');
 const { PSOperations } = require('./ps_operations');
 const { calculateAspectRatio } = require('./aspect_ratio');
+const translations = require('./localization');
+
+// Localization Helper
+let currentLanguage = 'en';
+
+function getText(key, params = {}) {
+    const lang = translations[currentLanguage] || translations['en'];
+    let text = lang[key] || translations['en'][key] || key;
+    for (const [k, v] of Object.entries(params)) {
+        text = text.replace(`{${k}}`, v);
+    }
+    return text;
+}
 
 // Initialize managers
 const settingsManager = new SettingsManager();
@@ -39,6 +52,10 @@ async function initializeApp() {
 
     // Setup Settings Tab UI
     setupSettingsUI();
+
+    // Load language
+    currentLanguage = settingsManager.get('language', 'en');
+    updateLanguage(currentLanguage);
 
     // Load selected provider
     const selectedProviderName = settingsManager.get('selected_provider');
@@ -198,7 +215,7 @@ function setupGenerateUI() {
 
     // Add Preset
     btnAddPreset.addEventListener('click', async () => {
-        const newName = await promptUser('Enter preset name:');
+        const newName = await promptUser(getText('msg_enter_preset_name'));
         if (!newName) return;
 
         const currentPrompt = promptInput.value || '';
@@ -217,7 +234,7 @@ function setupGenerateUI() {
     // Save Preset
     btnSavePreset.addEventListener('click', async () => {
         if (!currentPreset) {
-            showGenerateStatus('No preset selected', 'error');
+            showGenerateStatus(getText('msg_no_preset_selected'), 'error');
             return;
         }
 
@@ -232,11 +249,11 @@ function setupGenerateUI() {
     // Rename Preset
     btnRenamePreset.addEventListener('click', async () => {
         if (!currentPreset) {
-            showGenerateStatus('No preset selected', 'error');
+            showGenerateStatus(getText('msg_no_preset_selected'), 'error');
             return;
         }
 
-        const newName = await promptUser(`Rename "${currentPreset}" to:`);
+        const newName = await promptUser(getText('msg_rename_preset', { name: currentPreset }));
         if (!newName) return;
 
         const result = await presetManager.renamePreset(currentPreset, newName);
@@ -253,11 +270,11 @@ function setupGenerateUI() {
     // Delete Preset
     btnDeletePreset.addEventListener('click', async () => {
         if (!currentPreset) {
-            showGenerateStatus('No preset selected', 'error');
+            showGenerateStatus(getText('msg_no_preset_selected'), 'error');
             return;
         }
 
-        const confirmed = await confirmUser(`Delete preset "${currentPreset}"?`);
+        const confirmed = await confirmUser(getText('msg_delete_preset', { name: currentPreset }));
         if (!confirmed) return;
 
         const result = await presetManager.deletePreset(currentPreset);
@@ -302,6 +319,15 @@ function setupSettingsUI() {
     const debugFolderPathInput = document.getElementById('debugFolderPath');
     const inputMaxSize = document.getElementById('inputMaxSize');
     const inputQuality = document.getElementById('inputQuality');
+    const languageSelect = document.getElementById('languageSelect');
+
+    // Language Selection
+    languageSelect.value = currentLanguage;
+    languageSelect.addEventListener('change', async (e) => {
+        const lang = e.target.value;
+        await settingsManager.set('language', lang);
+        updateLanguage(lang);
+    });
 
     // Populate provider dropdown
     updateProviderDropdown();
@@ -351,7 +377,7 @@ function setupSettingsUI() {
 
     // Add Provider
     btnAddProvider.addEventListener('click', async () => {
-        const newName = await promptUser('Enter new provider name:');
+        const newName = await promptUser(getText('msg_enter_provider_name'));
         if (!newName) return;
 
         const result = await providerManager.addProvider(newName, '', '', '');
@@ -368,7 +394,7 @@ function setupSettingsUI() {
     // Save Provider
     btnSaveProvider.addEventListener('click', async () => {
         if (!currentProvider) {
-            showStatus('No provider selected', 'error');
+            showStatus(getText('msg_no_provider_selected'), 'error');
             return;
         }
 
@@ -384,7 +410,7 @@ function setupSettingsUI() {
             currentProvider.baseUrl = inputBaseUrl.value;
             currentProvider.model = inputModelId.value;
             await settingsManager.set('selected_provider', currentProvider.name);
-            showStatus('Provider saved successfully', 'success');
+            showStatus(getText('msg_provider_saved'), 'success');
         } else {
             showStatus(result.message, 'error');
         }
@@ -393,11 +419,11 @@ function setupSettingsUI() {
     // Delete Provider
     btnDeleteProvider.addEventListener('click', async () => {
         if (!currentProvider) {
-            showStatus('No provider selected', 'error');
+            showStatus(getText('msg_no_provider_selected'), 'error');
             return;
         }
 
-        const confirmed = await confirmUser(`Delete provider "${currentProvider.name}"?`);
+        const confirmed = await confirmUser(getText('msg_delete_provider', { name: currentProvider.name }));
         if (!confirmed) return;
 
         const result = await providerManager.deleteProvider(currentProvider.name);
@@ -419,11 +445,11 @@ function setupSettingsUI() {
     // Test Connection
     btnTestConnection.addEventListener('click', async () => {
         if (!currentProvider) {
-            showStatus('No provider selected', 'error');
+            showStatus(getText('msg_no_provider_selected'), 'error');
             return;
         }
 
-        showStatus('Testing connection...', 'info');
+        showStatus(getText('msg_testing_connection'), 'info');
 
         const testConfig = {
             name: currentProvider.name,
@@ -545,7 +571,7 @@ async function handleSmartCanvasRatio() {
     }
 
     try {
-        showCanvasRatioStatus('Analyzing canvas ratio...', 'info');
+        showCanvasRatioStatus(getText('msg_analyzing_ratio'), 'info');
         btnSmartCanvasRatio.disabled = true;
 
         const result = await executeAsModal(async () => {
@@ -554,14 +580,18 @@ async function handleSmartCanvasRatio() {
 
         if (!result.changed) {
             showCanvasRatioStatus(
-                `✅ Canvas is already ${result.targetRatio} ratio (${result.newWidth}x${result.newHeight})`,
+                getText('msg_ratio_unchanged', { ratio: result.targetRatio, width: result.newWidth, height: result.newHeight }),
                 'success'
             );
         } else {
             showCanvasRatioStatus(
-                `✅ Canvas adjusted to ${result.targetRatio} ratio\n` +
-                `Original: ${result.originalWidth}x${result.originalHeight} → ` +
-                `New: ${result.newWidth}x${result.newHeight}`,
+                getText('msg_ratio_adjusted', {
+                    ratio: result.targetRatio,
+                    oldWidth: result.originalWidth,
+                    oldHeight: result.originalHeight,
+                    newWidth: result.newWidth,
+                    newHeight: result.newHeight
+                }),
                 'success'
             );
         }
@@ -569,7 +599,7 @@ async function handleSmartCanvasRatio() {
     } catch (e) {
         console.error('Smart Canvas Ratio failed:', e);
         const errorMessage = e?.message || String(e) || 'Unknown error';
-        showCanvasRatioStatus(`❌ Adjustment failed: ${errorMessage}`, 'error');
+        showCanvasRatioStatus(getText('msg_adjustment_failed', { error: errorMessage }), 'error');
     } finally {
         btnSmartCanvasRatio.disabled = false;
     }
@@ -577,23 +607,23 @@ async function handleSmartCanvasRatio() {
 
 async function handleGenerateImage() {
     if (isGenerating) {
-        showGenerateStatus('Already generating...', 'error');
+        showGenerateStatus(getText('msg_already_generating'), 'error');
         return;
     }
 
     if (!app.activeDocument) {
-        showGenerateStatus('❌ Please open a document first', 'error');
+        showGenerateStatus(getText('msg_open_document_first'), 'error');
         return;
     }
 
     const prompt = document.getElementById('promptInput').value.trim();
     if (!prompt) {
-        showGenerateStatus('Please enter a prompt', 'error');
+        showGenerateStatus(getText('msg_enter_prompt'), 'error');
         return;
     }
 
     if (!currentProvider || !currentProvider.apiKey || !currentProvider.baseUrl) {
-        showGenerateStatus('Please configure a provider in Settings', 'error');
+        showGenerateStatus(getText('msg_configure_provider'), 'error');
         return;
     }
 
@@ -609,12 +639,12 @@ async function handleGenerateImage() {
     btnGenerate.disabled = true;
     btnGenerate.classList.add('shine-effect');
     const originalBtnText = btnGenerate.textContent;
-    btnGenerate.textContent = 'Generating';
+    btnGenerate.textContent = getText('btn_generating');
 
     try {
         await settingsManager.set('latest_prompt', prompt);
 
-        showGenerateStatus('Getting canvas info...', 'info');
+        showGenerateStatus(getText('msg_getting_canvas_info'), 'info');
 
         let aspectRatio = '1:1';
         let canvasInfo = null;
@@ -683,8 +713,8 @@ async function handleGenerateImage() {
             throw e;
         }
 
-        const modeText = mode === 'imgedit' ? 'Image Edit' : 'Text to Image';
-        showGenerateStatus(`Generating image... (${modeText}, ${resolution}, ${aspectRatio})`, 'info');
+        const modeText = mode === 'imgedit' ? getText('radio_imgedit') : getText('radio_text2img');
+        showGenerateStatus(getText('msg_generating_image', { mode: modeText, resolution: resolution, ratio: aspectRatio }), 'info');
 
         const imageFile = await imageGenerator.generate({
             prompt,
@@ -706,7 +736,7 @@ async function handleGenerateImage() {
         const fs = require('uxp').storage.localFileSystem;
         const imageToken = fs.createSessionToken(imageFile);
 
-        showGenerateStatus('Importing image to Photoshop...', 'info');
+        showGenerateStatus(getText('msg_importing_image'), 'info');
 
         const layerName = await executeAsModal(async () => {
             if (selectionRegion) {
@@ -716,7 +746,7 @@ async function handleGenerateImage() {
             }
         }, { commandName: "Import Generated Image" });
 
-        showGenerateStatus(`✅ Complete! Layer: ${layerName}`, 'success');
+        showGenerateStatus(getText('msg_complete', { layer: layerName }), 'success');
 
     } catch (e) {
         console.error('Generation failed:', e);
@@ -731,13 +761,13 @@ async function handleGenerateImage() {
             }
         }
 
-        showGenerateStatus(`❌ Generation failed: ${errorMessage}`, 'error');
+        showGenerateStatus(getText('msg_generation_failed', { error: errorMessage }), 'error');
     } finally {
         isGenerating = false;
         const btnGenerate = document.getElementById('btnGenerate');
         btnGenerate.disabled = false;
         btnGenerate.classList.remove('shine-effect');
-        btnGenerate.textContent = 'Generate Image';
+        btnGenerate.textContent = getText('btn_generate');
     }
 }
 
@@ -761,7 +791,7 @@ async function promptUser(message, defaultValue = '') {
         input.value = defaultValue;
         input.className = 'dialog-input';
         input.size = 'S';
-        input.setAttribute('placeholder', 'Enter name...');
+        input.setAttribute('placeholder', getText('dialog_placeholder_name'));
 
         // 支持回车确认
         input.addEventListener('keydown', (e) => {
@@ -779,7 +809,7 @@ async function promptUser(message, defaultValue = '') {
         buttonContainer.className = 'dialog-buttons';
 
         const cancelBtn = document.createElement('sp-action-button');
-        cancelBtn.textContent = 'Cancel';
+        cancelBtn.textContent = getText('dialog_cancel');
         cancelBtn.className = 'dialog-button';
         cancelBtn.size = 'S';
         cancelBtn.addEventListener('click', () => {
@@ -790,7 +820,7 @@ async function promptUser(message, defaultValue = '') {
         buttonContainer.appendChild(cancelBtn);
 
         const okBtn = document.createElement('sp-action-button');
-        okBtn.textContent = 'OK';
+        okBtn.textContent = getText('dialog_ok');
         okBtn.className = 'dialog-button';
         okBtn.size = 'S';
         okBtn.addEventListener('click', () => {
@@ -1102,6 +1132,60 @@ function setupResizableTextarea() {
     });
 
     console.log('[Resizable Textarea] Initialization complete');
+}
+
+// Update UI language
+function updateLanguage(lang) {
+    currentLanguage = lang;
+
+    // Update tabs
+    document.getElementById('labelTabGenerate').textContent = getText('tab_generate');
+    document.getElementById('labelTabSettings').textContent = getText('tab_settings');
+
+    // Update Generate tab
+    document.getElementById('labelPromptPresets').textContent = getText('label_prompt_presets');
+    document.getElementById('presetSelect').placeholder = getText('placeholder_select_preset');
+    document.getElementById('btnAddPreset').textContent = getText('btn_add');
+    document.getElementById('btnSavePreset').textContent = getText('btn_save');
+    document.getElementById('btnRenamePreset').textContent = getText('btn_rename');
+    document.getElementById('btnDeletePreset').textContent = getText('btn_del');
+    document.getElementById('promptInput').placeholder = getText('placeholder_prompt');
+    document.getElementById('labelResolution').textContent = getText('label_resolution');
+    document.getElementById('resolutionSelect').placeholder = getText('placeholder_select');
+    document.getElementById('btnSmartCanvasRatio').textContent = getText('btn_smart_ratio');
+    document.getElementById('searchWebCheckbox').textContent = getText('checkbox_search_web');
+    document.getElementById('selectionModeCheckbox').textContent = getText('checkbox_selection_mode');
+    document.getElementById('btnGenerate').textContent = getText('btn_generate');
+    document.getElementById('radioText2Img').textContent = getText('radio_text2img');
+    document.getElementById('radioImgEdit').textContent = getText('radio_imgedit');
+    document.getElementById('multiImageModeCheckbox').textContent = getText('checkbox_layer_groups');
+    document.getElementById('btnEnsureGroups').textContent = getText('btn_add_groups');
+
+    // Update Settings tab
+    document.getElementById('labelLanguage').textContent = getText('label_language');
+    document.getElementById('labelProvider').textContent = getText('label_provider');
+    document.getElementById('providerSelect').placeholder = getText('placeholder_select_provider');
+    document.getElementById('btnAddProvider').textContent = getText('btn_add');
+    document.getElementById('btnSaveProvider').textContent = getText('btn_save');
+    document.getElementById('btnDeleteProvider').textContent = getText('btn_del');
+    document.getElementById('btnTestConnection').textContent = getText('btn_test_connection');
+    document.getElementById('labelApiKey').textContent = getText('label_api_key');
+    document.getElementById('inputApiKey').placeholder = getText('placeholder_api_key');
+    document.getElementById('labelBaseUrl').textContent = getText('label_base_url');
+    document.getElementById('inputBaseUrl').placeholder = getText('placeholder_base_url');
+    document.getElementById('labelModelId').textContent = getText('label_model_id');
+    document.getElementById('inputModelId').placeholder = getText('placeholder_model_id');
+    document.getElementById('labelExportSettings').textContent = getText('label_export_settings');
+    document.getElementById('labelMaxSize').textContent = getText('label_max_size');
+    document.getElementById('labelQuality').textContent = getText('label_quality');
+    document.getElementById('debugModeCheckbox').textContent = getText('checkbox_debug_mode');
+    document.getElementById('labelLogPath').textContent = getText('label_log_path');
+    document.getElementById('debugFolderPath').placeholder = getText('placeholder_log_path');
+    document.getElementById('btnTestExport').textContent = getText('btn_test_export');
+    document.getElementById('btnTestImport').textContent = getText('btn_test_import');
+    document.getElementById('footerText').textContent = getText('footer_text');
+
+    console.log(`[UI] Language updated to: ${lang}`);
 }
 
 // ================= Reload Plugin 功能 =================
