@@ -1200,6 +1200,7 @@ function updateLanguage(lang) {
     document.getElementById('btnEnsureGroups').textContent = getText('btn_add_groups');
 
     // Update Settings tab
+    document.getElementById('languageSelect').placeholder = getText('placeholder_language_select');
     document.getElementById('labelExtraSettings').textContent = getText('label_extra_settings');
     document.getElementById('labelLanguage').textContent = getText('label_language');
     document.getElementById('labelProvider').textContent = getText('label_provider');
