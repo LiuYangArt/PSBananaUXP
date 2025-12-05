@@ -43,6 +43,10 @@ async function logTask(message) {
     taskLogs.push(logEntry);
     console.log(message);
 
+    // Check debug mode
+    const debugMode = settingsManager.get('debug_mode', false);
+    if (!debugMode) return;
+
     // 异步写入日志文件
     try {
         await fileManager.saveTaskLog(taskLogs.join('\n'));
