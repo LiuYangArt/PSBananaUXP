@@ -30,7 +30,8 @@ const imageGenerator = new ImageGenerator(fileManager);
 // Current state
 let currentProvider = null;
 let currentPreset = null;
-let isGenerating = false;
+let activeGenerationCount = 0;  // 当前正在执行的生成任务数量
+let isProcessing = false;  // 用于测试操作的锁
 let generationMode = 'text2img';  // 'text2img' or 'imgedit'
 
 // Wait for DOM to load
@@ -563,6 +564,19 @@ function showGenerateStatus(message, type) {
     }
 }
 
+// 更新生成按钮的状态和文本
+function updateGeneratingButton() {
+    const btnGenerate = document.getElementById('btnGenerate');
+
+    if (activeGenerationCount > 0) {
+        btnGenerate.classList.add('shine-effect');
+        btnGenerate.textContent = getText('btn_generating_count', { count: activeGenerationCount });
+    } else {
+        btnGenerate.classList.remove('shine-effect');
+        btnGenerate.textContent = getText('btn_generate');
+    }
+}
+
 async function handleSmartCanvasRatio() {
     const btnSmartCanvasRatio = document.getElementById('btnSmartCanvasRatio');
 
@@ -606,10 +620,7 @@ async function handleSmartCanvasRatio() {
 }
 
 async function handleGenerateImage() {
-    if (isGenerating) {
-        showGenerateStatus(getText('msg_already_generating'), 'error');
-        return;
-    }
+    // 不再阻止并发请求，允许同时执行多个生成任务
 
     if (!app.activeDocument) {
         showGenerateStatus(getText('msg_open_document_first'), 'error');
@@ -634,12 +645,9 @@ async function handleGenerateImage() {
     const searchWebMode = settingsManager.get('search_web_mode', false);
     const multiImageMode = settingsManager.get('multi_image_mode', false);
 
-    isGenerating = true;
-    const btnGenerate = document.getElementById('btnGenerate');
-    btnGenerate.disabled = true;
-    btnGenerate.classList.add('shine-effect');
-    const originalBtnText = btnGenerate.textContent;
-    btnGenerate.textContent = getText('btn_generating');
+    // 增加任务计数并更新按钮状态
+    activeGenerationCount++;
+    updateGeneratingButton();
 
     try {
         await settingsManager.set('latest_prompt', prompt);
@@ -763,11 +771,9 @@ async function handleGenerateImage() {
 
         showGenerateStatus(getText('msg_generation_failed', { error: errorMessage }), 'error');
     } finally {
-        isGenerating = false;
-        const btnGenerate = document.getElementById('btnGenerate');
-        btnGenerate.disabled = false;
-        btnGenerate.classList.remove('shine-effect');
-        btnGenerate.textContent = getText('btn_generate');
+        // 减少任务计数并更新按钮状态
+        activeGenerationCount--;
+        updateGeneratingButton();
     }
 }
 
@@ -920,13 +926,12 @@ async function updateDebugFolderPath() {
 }
 
 async function handleTestImport() {
-    if (isGenerating) {
+    if (isProcessing) {
         showGenerateStatus('Processing...', 'error');
         return;
     }
 
-    isGenerating = true;
-    document.getElementById('btnGenerate').disabled = true;
+    isProcessing = true;
     document.getElementById('btnTestImport').disabled = true;
 
     try {
@@ -968,20 +973,18 @@ async function handleTestImport() {
         const errorMessage = e?.message || String(e) || 'Unknown error';
         showGenerateStatus(`❌ Import failed: ${errorMessage}`, 'error');
     } finally {
-        isGenerating = false;
-        document.getElementById('btnGenerate').disabled = false;
+        isProcessing = false;
         document.getElementById('btnTestImport').disabled = false;
     }
 }
 
 async function handleTestExport() {
-    if (isGenerating) {
+    if (isProcessing) {
         showGenerateStatus('Processing...', 'error');
         return;
     }
 
-    isGenerating = true;
-    document.getElementById('btnGenerate').disabled = true;
+    isProcessing = true;
     document.getElementById('btnTestExport').disabled = true;
 
     try {
@@ -1039,14 +1042,13 @@ async function handleTestExport() {
         const errorMessage = e?.message || String(e) || 'Unknown error';
         showGenerateStatus(`❌ Export failed: ${errorMessage}`, 'error');
     } finally {
-        isGenerating = false;
-        document.getElementById('btnGenerate').disabled = false;
+        isProcessing = false;
         document.getElementById('btnTestExport').disabled = false;
     }
 }
 
 async function handleEnsureGroups() {
-    if (isGenerating) {
+    if (isProcessing) {
         showGenerateStatus('Processing...', 'error');
         return;
     }
@@ -1056,7 +1058,7 @@ async function handleEnsureGroups() {
         return;
     }
 
-    isGenerating = true;
+    isProcessing = true;
     const btnEnsureGroups = document.getElementById('btnEnsureGroups');
     btnEnsureGroups.disabled = true;
 
@@ -1077,7 +1079,7 @@ async function handleEnsureGroups() {
         const errorMessage = e?.message || String(e) || 'Unknown error';
         showGenerateStatus(`❌ Operation failed: ${errorMessage}`, 'error');
     } finally {
-        isGenerating = false;
+        isProcessing = false;
         btnEnsureGroups.disabled = false;
     }
 }
