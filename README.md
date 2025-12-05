@@ -5,6 +5,8 @@
 ## 插件下载
 
 [https://github.com/LiuYangArt/PSBananaUXP/tree/main/Plugin](https://github.com/LiuYangArt/PSBananaUXP/tree/main/Plugin)
+<img width="1076" height="219" alt="image" src="https://github.com/user-attachments/assets/429413fd-a0bb-40fe-9133-38815068c8f7" />
+
 
 ## 插件安装
 
@@ -26,3 +28,4 @@
 - 文生图，图生图
 - 选区模式，可只把选区区域发送给ai进行生图
 - Prompt预设
+- 同时处理多生图任务功能
