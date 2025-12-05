@@ -33,7 +33,23 @@ let currentPreset = null;
 let activeGenerationCount = 0;  // 当前正在执行的生成任务数量
 let isProcessing = false;  // 用于测试操作的锁
 let taskIdCounter = 0;  // 任务ID计数器，用于调试
+let taskLogs = [];  // 存储任务日志
 let generationMode = 'text2img';  // 'text2img' or 'imgedit'
+
+// 添加任务日志并写入文件
+async function logTask(message) {
+    const timestamp = new Date().toISOString();
+    const logEntry = `[${timestamp}] ${message}`;
+    taskLogs.push(logEntry);
+    console.log(message);
+
+    // 异步写入日志文件
+    try {
+        await fileManager.saveTaskLog(taskLogs.join('\n'));
+    } catch (e) {
+        console.error('Failed to save task log:', e);
+    }
+}
 
 // Wait for DOM to load
 document.addEventListener('DOMContentLoaded', async () => {
@@ -649,7 +665,7 @@ async function handleGenerateImage() {
     // 增加任务计数并更新按钮状态
     activeGenerationCount++;
     const taskId = ++taskIdCounter;  // 为此任务分配唯一ID
-    console.log(`[Task ${taskId}] Started - Active tasks: ${activeGenerationCount}`);
+    logTask(`[Task ${taskId}] Started - Active tasks: ${activeGenerationCount}`);
     updateGeneratingButton();
 
     try {
@@ -673,7 +689,7 @@ async function handleGenerateImage() {
                     const selectionInfo = await PSOperations.getSelectionInfo();
                     if (selectionInfo && selectionInfo.hasSelection) {
                         region = PSOperations.calculateGenerationRegion(selectionInfo.bounds, info.width, info.height);
-                        console.log(`[Task ${taskId}] Captured selection region:`, JSON.stringify(region));
+                        // 在 executeAsModal 内部，先保存到临时变量，稍后记录到日志
                     }
                 }
 
@@ -714,9 +730,12 @@ async function handleGenerateImage() {
             sourceImageData = exportData.sourceData;
             referenceImageData = exportData.referenceData;
 
+            // 记录选区信息到日志文件
             if (selectionRegion) {
+                logTask(`[Task ${taskId}] Captured selection region: ${JSON.stringify(selectionRegion)}`);
                 aspectRatio = selectionRegion.aspectRatio;
             } else {
+                logTask(`[Task ${taskId}] No selection, using full canvas`);
                 aspectRatio = calculateAspectRatio(canvasInfo.width, canvasInfo.height);
             }
 
@@ -750,21 +769,26 @@ async function handleGenerateImage() {
 
         showGenerateStatus(getText('msg_importing_image'), 'info');
 
+        // 在 executeAsModal 外部记录导入信息
+        if (selectionRegion) {
+            logTask(`[Task ${taskId}] Importing with region: ${JSON.stringify(selectionRegion)}`);
+        } else {
+            logTask(`[Task ${taskId}] Importing without region (full canvas)`);
+        }
+
         const layerName = await executeAsModal(async () => {
             if (selectionRegion) {
-                console.log(`[Task ${taskId}] Importing with region:`, JSON.stringify(selectionRegion));
                 return await PSOperations.importImageInRegion(imageToken, selectionRegion);
             } else {
-                console.log(`[Task ${taskId}] Importing without region (full canvas)`);
                 return await PSOperations.importImageByToken(imageToken);
             }
         }, { commandName: "Import Generated Image" });
 
-        console.log(`[Task ${taskId}] Completed successfully - Layer: ${layerName}`);
+        logTask(`[Task ${taskId}] Completed successfully - Layer: ${layerName}`);
         showGenerateStatus(getText('msg_complete', { layer: layerName }), 'success');
 
     } catch (e) {
-        console.error(`[Task ${taskId}] Generation failed:`, e);
+        logTask(`[Task ${taskId}] Generation failed: ${e?.message || String(e)}`);
         const errorMessage = e?.message || String(e) || 'Unknown error';
 
         if (debugMode) {
@@ -779,7 +803,7 @@ async function handleGenerateImage() {
         showGenerateStatus(getText('msg_generation_failed', { error: errorMessage }), 'error');
     } finally {
         // 减少任务计数并更新按钮状态
-        console.log(`[Task ${taskId}] Finished - Remaining active tasks: ${activeGenerationCount - 1}`);
+        logTask(`[Task ${taskId}] Finished - Remaining active tasks: ${activeGenerationCount - 1}`);
         activeGenerationCount--;
         updateGeneratingButton();
     }
