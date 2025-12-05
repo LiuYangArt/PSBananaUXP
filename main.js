@@ -32,6 +32,7 @@ let currentProvider = null;
 let currentPreset = null;
 let activeGenerationCount = 0;  // 当前正在执行的生成任务数量
 let isProcessing = false;  // 用于测试操作的锁
+let taskIdCounter = 0;  // 任务ID计数器，用于调试
 let generationMode = 'text2img';  // 'text2img' or 'imgedit'
 
 // Wait for DOM to load
@@ -647,6 +648,8 @@ async function handleGenerateImage() {
 
     // 增加任务计数并更新按钮状态
     activeGenerationCount++;
+    const taskId = ++taskIdCounter;  // 为此任务分配唯一ID
+    console.log(`[Task ${taskId}] Started - Active tasks: ${activeGenerationCount}`);
     updateGeneratingButton();
 
     try {
@@ -670,6 +673,7 @@ async function handleGenerateImage() {
                     const selectionInfo = await PSOperations.getSelectionInfo();
                     if (selectionInfo && selectionInfo.hasSelection) {
                         region = PSOperations.calculateGenerationRegion(selectionInfo.bounds, info.width, info.height);
+                        console.log(`[Task ${taskId}] Captured selection region:`, JSON.stringify(region));
                     }
                 }
 
@@ -748,21 +752,24 @@ async function handleGenerateImage() {
 
         const layerName = await executeAsModal(async () => {
             if (selectionRegion) {
+                console.log(`[Task ${taskId}] Importing with region:`, JSON.stringify(selectionRegion));
                 return await PSOperations.importImageInRegion(imageToken, selectionRegion);
             } else {
+                console.log(`[Task ${taskId}] Importing without region (full canvas)`);
                 return await PSOperations.importImageByToken(imageToken);
             }
         }, { commandName: "Import Generated Image" });
 
+        console.log(`[Task ${taskId}] Completed successfully - Layer: ${layerName}`);
         showGenerateStatus(getText('msg_complete', { layer: layerName }), 'success');
 
     } catch (e) {
-        console.error('Generation failed:', e);
+        console.error(`[Task ${taskId}] Generation failed:`, e);
         const errorMessage = e?.message || String(e) || 'Unknown error';
 
         if (debugMode) {
             try {
-                const errorLog = `=== Error Log ===\nTime: ${new Date().toISOString()}\nError: ${errorMessage}\nStack: ${e?.stack || 'N/A'}`;
+                const errorLog = `=== Error Log ===\nTime: ${new Date().toISOString()}\nTask ID: ${taskId}\nError: ${errorMessage}\nStack: ${e?.stack || 'N/A'}`;
                 await fileManager.saveLog(errorLog);
             } catch (logError) {
                 console.error('Failed to save error log:', logError);
@@ -772,6 +779,7 @@ async function handleGenerateImage() {
         showGenerateStatus(getText('msg_generation_failed', { error: errorMessage }), 'error');
     } finally {
         // 减少任务计数并更新按钮状态
+        console.log(`[Task ${taskId}] Finished - Remaining active tasks: ${activeGenerationCount - 1}`);
         activeGenerationCount--;
         updateGeneratingButton();
     }
