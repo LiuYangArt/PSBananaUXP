@@ -10,7 +10,7 @@ class SettingsManager {
             latest_prompt: '',       // 最近一次生成使用的prompt
             export_max_size: 2048,  // 导出图片长边最大长度
             export_quality: 80,      // WebP压缩质量
-            selection_mode: false,   // 使用选区区域生图
+            selection_mode: true,   // 使用选区区域生图
             multi_image_mode: false, // 多图生图模式(仅在Image Edit模式下有效)
             search_web_mode: false   // 搜索网络模式(启用Google Search工具)
         };

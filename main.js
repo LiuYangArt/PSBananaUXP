@@ -326,7 +326,7 @@ function setupSettingsUI() {
     const languageSelect = document.getElementById('languageSelect');
 
     // Selection Mode
-    const savedSelectionMode = settingsManager.get('selection_mode', false);
+    const savedSelectionMode = settingsManager.get('selection_mode', true);
     selectionModeCheckbox.checked = savedSelectionMode;
 
     selectionModeCheckbox.addEventListener('change', async (e) => {
