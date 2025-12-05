@@ -26,6 +26,7 @@ const translations = {
         "btn_add_groups": "Add Reference/Source Group",
 
         // Settings Tab
+        "label_extra_settings": "Extra Settings",
         "label_language": "Language",
         "label_provider": "Provider",
         "placeholder_select_provider": "Select Provider",
@@ -100,6 +101,7 @@ const translations = {
         "btn_add_groups": "添加参考/原图组",
 
         // Settings Tab
+        "label_extra_settings": "额外设置",
         "label_language": "语言",
         "label_provider": "服务商",
         "placeholder_select_provider": "选择服务商",

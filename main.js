@@ -165,8 +165,6 @@ function setupGenerateUI() {
     const btnTestImport = document.getElementById('btnTestImport');
     const btnTestExport = document.getElementById('btnTestExport');
     const btnEnsureGroups = document.getElementById('btnEnsureGroups');
-    const selectionModeCheckbox = document.getElementById('selectionModeCheckbox');
-    const searchWebCheckbox = document.getElementById('searchWebCheckbox');
     const multiImageModeCheckbox = document.getElementById('multiImageModeCheckbox');
     const multiImageModeSection = document.getElementById('multiImageModeSection');
     const resolutionSelect = document.getElementById('resolutionSelect');
@@ -174,24 +172,6 @@ function setupGenerateUI() {
 
     // 初始化可拖拽调整大小的 Prompt 文本框
     setupResizableTextarea();
-
-    // Selection Mode
-    const savedSelectionMode = settingsManager.get('selection_mode', false);
-    selectionModeCheckbox.checked = savedSelectionMode;
-
-    selectionModeCheckbox.addEventListener('change', async (e) => {
-        await settingsManager.set('selection_mode', e.target.checked);
-        console.log(`[UI] Selection mode switched to: ${e.target.checked}`);
-    });
-
-    // Search Web Mode
-    const savedSearchWebMode = settingsManager.get('search_web_mode', false);
-    searchWebCheckbox.checked = savedSearchWebMode;
-
-    searchWebCheckbox.addEventListener('change', async (e) => {
-        await settingsManager.set('search_web_mode', e.target.checked);
-        console.log(`[UI] Search web mode switched to: ${e.target.checked}`);
-    });
 
     // Multi-Image Mode
     const savedMultiImageMode = settingsManager.get('multi_image_mode', false);
@@ -329,6 +309,8 @@ function setupGenerateUI() {
 }
 
 function setupSettingsUI() {
+    const selectionModeCheckbox = document.getElementById('selectionModeCheckbox');
+    const searchWebCheckbox = document.getElementById('searchWebCheckbox');
     const providerSelect = document.getElementById('providerSelect');
     const btnAddProvider = document.getElementById('btnAddProvider');
     const btnSaveProvider = document.getElementById('btnSaveProvider');
@@ -342,6 +324,24 @@ function setupSettingsUI() {
     const inputMaxSize = document.getElementById('inputMaxSize');
     const inputQuality = document.getElementById('inputQuality');
     const languageSelect = document.getElementById('languageSelect');
+
+    // Selection Mode
+    const savedSelectionMode = settingsManager.get('selection_mode', false);
+    selectionModeCheckbox.checked = savedSelectionMode;
+
+    selectionModeCheckbox.addEventListener('change', async (e) => {
+        await settingsManager.set('selection_mode', e.target.checked);
+        console.log(`[UI] Selection mode switched to: ${e.target.checked}`);
+    });
+
+    // Search Web Mode
+    const savedSearchWebMode = settingsManager.get('search_web_mode', false);
+    searchWebCheckbox.checked = savedSearchWebMode;
+
+    searchWebCheckbox.addEventListener('change', async (e) => {
+        await settingsManager.set('search_web_mode', e.target.checked);
+        console.log(`[UI] Search web mode switched to: ${e.target.checked}`);
+    });
 
     // Language Selection
     languageSelect.value = currentLanguage;
@@ -1200,6 +1200,7 @@ function updateLanguage(lang) {
     document.getElementById('btnEnsureGroups').textContent = getText('btn_add_groups');
 
     // Update Settings tab
+    document.getElementById('labelExtraSettings').textContent = getText('label_extra_settings');
     document.getElementById('labelLanguage').textContent = getText('label_language');
     document.getElementById('labelProvider').textContent = getText('label_provider');
     document.getElementById('providerSelect').placeholder = getText('placeholder_select_provider');

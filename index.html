@@ -379,18 +379,7 @@
                 </div>
             </div>
 
-            <!-- Toggles -->
-            <div class="section">
-                <div class="tooltip">
-                    <sp-checkbox size="s" id="searchWebCheckbox">Search Web (Experimental)</sp-checkbox>
-                    <!-- <sp-tooltip open placement="top" variant="info">Only works for google/yunwu api
-                        provider</sp-tooltip> -->
-                </div>
-                <div class="tooltip">
-                    <sp-checkbox size="s" id="selectionModeCheckbox">Generate by Selection Mask</sp-checkbox>
-                    <!-- <sp-tooltip open placement="top" variant="info">Generate selection area only</sp-tooltip> -->
-                </div>
-            </div>
+
 
             <!-- Generate Button -->
             <sp-action-button id="btnGenerate" class="full-width" size="l"
@@ -452,6 +441,20 @@
             </div>
             <div id="connectionStatus" class="status-message"></div>
             <sp-divider size="m"></sp-divider>
+
+            <!-- Toggles -->
+            <div class="section">
+                <sp-label id="labelExtraSettings">Extra Settings</sp-label>
+                <div class="row">
+                    <sp-checkbox size="s" id="searchWebCheckbox">Search Web (Experimental)</sp-checkbox>
+                    <!-- <sp-tooltip open placement="top" variant="info">Only works for google/yunwu api
+                        provider</sp-tooltip> -->
+                </div>
+                <div class="row">
+                    <sp-checkbox size="s" id="selectionModeCheckbox">Generate by Selection Mask</sp-checkbox>
+                    <!-- <sp-tooltip open placement="top" variant="info">Generate selection area only</sp-tooltip> -->
+                </div>
+            </div>
 
             <!-- Export Settings -->
             <div class="section">
