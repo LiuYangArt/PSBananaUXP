@@ -97,6 +97,12 @@ class ProviderManager {
                         "apiKey": "",
                         "baseUrl": "https://openrouter.ai/api/v1/chat/completions",
                         "model": "google/gemini-3-pro-image-preview"
+                    },
+                    {
+                        "name": "Seedream 4.5",
+                        "apiKey": "",
+                        "baseUrl": "https://ark.cn-beijing.volces.com/api/v3/images/generations",
+                        "model": "doubao-seedream-4-5-251128"
                     }
                 ];
                 await this.save();
@@ -175,6 +181,9 @@ class ProviderManager {
         if (name === "Google Gemini" || name === "Yunwu Gemini") {
             let cleanBaseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
             apiUrl = `${cleanBaseUrl}/models?key=${apiKey}`;
+        } else if (name.toLowerCase().includes("seedream") || baseUrl.toLowerCase().includes("ark.cn-beijing.volces.com")) {
+            // Seedream API 不支持 /models 端点，直接返回成功（需要实际生图测试）
+            return { success: true, message: "Seedream provider: Cannot test connection automatically. Please verify by generating an image." };
         } else if (name.toLowerCase().includes("gptgod") || baseUrl.toLowerCase().includes("gptgod")) {
             if (baseUrl.includes("/chat/completions")) {
                 apiUrl = baseUrl.replace("/chat/completions", "/models");

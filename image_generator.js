@@ -1,6 +1,6 @@
 /**
  * Image Generator - handles AI image generation with multiple providers
- * Supports: Google Gemini, Yunwu, GPTGod, OpenRouter
+ * Supports: Google Gemini, Yunwu, GPTGod, OpenRouter, Seedream
  */
 class ImageGenerator {
     constructor(fileManager) {
@@ -140,6 +140,8 @@ class ImageGenerator {
 
         if (urlLower.includes("generativelanguage.googleapis.com")) {
             return "google_official";
+        } else if (nameLower.includes("seedream") || urlLower.includes("ark.cn-beijing.volces.com")) {
+            return "seedream";
         } else if (nameLower.includes("gptgod") || urlLower.includes("gptgod")) {
             return "gptgod";
         } else if (nameLower.includes("openrouter") || urlLower.includes("openrouter.ai")) {
@@ -160,7 +162,7 @@ class ImageGenerator {
         if (providerType === "google_official" || providerType === "yunwu") {
             return `${url}/models/${model}:generateContent?key=${apiKey}`;
         } else {
-            // OpenAI-compatible (GPTGod, OpenRouter)
+            // OpenAI-compatible (GPTGod, OpenRouter, Seedream)
             return url;
         }
     }
@@ -171,7 +173,7 @@ class ImageGenerator {
     _buildHeaders(provider, providerType) {
         const headers = { "Content-Type": "application/json" };
 
-        if (providerType === "gptgod" || providerType === "openrouter") {
+        if (providerType === "gptgod" || providerType === "openrouter" || providerType === "seedream") {
             headers["Authorization"] = `Bearer ${provider.apiKey}`;
         }
 
@@ -190,6 +192,8 @@ class ImageGenerator {
             return this._buildGPTGodPayload(prompt, aspectRatio, resolution, provider, mode, searchWeb, inputImage, sourceImage, referenceImage);
         } else if (providerType === "openrouter") {
             return this._buildOpenRouterPayload(prompt, aspectRatio, resolution, provider, mode, searchWeb, inputImage, sourceImage, referenceImage);
+        } else if (providerType === "seedream") {
+            return this._buildSeedreamPayload(prompt, aspectRatio, resolution, provider, mode, searchWeb, inputImage, sourceImage, referenceImage);
         }
     }
 
@@ -534,6 +538,85 @@ class ImageGenerator {
     }
 
     /**
+     * Build Seedream payload
+     * 根据Seedream API文档构建请求
+     * - Seedream 4.5: 支持 2K/4K，不支持 1K
+     * - Seedream 4.0: 支持 1K/2K/4K
+     * - Seedream 3.0: 支持 1K/2K
+     * - 图片通过 base64 或 URL 传递
+     * - 需要在 prompt 中描述宽高比
+     * Note: Seedream does not support google_search tool
+     */
+    _buildSeedreamPayload(prompt, aspectRatio, resolution, provider, mode = 'text2img', searchWeb = false, inputImage = null, sourceImage = null, referenceImage = null) {
+        // 在 prompt 中添加宽高比描述 (类似 GPTGod)
+        let finalPrompt = prompt;
+        if (aspectRatio && aspectRatio !== "1:1") {
+            // Seedream 推荐在 prompt 中自然语言描述宽高比
+            const ratioDescription = this._getAspectRatioDescription(aspectRatio);
+            finalPrompt += `. ${ratioDescription}`;
+        }
+
+        // 处理分辨率：Seedream 4.5 不支持 1K
+        let finalSize = resolution || "2K";
+        const modelLower = (provider.model || "").toLowerCase();
+        
+        // 检查是否是 Seedream 4.5 模型
+        if (modelLower.includes("4-5") || modelLower.includes("4.5")) {
+            // Seedream 4.5 只支持 2K 和 4K
+            if (finalSize === "1K") {
+                console.warn("[Seedream] Model 4.5 does not support 1K, using 2K instead");
+                finalSize = "2K";
+            }
+        }
+
+        const payload = {
+            model: provider.model,
+            prompt: finalPrompt,
+            size: finalSize,
+            watermark: false  // 默认不添加水印
+        };
+
+        // 图生图模式: 添加图片
+        // Seedream 支持单张图片输入 (image字段)
+        // 多图模式: 只使用第一张图片 (优先使用 sourceImage)
+        if (mode === 'imgedit' && inputImage) {
+            // 使用 base64 格式 (文档支持)
+            payload.image = `data:image/png;base64,${inputImage}`;
+        } else if (sourceImage) {
+            // 多图模式: 优先使用 source 图片
+            payload.image = `data:image/webp;base64,${sourceImage}`;
+            // 如果有 reference 图片，在 prompt 中说明
+            if (referenceImage) {
+                finalPrompt = `[Style Reference: See attached image] ${finalPrompt}`;
+                payload.prompt = finalPrompt;
+            }
+        } else if (referenceImage) {
+            // 只有 reference 图片时使用它
+            payload.image = `data:image/webp;base64,${referenceImage}`;
+        }
+
+        return payload;
+    }
+
+    /**
+     * Get aspect ratio description for Seedream prompt
+     * 获取宽高比的自然语言描述
+     */
+    _getAspectRatioDescription(aspectRatio) {
+        const ratioMap = {
+            "16:9": "Aspect ratio 16:9, wide landscape format",
+            "9:16": "Aspect ratio 9:16, tall portrait format",
+            "4:3": "Aspect ratio 4:3, landscape format",
+            "3:4": "Aspect ratio 3:4, portrait format",
+            "21:9": "Aspect ratio 21:9, ultra-wide format",
+            "3:2": "Aspect ratio 3:2, landscape format",
+            "2:3": "Aspect ratio 2:3, portrait format",
+            "1:1": "Aspect ratio 1:1, square format"
+        };
+        return ratioMap[aspectRatio] || `Aspect ratio ${aspectRatio}`;
+    }
+
+    /**
      * Process API response and return image file
      */
     async _processResponse(responseData, providerType) {
@@ -543,6 +626,8 @@ class ImageGenerator {
             return await this._processGPTGodResponse(responseData);
         } else if (providerType === "openrouter") {
             return await this._processOpenRouterResponse(responseData);
+        } else if (providerType === "seedream") {
+            return await this._processSeedreamResponse(responseData);
         }
     }
 
@@ -652,6 +737,27 @@ class ImageGenerator {
     }
 
     /**
+     * Process Seedream response (URL format)
+     * Seedream 返回格式: { data: [{ url: "...", size: "1760x2368" }], usage: {...} }
+     */
+    async _processSeedreamResponse(responseData) {
+        // 检查是否有 data 数组
+        if (!responseData.data || !Array.isArray(responseData.data) || responseData.data.length === 0) {
+            const serverMessage = this._extractServerMessage(responseData);
+            throw new Error(`No image generated. ${serverMessage}`);
+        }
+
+        // 获取第一张图片的 URL
+        const imageData = responseData.data[0];
+        if (!imageData.url) {
+            throw new Error("No image URL in Seedream response");
+        }
+
+        // 下载图片
+        return await this.fileManager.downloadImage(imageData.url);
+    }
+
+    /**
      * Get file extension from MIME type
      */
     _getExtensionFromMimeType(mimeType) {
@@ -702,6 +808,27 @@ class ImageGenerator {
                 const errorMsg = typeof responseData.error === 'string' 
                     ? responseData.error 
                     : responseData.error.message || JSON.stringify(responseData.error);
+                
+                // Seedream API 特殊错误提示
+                if (errorMsg.includes('AuthenticationError') || errorMsg.includes('API key')) {
+                    return `认证错误: ${errorMsg}
+
+请检查:
+1. API Key 是否正确填写
+2. 是否选择了正确的 Provider (Seedream 4.5)
+3. Base URL 是否为: https://ark.cn-beijing.volces.com/api/v3/images/generations`;
+                }
+                
+                // Seedream 分辨率参数错误
+                if (errorMsg.includes('size') && (errorMsg.includes('not supported') || errorMsg.includes('not valid'))) {
+                    return `分辨率参数错误: ${errorMsg}
+
+提示:
+- Seedream 4.5 仅支持 2K 和 4K，不支持 1K
+- 请在插件中选择 2K 或 4K 分辨率
+- 或使用 Seedream 4.0 模型（支持 1K）`;
+                }
+                
                 return `Error: ${errorMsg}`;
             }
 
