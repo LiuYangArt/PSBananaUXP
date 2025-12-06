@@ -4,7 +4,7 @@
 
 ## 插件下载
 
-[https://github.com/LiuYangArt/PSBananaUXP/tree/main/Plugin](https://github.com/LiuYangArt/PSBananaUXP/tree/main/Plugin)
+[https://github.com/LiuYangArt/PSBananaUXP/blob/main/Plugin/PSBanana.zip](https://github.com/LiuYangArt/PSBananaUXP/blob/main/Plugin/PSBanana.zip)
 <img width="1076" height="219" alt="image" src="https://github.com/user-attachments/assets/429413fd-a0bb-40fe-9133-38815068c8f7" />
 
 
@@ -34,7 +34,7 @@
 
 ## Plugin Download
 
-[https://github.com/LiuYangArt/PSBananaUXP/tree/main/Plugin](https://github.com/LiuYangArt/PSBananaUXP/tree/main/Plugin)
+[https://github.com/LiuYangArt/PSBananaUXP/blob/main/Plugin/PSBanana.zip](https://github.com/LiuYangArt/PSBananaUXP/blob/main/Plugin/PSBanana.zip)
 <img width="1076" height="219" alt="image" src="https://github.com/user-attachments/assets/429413fd-a0bb-40fe-9133-38815068c8f7" />
 
 ## Plugin Installation
