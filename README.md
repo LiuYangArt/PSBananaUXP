@@ -32,8 +32,6 @@
 
 ---
 
-<img width="512" height="512" alt="generated_image_20251129224205" src="https://github.com/user-attachments/assets/54661238-b11e-40be-ab12-4a49f6a036dd" />
-
 ## Plugin Download
 
 [https://github.com/LiuYangArt/PSBananaUXP/tree/main/Plugin](https://github.com/LiuYangArt/PSBananaUXP/tree/main/Plugin)
