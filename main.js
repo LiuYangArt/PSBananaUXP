@@ -482,7 +482,9 @@ function setupSettingsUI() {
 
         const result = await providerManager.testConnection(testConfig);
         if (result.success) {
-            showStatus(result.message, 'success');
+            // 如果返回的是 messageKey，使用 getText 转换为当前语言
+            const message = result.messageKey ? getText(result.messageKey) : result.message;
+            showStatus(message, 'success');
         } else {
             showStatus(result.message, 'error');
         }
@@ -797,7 +799,11 @@ async function handleGenerateImage() {
 
         if (debugMode) {
             try {
-                const errorLog = `=== Error Log ===\nTime: ${new Date().toISOString()}\nTask ID: ${taskId}\nError: ${errorMessage}\nStack: ${e?.stack || 'N/A'}`;
+                const errorLog = `=== Error Log ===
+Time: ${new Date().toISOString()}
+Task ID: ${taskId}
+Error: ${errorMessage}
+Stack: ${e?.stack || 'N/A'}`;
                 await fileManager.saveLog(errorLog);
             } catch (logError) {
                 console.error('Failed to save error log:', logError);
