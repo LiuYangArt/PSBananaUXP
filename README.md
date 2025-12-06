@@ -30,6 +30,10 @@
 - Prompt预设
 - 同时处理多生图任务功能
 
+## 免责声明
+本插件功能依赖第三方 API 服务。在使用过程中，您的数据（包括但不限于图片、提示词）将被发送至第三方服务器进行处理。开发者不对第三方服务的数据安全性、隐私保护或服务稳定性承担任何责任。请勿上传包含敏感个人信息的内容，使用本插件产生的任何数据泄露风险由用户自行承担。
+
+
 ---
 
 ## Plugin Download
@@ -57,4 +61,6 @@
 - Selection mode: Only send the selected area to AI for image generation.
 - Prompt presets.
 - Ability to process multiple image generation tasks simultaneously.
-```
+
+## Disclaimer
+This plugin relies on third-party API services. Please be aware that your data (including but not limited to images and prompts) will be transmitted to external servers for processing. The developer assumes no liability for data security, privacy leaks, or service stability regarding these third-party providers. Please do not upload sensitive personal information; users assume all risks associated with data privacy when using this plugin.
