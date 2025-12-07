@@ -656,6 +656,8 @@ async function handleGenerateImage() {
         return;
     }
 
+    const targetDocument = app.activeDocument;
+
     const prompt = document.getElementById('promptInput').value.trim();
     if (!prompt) {
         showGenerateStatus(getText('msg_enter_prompt'), 'error');
@@ -788,11 +790,15 @@ async function handleGenerateImage() {
             logTask(`[Task ${taskId}] Importing without region (full canvas)`);
         }
 
+        // Ensure we are in the correct document
+        const targetDocumentId = targetDocument.id;
+        logTask(`[Task ${taskId}] Target document ID: ${targetDocumentId}, Current active: ${app.activeDocument?.id}`);
+
         const layerName = await executeAsModal(async (executionContext) => {
             if (selectionRegion) {
-                return await PSOperations.importImageInRegion(imageToken, selectionRegion, executionContext);
+                return await PSOperations.importImageInRegion(imageToken, selectionRegion, executionContext, targetDocumentId);
             } else {
-                return await PSOperations.importImageByToken(imageToken, executionContext);
+                return await PSOperations.importImageByToken(imageToken, executionContext, targetDocumentId);
             }
         }, { commandName: "Import Generated Image" });
 

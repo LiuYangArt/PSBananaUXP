@@ -160,6 +160,45 @@ class PSOperations {
     }
 
     /**
+     * Activate a specific document by its ID
+     * Must be called within executeAsModal
+     * @param {number} documentId - The document ID to activate
+     */
+    static async activateDocumentById(documentId) {
+        try {
+            // Check if already active
+            if (app.activeDocument && app.activeDocument.id === documentId) {
+                console.log(`[PS] Document ${documentId} is already active`);
+                return;
+            }
+
+            console.log(`[PS] Switching to document ID: ${documentId}`);
+
+            // Use batchPlay to select the document
+            await batchPlay([
+                {
+                    "_obj": "select",
+                    "_target": [
+                        {
+                            "_ref": "document",
+                            "_id": documentId
+                        }
+                    ],
+                    "_isCommand": true
+                }
+            ], {
+                "synchronousExecution": true,
+                "modalBehavior": "wait"
+            });
+
+            console.log(`[PS] Successfully switched to document ID: ${documentId}`);
+        } catch (e) {
+            console.error(`[PS] Failed to activate document ${documentId}:`, e);
+            throw new Error(`Failed to activate target document: ${e.message}`);
+        }
+    }
+
+    /**
      * Get the next available BananaImage layer name
      * Returns: BananaImage00, BananaImage01, etc.
      */
@@ -275,13 +314,20 @@ class PSOperations {
      * Must be called within executeAsModal
      * @param {string} token - File session token (直接用于 batchPlay)
      * @param {Object} executionContext - Context from executeAsModal
+     * @param {number} targetDocumentId - Optional target document ID to import into
      */
-    static async importImageByToken(token, executionContext = null) {
+    static async importImageByToken(token, executionContext = null, targetDocumentId = null) {
         let suspensionID = null;
         try {
             // Validate input
             if (!token) {
                 throw new Error("Invalid file token");
+            }
+
+            // If targetDocumentId is provided, activate that document first
+            if (targetDocumentId !== null) {
+                console.log(`[PS] Activating target document ID: ${targetDocumentId}`);
+                await this.activateDocumentById(targetDocumentId);
             }
 
             const doc = app.activeDocument;
@@ -369,8 +415,9 @@ class PSOperations {
      * @param {string} token - File session token
      * @param {Object} region - 生图区域 {left, top, width, height}
      * @param {Object} executionContext - Context from executeAsModal
+     * @param {number} targetDocumentId - Optional target document ID to import into
      */
-    static async importImageInRegion(token, region, executionContext = null) {
+    static async importImageInRegion(token, region, executionContext = null, targetDocumentId = null) {
         let suspensionID = null;
         try {
             if (!token) {
@@ -378,6 +425,12 @@ class PSOperations {
             }
             if (!region) {
                 throw new Error("Invalid region");
+            }
+
+            // If targetDocumentId is provided, activate that document first
+            if (targetDocumentId !== null) {
+                console.log(`[PS] Activating target document ID: ${targetDocumentId}`);
+                await this.activateDocumentById(targetDocumentId);
             }
 
             const doc = app.activeDocument;
