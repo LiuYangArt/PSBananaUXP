@@ -505,12 +505,18 @@ function updatePresetDropdown() {
     menu.innerHTML = '';
 
     const names = presetManager.getAllNames();
+
+    // Use DocumentFragment to minimize reflows
+    const fragment = document.createDocumentFragment();
+
     names.forEach(name => {
         const item = document.createElement('sp-menu-item');
         item.value = name;
         item.textContent = name;
-        menu.appendChild(item);
+        fragment.appendChild(item);
     });
+
+    menu.appendChild(fragment);
 }
 
 function loadPreset(presetName) {
