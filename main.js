@@ -378,8 +378,14 @@ function setupSettingsUI() {
     }
 
     // Export Settings
-    inputMaxSize.value = settingsManager.get('export_max_size', 2048);
-    inputQuality.value = settingsManager.get('export_quality', 80);
+    // Export Settings
+    const maxSize = settingsManager.get('export_max_size', 2048);
+    const quality = settingsManager.get('export_quality', 80);
+
+    console.log(`[UI] Loading Export Settings - Max Size: ${maxSize}, Quality: ${quality}`);
+
+    inputMaxSize.value = String(maxSize);
+    inputQuality.value = String(quality);
 
     inputMaxSize.addEventListener('change', async (e) => {
         const value = parseInt(e.target.value) || 2048;
