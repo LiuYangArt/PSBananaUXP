@@ -69,7 +69,7 @@ class PSOperations {
             }
 
             const selection = result[0].selection;
-            
+
             return {
                 hasSelection: true,
                 bounds: {
@@ -98,16 +98,16 @@ class PSOperations {
         const { left, top, right, bottom } = selectionBounds;
         const selectionWidth = right - left;
         const selectionHeight = bottom - top;
-        
+
         console.log(`[PS] Selection bounds: ${selectionWidth}x${selectionHeight} at (${left}, ${top})`);
-        
+
         // 计算选区的宽高比
         const selectionRatio = selectionWidth / selectionHeight;
-        
+
         // 找到最接近的标准比例
         let closestRatio = ASPECT_RATIOS[0];
         let minDifference = Math.abs(selectionRatio - closestRatio.value);
-        
+
         for (const ratio of ASPECT_RATIOS) {
             const difference = Math.abs(selectionRatio - ratio.value);
             if (difference < minDifference) {
@@ -115,13 +115,13 @@ class PSOperations {
                 closestRatio = ratio;
             }
         }
-        
+
         console.log(`[PS] Selection ratio: ${selectionRatio.toFixed(4)}, closest: ${closestRatio.name}`);
-        
+
         // 根据标准比例计算生图区域尺寸
         let regionWidth, regionHeight;
         const targetRatio = closestRatio.value;
-        
+
         if (selectionRatio < targetRatio) {
             // 选区太窄，需要扩展宽度
             regionHeight = selectionHeight;
@@ -135,19 +135,19 @@ class PSOperations {
             regionWidth = selectionWidth;
             regionHeight = selectionHeight;
         }
-        
+
         // 计算生图区域的位置，使其居中包含选区
         const regionLeft = Math.round(left + (selectionWidth - regionWidth) / 2);
         const regionTop = Math.round(top + (selectionHeight - regionHeight) / 2);
-        
+
         // 确保生图区域不超出画布边界
         const finalLeft = Math.max(0, Math.min(regionLeft, canvasWidth - regionWidth));
         const finalTop = Math.max(0, Math.min(regionTop, canvasHeight - regionHeight));
         const finalRight = finalLeft + regionWidth;
         const finalBottom = finalTop + regionHeight;
-        
+
         console.log(`[PS] Generation region: ${regionWidth}x${regionHeight} at (${finalLeft}, ${finalTop})`);
-        
+
         return {
             left: finalLeft,
             top: finalTop,
@@ -195,8 +195,10 @@ class PSOperations {
      * Import image as a new layer
      * Must be called within executeAsModal
      * @param {File} imageFile - UXP File object
+     * @param {Object} executionContext - Context from executeAsModal
      */
-    static async importImageAsLayer(imageFile) {
+    static async importImageAsLayer(imageFile, executionContext = null) {
+        let suspensionID = null;
         try {
             // Validate input
             if (!imageFile || !imageFile.nativePath) {
@@ -206,6 +208,14 @@ class PSOperations {
             const doc = app.activeDocument;
             if (!doc) {
                 throw new Error("No active document");
+            }
+
+            // Suspend history
+            if (executionContext && executionContext.hostControl) {
+                suspensionID = await executionContext.hostControl.suspendHistory({
+                    "documentID": doc.id,
+                    "name": "Import Image"
+                });
             }
 
             console.log(`[PS] Importing image from: ${imageFile.nativePath}`);
@@ -243,8 +253,17 @@ class PSOperations {
             // Resize to canvas size
             await this.resizeLayerToCanvas(newLayer);
 
+            // Commit history
+            if (suspensionID !== null && executionContext && executionContext.hostControl) {
+                await executionContext.hostControl.resumeHistory(suspensionID, true);
+            }
+
             return layerName;
         } catch (e) {
+            // Rollback history on error
+            if (suspensionID !== null && executionContext && executionContext.hostControl) {
+                await executionContext.hostControl.resumeHistory(suspensionID, false);
+            }
             console.error("Error importing image:", e);
             const errorMsg = e.message || String(e) || "Unknown error during image import";
             throw new Error(`Failed to import image: ${errorMsg}`);
@@ -255,8 +274,10 @@ class PSOperations {
      * Import image from session token as a new layer
      * Must be called within executeAsModal
      * @param {string} token - File session token (直接用于 batchPlay)
+     * @param {Object} executionContext - Context from executeAsModal
      */
-    static async importImageByToken(token) {
+    static async importImageByToken(token, executionContext = null) {
+        let suspensionID = null;
         try {
             // Validate input
             if (!token) {
@@ -268,15 +289,23 @@ class PSOperations {
                 throw new Error("No active document");
             }
 
+            // Suspend history
+            if (executionContext && executionContext.hostControl) {
+                suspensionID = await executionContext.hostControl.suspendHistory({
+                    "documentID": doc.id,
+                    "name": "Import Generated Image"
+                });
+            }
+
             console.log(`[PS] Importing image using session token`);
-            
+
             const layerName = await this.getNextLayerName();
             console.log(`[PS] Next layer name: ${layerName}`);
 
             // 直接在 batchPlay 中使用 session token
             // 根据 UXP 文档，session token 可以直接作为 _path 使用
             console.log(`[PS] Calling batchPlay with session token`);
-            
+
             // 先导入图片（会导入到当前活动图层的位置）
             const result = await batchPlay([
                 {
@@ -295,7 +324,7 @@ class PSOperations {
                 "synchronousExecution": true,
                 "modalBehavior": "wait"
             });
-            
+
             console.log(`[PS] batchPlay completed successfully`);
 
             // Rename the layer
@@ -306,7 +335,7 @@ class PSOperations {
 
             newLayer.name = layerName;
             console.log(`[PS] Layer created successfully: ${layerName}`);
-            
+
             // 立即将图层移到最顶层（在缩放之前），确保不会被困在组内
             await this.moveLayerToTop(newLayer);
             console.log(`[PS] Layer moved to top of document`);
@@ -314,8 +343,18 @@ class PSOperations {
             // Resize to canvas size
             await this.resizeLayerToCanvas(newLayer);
 
+            // Commit history
+            if (suspensionID !== null && executionContext && executionContext.hostControl) {
+                await executionContext.hostControl.resumeHistory(suspensionID, true);
+            }
+
             return layerName;
         } catch (e) {
+            // Rollback history on error
+            if (suspensionID !== null && executionContext && executionContext.hostControl) {
+                await executionContext.hostControl.resumeHistory(suspensionID, false);
+            }
+
             console.error("[PS] ERROR in importImageByToken:", e);
             console.error("[PS] Error message:", e.message);
             console.error("[PS] Token was:", token);
@@ -329,8 +368,10 @@ class PSOperations {
      * 必须在executeAsModal中调用
      * @param {string} token - File session token
      * @param {Object} region - 生图区域 {left, top, width, height}
+     * @param {Object} executionContext - Context from executeAsModal
      */
-    static async importImageInRegion(token, region) {
+    static async importImageInRegion(token, region, executionContext = null) {
+        let suspensionID = null;
         try {
             if (!token) {
                 throw new Error("Invalid file token");
@@ -344,8 +385,16 @@ class PSOperations {
                 throw new Error("No active document");
             }
 
+            // Suspend history
+            if (executionContext && executionContext.hostControl) {
+                suspensionID = await executionContext.hostControl.suspendHistory({
+                    "documentID": doc.id,
+                    "name": "Import Generated Image (Selection)"
+                });
+            }
+
             console.log(`[PS] Importing image in region: ${region.width}x${region.height} at (${region.left}, ${region.top})`);
-            
+
             const layerName = await this.getNextLayerName();
 
             // 导入图片
@@ -374,7 +423,7 @@ class PSOperations {
 
             newLayer.name = layerName;
             console.log(`[PS] Layer created: ${layerName}`);
-            
+
             // 立即将图层移到最顶层（在缩放之前），确保不会被困在组内
             await this.moveLayerToTop(newLayer);
             console.log(`[PS] Layer moved to top of document`);
@@ -382,8 +431,17 @@ class PSOperations {
             // 调整图层到区域大小和位置
             await this.resizeLayerToRegion(newLayer, region);
 
+            // Commit history
+            if (suspensionID !== null && executionContext && executionContext.hostControl) {
+                await executionContext.hostControl.resumeHistory(suspensionID, true);
+            }
+
             return layerName;
         } catch (e) {
+            // Rollback history on error
+            if (suspensionID !== null && executionContext && executionContext.hostControl) {
+                await executionContext.hostControl.resumeHistory(suspensionID, false);
+            }
             console.error("[PS] ERROR in importImageInRegion:", e);
             const errorMsg = e.message || String(e) || "Unknown error";
             throw new Error(`Failed to import image in region: ${errorMsg}`);
@@ -475,9 +533,9 @@ class PSOperations {
             // 计算region和layer的宽高比
             const regionRatio = region.width / region.height;
             const layerRatio = layerWidth / layerHeight;
-            
+
             console.log(`[PS] Region ratio: ${regionRatio.toFixed(4)}, Layer ratio: ${layerRatio.toFixed(4)}`);
-            
+
             // 根据宽高比关系决定缩放基准：
             // - 如果region比layer更宽（regionRatio > layerRatio），按高度缩放
             // - 如果region比layer更窄（regionRatio < layerRatio），按宽度缩放
@@ -647,13 +705,13 @@ class PSOperations {
     static async moveLayerToTop(layer) {
         try {
             const doc = app.activeDocument;
-            
+
             // 先将图层移出组（如果在组内）
             // 多次检查，确保完全移出所有嵌套组
             let maxAttempts = 5;  // 最多尝试5次，处理深度嵌套的情况
             for (let i = 0; i < maxAttempts; i++) {
                 if (layer.parent && layer.parent.typename === "LayerSet") {
-                    console.log(`[PS] Layer is inside group '${layer.parent.name}' (depth ${i+1}), moving out...`);
+                    console.log(`[PS] Layer is inside group '${layer.parent.name}' (depth ${i + 1}), moving out...`);
                     // 将图层移到文档根层级
                     await batchPlay([
                         {
@@ -676,7 +734,7 @@ class PSOperations {
                         "synchronousExecution": true,
                         "modalBehavior": "wait"
                     });
-                    
+
                     // 重新获取图层引用（移动后可能需要刷新）
                     const currentLayers = doc.activeLayers;
                     if (currentLayers && currentLayers.length > 0) {
@@ -687,7 +745,7 @@ class PSOperations {
                     break;
                 }
             }
-            
+
             // 然后移到最顶层
             console.log(`[PS] Moving layer to front of all layers...`);
             await batchPlay([
@@ -711,7 +769,7 @@ class PSOperations {
                 "synchronousExecution": true,
                 "modalBehavior": "wait"
             });
-            
+
             console.log(`[PS] Layer successfully moved to top`);
         } catch (e) {
             console.error("Error moving layer to top:", e);
@@ -755,7 +813,7 @@ class PSOperations {
             let exportWidth = exportSourceWidth;
             let exportHeight = exportSourceHeight;
             const maxDimension = Math.max(exportSourceWidth, exportSourceHeight);
-            
+
             if (maxDimension > maxSize) {
                 const scale = maxSize / maxDimension;
                 exportWidth = Math.round(exportSourceWidth * scale);
@@ -794,7 +852,7 @@ class PSOperations {
                 // 操作完成后会回滚,避免创建新文档产生闪烁
                 if (region || maxDimension > maxSize) {
                     console.log('[PS] Performing temporary modifications on original document...');
-                    
+
                     // 合并可见图层到新图层
                     console.log('[PS] Merging visible layers...');
                     await batchPlay([{
@@ -805,7 +863,7 @@ class PSOperations {
                         "synchronousExecution": true,
                         "modalBehavior": "wait"
                     });
-                    
+
                     // 如果有区域，先裁切到区域
                     if (region) {
                         console.log(`[PS] Cropping to region: ${region.width}x${region.height}`);
@@ -816,14 +874,14 @@ class PSOperations {
                             bottom: region.bottom
                         });
                     }
-                    
+
                     // 如果需要缩放
                     if (maxDimension > maxSize) {
                         console.log(`[PS] Resizing to: ${exportWidth}x${exportHeight}`);
                         await doc.resizeImage(exportWidth, exportHeight);
                     }
                 }
-                
+
                 // 展平图像（自动将透明背景填充为白色）
                 console.log('[PS] Flattening image (transparent areas will be filled with white)...');
                 await doc.flatten();
@@ -832,7 +890,7 @@ class PSOperations {
                 // 使用batchPlay保存WebP格式
                 console.log('[PS] Saving WebP file...');
                 const fileToken = fs.createSessionToken(webpFile);
-                
+
                 await batchPlay([{
                     "_obj": "save",
                     "as": {
@@ -862,7 +920,7 @@ class PSOperations {
 
                 // 创建session token供后续使用
                 const token = fs.createSessionToken(webpFile);
-                
+
                 return {
                     file: webpFile,
                     token: token,
@@ -959,7 +1017,7 @@ class PSOperations {
             let exportWidth = exportSourceWidth;
             let exportHeight = exportSourceHeight;
             const maxDimension = Math.max(exportSourceWidth, exportSourceHeight);
-            
+
             if (maxDimension > maxSize) {
                 const scale = maxSize / maxDimension;
                 exportWidth = Math.round(exportSourceWidth * scale);
@@ -997,7 +1055,7 @@ class PSOperations {
                 for (const layer of doc.layers) {
                     layerVisibilityStates.set(layer.id, layer.visible);
                 }
-                
+
                 // 隐藏所有其他图层,只保留目标组可见
                 console.log('[PS] Setting layer visibility for group export...');
                 for (const layer of doc.layers) {
@@ -1018,7 +1076,7 @@ class PSOperations {
                     "synchronousExecution": true,
                     "modalBehavior": "wait"
                 });
-                
+
                 // 如果有区域,裁切到区域
                 if (region) {
                     console.log(`[PS] Cropping to region: ${region.width}x${region.height}`);
@@ -1029,13 +1087,13 @@ class PSOperations {
                         bottom: region.bottom
                     });
                 }
-                
+
                 // 如果需要缩放
                 if (maxDimension > maxSize) {
                     console.log(`[PS] Resizing to: ${exportWidth}x${exportHeight}`);
                     await doc.resizeImage(exportWidth, exportHeight);
                 }
-                
+
                 // 展平图像（自动将透明背景填充为白色）
                 console.log('[PS] Flattening image (transparent areas will be filled with white)...');
                 await doc.flatten();
@@ -1222,16 +1280,16 @@ class PSOperations {
 
             // 支持的标准比例列表
             const standardRatios = [
-                { name: "1:1", ratio: 1/1 },
-                { name: "2:3", ratio: 2/3 },
-                { name: "3:2", ratio: 3/2 },
-                { name: "3:4", ratio: 3/4 },
-                { name: "4:3", ratio: 4/3 },
-                { name: "4:5", ratio: 4/5 },
-                { name: "5:4", ratio: 5/4 },
-                { name: "9:16", ratio: 9/16 },
-                { name: "16:9", ratio: 16/9 },
-                { name: "21:9", ratio: 21/9 }
+                { name: "1:1", ratio: 1 / 1 },
+                { name: "2:3", ratio: 2 / 3 },
+                { name: "3:2", ratio: 3 / 2 },
+                { name: "3:4", ratio: 3 / 4 },
+                { name: "4:3", ratio: 4 / 3 },
+                { name: "4:5", ratio: 4 / 5 },
+                { name: "5:4", ratio: 5 / 4 },
+                { name: "9:16", ratio: 9 / 16 },
+                { name: "16:9", ratio: 16 / 9 },
+                { name: "21:9", ratio: 21 / 9 }
             ];
 
             // 计算当前画布的宽高比

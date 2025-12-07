@@ -788,11 +788,11 @@ async function handleGenerateImage() {
             logTask(`[Task ${taskId}] Importing without region (full canvas)`);
         }
 
-        const layerName = await executeAsModal(async () => {
+        const layerName = await executeAsModal(async (executionContext) => {
             if (selectionRegion) {
-                return await PSOperations.importImageInRegion(imageToken, selectionRegion);
+                return await PSOperations.importImageInRegion(imageToken, selectionRegion, executionContext);
             } else {
-                return await PSOperations.importImageByToken(imageToken);
+                return await PSOperations.importImageByToken(imageToken, executionContext);
             }
         }, { commandName: "Import Generated Image" });
 
