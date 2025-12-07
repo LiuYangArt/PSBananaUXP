@@ -675,6 +675,7 @@ async function handleGenerateImage() {
     const selectionMode = settingsManager.get('selection_mode', false);
     const searchWebMode = settingsManager.get('search_web_mode', false);
     const multiImageMode = settingsManager.get('multi_image_mode', false);
+    const saveGeneratedImages = settingsManager.get('save_generated_images', false);
 
     // 增加任务计数并更新按钮状态
     activeGenerationCount++;
@@ -726,13 +727,40 @@ async function handleGenerateImage() {
 
                     const sourceResult = await PSOperations.exportGroupAsWebP(sourceGroup, maxSize, quality, executionContext, region);
                     sourceData = await fileManager.fileToBase64(sourceResult.file);
+                    // Only delete if debug mode is OFF
+                    if (!debugMode) {
+                        try {
+                            await sourceResult.file.delete();
+                            console.log(`[Cleanup] Deleted temporary source file: ${sourceResult.file.nativePath}`);
+                        } catch (e) {
+                            console.error(`[Cleanup] Failed to delete source file:`, e);
+                        }
+                    }
 
                     const referenceResult = await PSOperations.exportGroupAsWebP(referenceGroup, maxSize, quality, executionContext, region);
                     referenceData = await fileManager.fileToBase64(referenceResult.file);
+                    // Only delete if debug mode is OFF
+                    if (!debugMode) {
+                        try {
+                            await referenceResult.file.delete();
+                            console.log(`[Cleanup] Deleted temporary reference file: ${referenceResult.file.nativePath}`);
+                        } catch (e) {
+                            console.error(`[Cleanup] Failed to delete reference file:`, e);
+                        }
+                    }
                 }
                 else if (mode === 'imgedit') {
                     const exportResult = await PSOperations.exportVisibleLayersAsWebP(maxSize, quality, executionContext, region);
                     imageData = await fileManager.fileToBase64(exportResult.file);
+                    // Only delete if debug mode is OFF
+                    if (!debugMode) {
+                        try {
+                            await exportResult.file.delete();
+                            console.log(`[Cleanup] Deleted temporary export file: ${exportResult.file.nativePath}`);
+                        } catch (e) {
+                            console.error(`[Cleanup] Failed to delete export file:`, e);
+                        }
+                    }
                 }
 
                 return { info, imageData, region, sourceData, referenceData };
@@ -804,6 +832,17 @@ async function handleGenerateImage() {
 
         logTask(`[Task ${taskId}] Completed successfully - Layer: ${layerName}`);
         showGenerateStatus(getText('msg_complete', { layer: layerName }), 'success');
+
+        // Cleanup generated file if not debugging and not configured to save
+        if (!debugMode && !saveGeneratedImages) {
+            try {
+                await imageFile.delete();
+                console.log(`[Cleanup] Deleted generated image file: ${imageFile.nativePath}`);
+                logTask(`[Cleanup] Deleted generated image file`);
+            } catch (e) {
+                console.error(`[Cleanup] Failed to delete generated image:`, e);
+            }
+        }
 
     } catch (e) {
         logTask(`[Task ${taskId}] Generation failed: ${e?.message || String(e)}`);
