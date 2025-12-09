@@ -224,7 +224,7 @@ function setupGenerateUI() {
         const result = await presetManager.addPreset(newName, currentPrompt);
 
         if (result.success) {
-            updatePresetDropdown();
+            updatePresetDropdown(newName);
             presetSelect.value = newName;
             currentPreset = newName;
             showGenerateStatus(result.message, 'success');
@@ -260,7 +260,7 @@ function setupGenerateUI() {
 
         const result = await presetManager.renamePreset(currentPreset, newName);
         if (result.success) {
-            updatePresetDropdown();
+            updatePresetDropdown(newName);
             presetSelect.value = newName;
             currentPreset = newName;
             showGenerateStatus(result.message, 'success');
@@ -499,7 +499,7 @@ function setupSettingsUI() {
 
 // Helper Functions
 
-function updatePresetDropdown() {
+function updatePresetDropdown(selectedName = null) {
     const presetSelect = document.getElementById('presetSelect');
     const menu = presetSelect.querySelector('sp-menu');
     menu.innerHTML = '';
@@ -513,10 +513,18 @@ function updatePresetDropdown() {
         const item = document.createElement('sp-menu-item');
         item.value = name;
         item.textContent = name;
+        if (selectedName && name === selectedName) {
+            item.selected = true;
+        }
         fragment.appendChild(item);
     });
 
     menu.appendChild(fragment);
+
+    // Explicitly set value on the dropdown if provided
+    if (selectedName) {
+        presetSelect.value = selectedName;
+    }
 }
 
 function loadPreset(presetName) {
