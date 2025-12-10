@@ -1,7 +1,9 @@
 /**
  * Image Generator - handles AI image generation with multiple providers
- * Supports: Google Gemini, Yunwu, GPTGod, OpenRouter, Seedream
+ * Supports: Google Gemini, Yunwu, GPTGod, OpenRouter, Seedream, ComfyUI
  */
+const { Z_IMAGE_TURBO_WORKFLOW, QWEN_IMAGE_EDIT_WORKFLOW } = require('./workflow_templates.js');
+
 class ImageGenerator {
     constructor(fileManager) {
         this.fileManager = fileManager;
@@ -607,46 +609,86 @@ class ImageGenerator {
 
     /**
      * Build ComfyUI payload
-         * Uses a standard built-in Text2Img workflow.
-         */
+     * Uses Z-Image for text2img and Qwen Image Edit for imgedit mode.
+     */
     async _buildComfyUIPayload(prompt, aspectRatio, resolution, provider, mode = 'text2img', inputImage = null, sourceImage = null, referenceImage = null) {
-        if (mode !== 'text2img') {
-            console.warn("ComfyUI currently only supports text2img mode with the default workflow.");
-        }
-
         // Calculate dimensions
         const { width, height } = this._getPixelDimensions(resolution, aspectRatio);
         const seed = Math.floor(Math.random() * 1000000000);
-        const ckptName = provider.model || "v1-5-pruned-emaonly.safetensors";
+        const baseUrl = provider.baseUrl.endsWith("/") ? provider.baseUrl.slice(0, -1) : provider.baseUrl;
 
-        // 1. Try to load custom workflow from Workflows/comfy_workflow.json
-        let workflow = await this.fileManager.loadWorkflowFile('comfy_workflow.json');
+        let workflow;
 
-        if (!workflow) {
-            // 2. If not found, create default workflow and save it for user to edit
-            console.log("[ComfyUI] Custom workflow not found, creating default template...");
-            workflow = {
-                "3": { "class_type": "KSampler", "inputs": { "cfg": 8, "denoise": 1, "latent_image": ["5", 0], "model": ["4", 0], "negative": ["7", 0], "positive": ["6", 0], "sampler_name": "euler", "scheduler": "normal", "seed": seed, "steps": 20 } },
-                "4": { "class_type": "CheckpointLoaderSimple", "inputs": { "ckpt_name": ckptName } },
-                "5": { "class_type": "EmptyLatentImage", "inputs": { "batch_size": 1, "height": height, "width": width } },
-                "6": { "class_type": "CLIPTextEncode", "inputs": { "clip": ["4", 1], "text": prompt } },
-                "7": { "class_type": "CLIPTextEncode", "inputs": { "clip": ["4", 1], "text": "text, watermark" } },
-                "8": { "class_type": "VAEDecode", "inputs": { "samples": ["3", 0], "vae": ["4", 2] } },
-                "9": { "class_type": "SaveImage", "inputs": { "filename_prefix": "PSBanana_Comfy", "images": ["8", 0] } }
-            };
+        if (mode === 'imgedit' && (inputImage || sourceImage)) {
+            // === Image Edit Mode: Use Qwen Image Edit Workflow ===
+            console.log("[ComfyUI] Using Qwen Image Edit workflow for imgedit mode.");
+            workflow = JSON.parse(JSON.stringify(QWEN_IMAGE_EDIT_WORKFLOW)); // Deep copy
 
-            // Allow override via Z-Image Turbo detection if file not found
-            if (ckptName.includes("turbo") || ckptName.includes("z_image")) {
-                console.log("[ComfyUI] Detected Turbo model, using Z-Image Turbo workflow template.");
-                workflow = this._getZImageTurboWorkflow(seed, width, height, prompt);
-            } else {
-                // Save this as a template ONLY if it's the standard one
-                await this.fileManager.saveWorkflowFile('comfy_workflow.json', workflow);
+            // Upload the input image to ComfyUI
+            const imageToUpload = inputImage || sourceImage;
+            let uploadedFilename;
+            try {
+                uploadedFilename = await this._uploadImageToComfyUI(imageToUpload, baseUrl);
+            } catch (uploadError) {
+                console.error("[ComfyUI] Image upload failed:", uploadError);
+                throw new Error(`Failed to upload image to ComfyUI: ${uploadError.message}`);
             }
+
+            // Inject uploaded image into LoadImage node (78)
+            if (workflow["78"] && workflow["78"].inputs) {
+                workflow["78"].inputs.image = uploadedFilename;
+            }
+
+            // Inject prompt into positive TextEncodeQwenImageEditPlus node (111)
+            if (workflow["111"] && workflow["111"].inputs) {
+                workflow["111"].inputs.prompt = prompt;
+            }
+
+            // Inject seed into KSampler (3)
+            if (workflow["3"] && workflow["3"].inputs) {
+                workflow["3"].inputs.seed = seed;
+            }
+
+            // Note: Qwen workflow uses FluxKontextImageScale (390) which auto-scales,
+            // so we don't need to inject width/height directly for image edit.
+            // The output will match the input image dimensions.
+
         } else {
-            console.log("[ComfyUI] Loaded custom workflow. Injecting parameters...");
-            // 3. Inject parameters into custom workflow
-            this._injectParamsIntoWorkflow(workflow, prompt, width, height, seed, ckptName);
+            // === Text to Image Mode: Use Z-Image Turbo Workflow ===
+            console.log("[ComfyUI] Using Z-Image Turbo workflow for text2img mode.");
+
+            // 1. Try to load custom workflow from Workflows/comfy_t2i_workflow.json
+            workflow = await this.fileManager.loadWorkflowFile('comfy_t2i_workflow.json');
+
+            if (!workflow) {
+                // 2. If not found, use built-in Z-Image Turbo workflow
+                console.log("[ComfyUI] Custom T2I workflow not found, using built-in Z-Image Turbo.");
+                workflow = JSON.parse(JSON.stringify(Z_IMAGE_TURBO_WORKFLOW)); // Deep copy
+
+                // Inject parameters
+                // Prompt (node 45)
+                if (workflow["45"] && workflow["45"].inputs) {
+                    workflow["45"].inputs.text = prompt;
+                }
+
+                // Dimensions (node 41)
+                if (workflow["41"] && workflow["41"].inputs) {
+                    workflow["41"].inputs.width = width;
+                    workflow["41"].inputs.height = height;
+                }
+
+                // Seed (node 44)
+                if (workflow["44"] && workflow["44"].inputs) {
+                    workflow["44"].inputs.seed = seed;
+                }
+
+                // Save as template for user to customize
+                await this.fileManager.saveWorkflowFile('comfy_t2i_workflow.json', workflow);
+            } else {
+                console.log("[ComfyUI] Loaded custom T2I workflow. Injecting parameters...");
+                // Inject parameters into custom workflow
+                this._injectParamsIntoWorkflow(workflow, prompt, width, height, seed, null);
+            }
         }
 
         return {
@@ -654,6 +696,78 @@ class ImageGenerator {
             "client_id": "ps_banana_uxp_" + Date.now()
         };
     }
+
+    /**
+     * Upload image to ComfyUI server - Manual Multipart Construction
+     * Bypassing UXP FormData issues by constructing the body manually
+     * @param {string} base64Image - Base64 encoded image (without data: prefix)
+     * @param {string} baseUrl - ComfyUI base URL
+     * @returns {Promise<string>} - Filename of uploaded image
+     */
+    async _uploadImageToComfyUI(base64Image, baseUrl) {
+        const uploadUrl = `${baseUrl}/upload/image`;
+        const filename = `ps_banana_input_${Date.now()}.png`;
+
+        // Generate a random boundary
+        const boundary = "----BananaBoundary" + Math.random().toString(36).substring(2);
+
+        // 1. Prepare Multipart Header and Footer
+        // Note: Using \r\n for line breaks as required by HTTP spec
+        const preAmble = `--${boundary}\r\n` +
+            `Content-Disposition: form-data; name="image"; filename="${filename}"\r\n` +
+            `Content-Type: image/png\r\n\r\n`;
+
+        const postAmble = `\r\n--${boundary}--\r\n`;
+
+        // 2. Decode base64 image to binary bytes
+        const binaryString = atob(base64Image);
+        const imageBytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            imageBytes[i] = binaryString.charCodeAt(i);
+        }
+
+        // 3. Convert Header/Footer strings to bytes
+        // Using simple charCodeAt for ASCII headers is safe and robust without TextEncoder dependency
+        const preBytes = new Uint8Array(preAmble.length);
+        for (let i = 0; i < preAmble.length; i++) preBytes[i] = preAmble.charCodeAt(i);
+
+        const postBytes = new Uint8Array(postAmble.length);
+        for (let i = 0; i < postAmble.length; i++) postBytes[i] = postAmble.charCodeAt(i);
+
+        // 4. Combine all parts into one buffer
+        const totalLength = preBytes.length + imageBytes.length + postBytes.length;
+        const fullBody = new Uint8Array(totalLength);
+
+        fullBody.set(preBytes, 0);
+        fullBody.set(imageBytes, preBytes.length);
+        fullBody.set(postBytes, preBytes.length + imageBytes.length);
+
+        console.log(`[ComfyUI] Uploading image (manual multipart) to: ${uploadUrl}`);
+        console.log(`[ComfyUI] Filename: ${filename}, Size: ${totalLength} bytes`);
+
+        // 5. Send Request
+        const response = await fetch(uploadUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': `multipart/form-data; boundary=${boundary}`
+            },
+            body: fullBody.buffer // Send as ArrayBuffer
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Upload failed: ${response.status} - ${errorText}`);
+        }
+
+        const result = await response.json();
+        console.log(`[ComfyUI] Image uploaded successfully:`, result);
+
+        return result.name;
+    }
+
+    /**
+     * @deprecated Legacy function, use Z_IMAGE_TURBO_WORKFLOW instead
+     */
     _getZImageTurboWorkflow(seed, width, height, prompt) {
         return {
             "9": { "class_type": "SaveImage", "inputs": { "filename_prefix": "PSBanana_Z_Turbo", "images": ["43", 0] } },
