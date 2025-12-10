@@ -23,12 +23,12 @@ class ImageGenerator {
      * @returns {Promise<File>} - UXP File object of generated image
      */
     async generate(options) {
-        const { 
-            prompt, 
-            provider, 
-            aspectRatio, 
-            resolution, 
-            debugMode, 
+        const {
+            prompt,
+            provider,
+            aspectRatio,
+            resolution,
+            debugMode,
             mode = 'text2img',
             searchWeb = false,
             inputImage,
@@ -47,12 +47,12 @@ class ImageGenerator {
         console.log(`[DEBUG] Search web mode: ${searchWeb}`);
 
         // Build payload
-        const payload = this._buildPayload(
-            prompt, 
-            aspectRatio, 
-            resolution, 
-            provider, 
-            providerType, 
+        const payload = await this._buildPayload(
+            prompt,
+            aspectRatio,
+            resolution,
+            provider,
+            providerType,
             mode,
             searchWeb,
             inputImage,
@@ -84,7 +84,7 @@ class ImageGenerator {
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error(`[DEBUG] Error response:`, errorText);
-                
+
                 if (debugMode) {
                     await this.fileManager.saveLog(
                         `=== HTTP Error ===\n` +
@@ -95,7 +95,7 @@ class ImageGenerator {
                         `Response: ${errorText}\n`
                     );
                 }
-                
+
                 throw new Error(`HTTP Error: ${response.status} - ${errorText.substring(0, 200)}`);
             }
 
@@ -108,11 +108,11 @@ class ImageGenerator {
             }
 
             // Process response and download/save image
-            return await this._processResponse(responseData, providerType);
+            return await this._processResponse(responseData, providerType, provider);
 
         } catch (e) {
             console.error("Image generation failed:", e);
-            
+
             if (debugMode) {
                 await this.fileManager.saveLog(
                     `=== Generation Error ===\n` +
@@ -125,7 +125,7 @@ class ImageGenerator {
                     `Stack: ${e.stack}\n`
                 );
             }
-            
+
             throw new Error(`Generation failed: ${e.message}`);
         }
     }
@@ -146,6 +146,8 @@ class ImageGenerator {
             return "gptgod";
         } else if (nameLower.includes("openrouter") || urlLower.includes("openrouter.ai")) {
             return "openrouter";
+        } else if (nameLower.includes("comfyui") || urlLower.includes(":8188")) {
+            return "comfyui";
         } else {
             // Default to Yunwu/Gemini-compatible format
             return "yunwu";
@@ -161,6 +163,9 @@ class ImageGenerator {
 
         if (providerType === "google_official" || providerType === "yunwu") {
             return `${url}/models/${model}:generateContent?key=${apiKey}`;
+        } else if (providerType === "comfyui") {
+            // ComfyUI uses /prompt for queuing
+            return `${url}/prompt`;
         } else {
             // OpenAI-compatible (GPTGod, OpenRouter, Seedream)
             return url;
@@ -194,6 +199,8 @@ class ImageGenerator {
             return this._buildOpenRouterPayload(prompt, aspectRatio, resolution, provider, mode, searchWeb, inputImage, sourceImage, referenceImage);
         } else if (providerType === "seedream") {
             return this._buildSeedreamPayload(prompt, aspectRatio, resolution, provider, mode, searchWeb, inputImage, sourceImage, referenceImage);
+        } else if (providerType === "comfyui") {
+            return this._buildComfyUIPayload(prompt, aspectRatio, resolution, provider, mode, inputImage, sourceImage, referenceImage);
         }
     }
 
@@ -214,26 +221,26 @@ class ImageGenerator {
 
         // 构建content parts
         const parts = [];
-        
+
         // 多图模式: 添加system prompt和多张图片
         if (sourceImage || referenceImage) {
             let systemPrompt = "";
             let imageCount = 0;
-            
+
             // 注意：图片顺序是 Reference -> Source
             if (referenceImage) {
                 imageCount++;
                 systemPrompt += `Image ${imageCount} is the Reference Layer (use this for style/content reference). `;
             }
-            
+
             if (sourceImage) {
                 imageCount++;
                 systemPrompt += `Image ${imageCount} is the Source Layer (the content to be modified). `;
             }
-            
+
             // 添加system prompt和用户prompt（prompt在最前面）
             parts.push({ text: `System Instruction: ${systemPrompt}\n\nUser Prompt: ${prompt}` });
-            
+
             // 添加图片（顺序: Reference -> Source）
             if (referenceImage) {
                 parts.push({
@@ -243,7 +250,7 @@ class ImageGenerator {
                     }
                 });
             }
-            
+
             if (sourceImage) {
                 parts.push({
                     inlineData: {
@@ -300,26 +307,26 @@ class ImageGenerator {
 
         // 构建content parts
         const parts = [];
-        
+
         // 多图模式: 添加system prompt和多张图片
         if (sourceImage || referenceImage) {
             let systemPrompt = "";
             let imageCount = 0;
-            
+
             // 注意：图片顺序是 Reference -> Source
             if (referenceImage) {
                 imageCount++;
                 systemPrompt += `Image ${imageCount} is the Reference Layer (use this for style/content reference). `;
             }
-            
+
             if (sourceImage) {
                 imageCount++;
                 systemPrompt += `Image ${imageCount} is the Source Layer (the content to be modified). `;
             }
-            
+
             // 添加system prompt和用户prompt（prompt在最前面）
             parts.push({ text: `System Instruction: ${systemPrompt}\n\nUser Prompt: ${prompt}` });
-            
+
             // 添加图片（顺序: Reference -> Source）
             if (referenceImage) {
                 parts.push({
@@ -329,7 +336,7 @@ class ImageGenerator {
                     }
                 });
             }
-            
+
             if (sourceImage) {
                 parts.push({
                     inlineData: {
@@ -394,27 +401,27 @@ class ImageGenerator {
 
         // 构建content
         const content = [];
-        
+
         // 多图模式: 添加图片注释到prompt并添加图片
         if (sourceImage || referenceImage) {
             let imageAnnotations = "";
             let imageIndex = 0;
-            
+
             // 注意：图片顺序是 Reference -> Source
             // 先添加文本prompt和图片注释（在最前面）
             if (referenceImage) {
                 imageIndex++;
                 imageAnnotations += `\n[Attached Image ${imageIndex}: Reference]`;
             }
-            
+
             if (sourceImage) {
                 imageIndex++;
                 imageAnnotations += `\n[Attached Image ${imageIndex}: Source]`;
             }
-            
+
             // 添加文本prompt和图片注释（在最前面）
             content.push({ type: "text", text: finalPrompt + imageAnnotations });
-            
+
             // 按顺序添加图片（Reference -> Source）
             if (referenceImage) {
                 content.push({
@@ -424,7 +431,7 @@ class ImageGenerator {
                     }
                 });
             }
-            
+
             if (sourceImage) {
                 content.push({
                     type: "image_url",
@@ -475,17 +482,17 @@ class ImageGenerator {
 
         // 构建message content
         let messageContent;
-        
+
         // 多图模式: 使用数组格式
         if (sourceImage || referenceImage) {
             messageContent = [];
-            
+
             // 先添加文本prompt（在最前面）
             messageContent.push({
                 type: "text",
                 text: prompt
             });
-            
+
             // 注意：图片顺序是 Reference -> Source
             if (referenceImage) {
                 messageContent.push({
@@ -495,7 +502,7 @@ class ImageGenerator {
                     }
                 });
             }
-            
+
             if (sourceImage) {
                 messageContent.push({
                     type: "image_url",
@@ -559,7 +566,7 @@ class ImageGenerator {
         // 处理分辨率：Seedream 4.5 不支持 1K
         let finalSize = resolution || "2K";
         const modelLower = (provider.model || "").toLowerCase();
-        
+
         // 检查是否是 Seedream 4.5 模型
         if (modelLower.includes("4-5") || modelLower.includes("4.5")) {
             // Seedream 4.5 只支持 2K 和 4K
@@ -599,6 +606,184 @@ class ImageGenerator {
     }
 
     /**
+     * Build ComfyUI payload
+         * Uses a standard built-in Text2Img workflow.
+         */
+    async _buildComfyUIPayload(prompt, aspectRatio, resolution, provider, mode = 'text2img', inputImage = null, sourceImage = null, referenceImage = null) {
+        if (mode !== 'text2img') {
+            console.warn("ComfyUI currently only supports text2img mode with the default workflow.");
+        }
+
+        // Calculate dimensions
+        const { width, height } = this._getPixelDimensions(resolution, aspectRatio);
+        const seed = Math.floor(Math.random() * 1000000000);
+        const ckptName = provider.model || "v1-5-pruned-emaonly.safetensors";
+
+        // 1. Try to load custom workflow from Workflows/comfy_workflow.json
+        let workflow = await this.fileManager.loadWorkflowFile('comfy_workflow.json');
+
+        if (!workflow) {
+            // 2. If not found, create default workflow and save it for user to edit
+            console.log("[ComfyUI] Custom workflow not found, creating default template...");
+            workflow = {
+                "3": { "class_type": "KSampler", "inputs": { "cfg": 8, "denoise": 1, "latent_image": ["5", 0], "model": ["4", 0], "negative": ["7", 0], "positive": ["6", 0], "sampler_name": "euler", "scheduler": "normal", "seed": seed, "steps": 20 } },
+                "4": { "class_type": "CheckpointLoaderSimple", "inputs": { "ckpt_name": ckptName } },
+                "5": { "class_type": "EmptyLatentImage", "inputs": { "batch_size": 1, "height": height, "width": width } },
+                "6": { "class_type": "CLIPTextEncode", "inputs": { "clip": ["4", 1], "text": prompt } },
+                "7": { "class_type": "CLIPTextEncode", "inputs": { "clip": ["4", 1], "text": "text, watermark" } },
+                "8": { "class_type": "VAEDecode", "inputs": { "samples": ["3", 0], "vae": ["4", 2] } },
+                "9": { "class_type": "SaveImage", "inputs": { "filename_prefix": "PSBanana_Comfy", "images": ["8", 0] } }
+            };
+
+            // Allow override via Z-Image Turbo detection if file not found
+            if (ckptName.includes("turbo") || ckptName.includes("z_image")) {
+                console.log("[ComfyUI] Detected Turbo model, using Z-Image Turbo workflow template.");
+                workflow = this._getZImageTurboWorkflow(seed, width, height, prompt);
+            } else {
+                // Save this as a template ONLY if it's the standard one
+                await this.fileManager.saveWorkflowFile('comfy_workflow.json', workflow);
+            }
+        } else {
+            console.log("[ComfyUI] Loaded custom workflow. Injecting parameters...");
+            // 3. Inject parameters into custom workflow
+            this._injectParamsIntoWorkflow(workflow, prompt, width, height, seed, ckptName);
+        }
+
+        return {
+            "prompt": workflow,
+            "client_id": "ps_banana_uxp_" + Date.now()
+        };
+    }
+    _getZImageTurboWorkflow(seed, width, height, prompt) {
+        return {
+            "9": { "class_type": "SaveImage", "inputs": { "filename_prefix": "PSBanana_Z_Turbo", "images": ["43", 0] } },
+            "39": { "class_type": "CLIPLoader", "inputs": { "clip_name": "qwen_3_4b.safetensors", "type": "lumina2", "device": "default" } },
+            "40": { "class_type": "VAELoader", "inputs": { "vae_name": "ae.safetensors" } },
+            "41": { "class_type": "EmptySD3LatentImage", "inputs": { "width": width, "height": height, "batch_size": 1 } },
+            "42": { "class_type": "ConditioningZeroOut", "inputs": { "conditioning": ["45", 0] } },
+            "43": { "class_type": "VAEDecode", "inputs": { "samples": ["44", 0], "vae": ["40", 0] } },
+            "44": { "class_type": "KSampler", "inputs": { "cfg": 1, "denoise": 1, "latent_image": ["41", 0], "model": ["47", 0], "negative": ["42", 0], "positive": ["45", 0], "sampler_name": "res_multistep", "scheduler": "simple", "seed": seed, "steps": 8 } },
+            "45": { "class_type": "CLIPTextEncode", "inputs": { "clip": ["39", 0], "text": prompt } },
+            "46": { "class_type": "UNETLoader", "inputs": { "unet_name": "z_image_turbo_bf16.safetensors", "weight_dtype": "default" } },
+            "47": { "class_type": "ModelSamplingAuraFlow", "inputs": { "model": ["48", 0], "shift": 3 } },
+            "48": { "class_type": "LoraLoaderModelOnly", "inputs": { "lora_name": "pixel_art_style_z_image_turbo.safetensors", "model": ["46", 0], "strength_model": 1 } }
+        };
+    }
+
+    /**
+     * Smartly inject parameters into a ComfyUI workflow
+     */
+    _injectParamsIntoWorkflow(workflow, prompt, width, height, seed, defaultCkptName) {
+        let kSamplerNode = null;
+        let positiveNodeId = null;
+        let negativeNodeId = null;
+
+        // 1. Find KSampler (to set Seed/Steps and find Prompts)
+        for (const [id, node] of Object.entries(workflow)) {
+            if (node.class_type === 'KSampler' || node.class_type === 'KSamplerAdvanced') {
+                kSamplerNode = node;
+                // Inject Seed
+                if (node.inputs) {
+                    node.inputs.seed = seed;
+                    if (node.inputs.steps) node.inputs.steps = 20; // Enforce default or keep? Let's enforce for consistency
+                    // node.inputs.cfg = 8; // Maybe keep user's CFG
+                }
+
+                // Trace Prompts
+                if (node.inputs.positive && Array.isArray(node.inputs.positive)) {
+                    positiveNodeId = node.inputs.positive[0];
+                }
+                if (node.inputs.negative && Array.isArray(node.inputs.negative)) {
+                    negativeNodeId = node.inputs.negative[0];
+                }
+                break; // Assume main KSampler
+            }
+        }
+
+        // 2. Inject Dimensions (EmptyLatentImage)
+        for (const [id, node] of Object.entries(workflow)) {
+            if (node.class_type.startsWith('EmptyLatentImage') || node.class_type.includes('EmptySD3Latent')) {
+                if (node.inputs) {
+                    node.inputs.width = width;
+                    node.inputs.height = height;
+                }
+            }
+        }
+
+        // 3. Inject Prompts (using traced IDs)
+        if (positiveNodeId && workflow[positiveNodeId]) {
+            if (workflow[positiveNodeId].inputs) {
+                workflow[positiveNodeId].inputs.text = prompt;
+            }
+        }
+        if (negativeNodeId && workflow[negativeNodeId]) {
+            if (workflow[negativeNodeId].inputs) {
+                // Keep existing negative prompt if distinct, or hardcode generic?
+                // Let's NOT overwrite negative prompt if it's a custom workflow, 
+                // UNLESS we want to support a negative prompt field in UI later.
+                // For now, let's leave negative prompt alone in custom workflows, 
+                // assuming the user configured it in the JSON.
+                // Or maybe just append? No.
+                // User context: "text, watermark" IS hardcoded in my default. 
+                // If they supplied a custom workflow, probably they want THEIR negative prompt.
+                // So I will NOT touch negative prompt here.
+            }
+        }
+
+        // 4. Inject Model Name?
+        // Only if we find a CheckpointLoaderSimple AND it matches the specific "CheckpointLoaderSimple" class.
+        // If the user uses UNetLoader (like the error case), we DO NOT touch it, avoiding the "value_not_in_list" error.
+        for (const [id, node] of Object.entries(workflow)) {
+            if (node.class_type === 'CheckpointLoaderSimple') {
+                // Check if the current value is valid or placeholder?
+                // Strategy: If user explicitly set a model in Settings, and this is a CheckpointLoaderSimple, update it.
+                // But if they use a custom workflow, they might have set a specific model there.
+                // Given the error "value_not_in_list", better to trust the File if it's custom.
+                // So I will NOT update ckpt_name in custom workflows.
+                // console.log("Keeping custom workflow checkpoint...");
+            }
+        }
+    }
+
+    /**
+     * Get pixel dimensions from Resolution (1K/2K/4K) and Aspect Ratio string
+     */
+    _getPixelDimensions(resolution, aspectRatio) {
+        // Base sizes for "1K" (approx 1MP), "2K" (approx 4MP), "4K" (approx 16MP)
+        // Usually 1K = 1024x1024 base.
+        let baseSize = 1024;
+
+        if (typeof resolution === 'string') {
+            if (resolution.includes("2K")) baseSize = 2048;
+            if (resolution.includes("4K")) baseSize = 4096;
+        } else if (typeof resolution === 'number') {
+            baseSize = resolution;
+        }
+
+        // Parse Aspect Ratio
+        let ratioVal = 1.0;
+        if (aspectRatio && aspectRatio.includes(":")) {
+            const [w, h] = aspectRatio.split(":").map(Number);
+            if (h !== 0) ratioVal = w / h;
+        }
+
+        // Calculate W/H maintaining area roughly equal to baseSize * baseSize
+        // W * H = Base^2
+        // W / H = Ratio
+        // H * Ratio * H = Base^2 => H^2 = Base^2 / Ratio => H = Base / sqrt(Ratio)
+
+        let h = Math.round(baseSize / Math.sqrt(ratioVal));
+        let w = Math.round(h * ratioVal);
+
+        // Ensure multiple of 8 (standard for diffusion models)
+        w = Math.round(w / 8) * 8;
+        h = Math.round(h / 8) * 8;
+
+        return { width: w, height: h };
+    }
+
+
+    /**
      * Get aspect ratio description for Seedream prompt
      * 获取宽高比的自然语言描述
      */
@@ -619,7 +804,7 @@ class ImageGenerator {
     /**
      * Process API response and return image file
      */
-    async _processResponse(responseData, providerType) {
+    async _processResponse(responseData, providerType, provider) {
         if (providerType === "google_official" || providerType === "yunwu") {
             return await this._processGeminiResponse(responseData);
         } else if (providerType === "gptgod") {
@@ -628,6 +813,12 @@ class ImageGenerator {
             return await this._processOpenRouterResponse(responseData);
         } else if (providerType === "seedream") {
             return await this._processSeedreamResponse(responseData);
+        } else if (providerType === "comfyui") {
+            return await this._processComfyUIResponse(responseData, provider);
+            // Note: I need to access provider config to get baseUrl for history polling. 
+            // Since _processResponse signature doesn't pass it, I'll assume I can pass it or fix the architecture. 
+            // Wait, I can just change _processResponse signature in the next step or rely on a class property? 
+            // Actually, I should pass provider to _processResponse in the main generate method.
         }
     }
 
@@ -758,6 +949,69 @@ class ImageGenerator {
     }
 
     /**
+     * Process ComfyUI response
+     * 1. Get prompt_id from response
+     * 2. Poll history until done
+     * 3. Download image
+     */
+    async _processComfyUIResponse(responseData, provider) {
+        if (!responseData.prompt_id) {
+            throw new Error("ComfyUI did not return a prompt_id");
+        }
+
+        const promptId = responseData.prompt_id;
+        const baseUrl = provider.baseUrl.endsWith("/") ? provider.baseUrl.slice(0, -1) : provider.baseUrl;
+
+        console.log(`[ComfyUI] Queued prompt: ${promptId}. Waiting for generation...`);
+
+        // Poll history
+        // Max wait: 5 minutes (300 seconds)
+        const maxRetries = 300;
+        let retries = 0;
+        let outputImages = null;
+
+        while (retries < maxRetries) {
+            await new Promise(r => setTimeout(r, 1000)); // Wait 1 sec
+
+            try {
+                const historyUrl = `${baseUrl}/history/${promptId}`;
+                const historyRes = await fetch(historyUrl);
+
+                if (historyRes.ok) {
+                    const historyData = await historyRes.json();
+                    if (historyData[promptId]) {
+                        // Job done!
+                        const outputs = historyData[promptId].outputs;
+                        // Find the output from SaveImage node (usually "9" in our workflow)
+                        for (const nodeId in outputs) {
+                            if (outputs[nodeId].images && outputs[nodeId].images.length > 0) {
+                                outputImages = outputs[nodeId].images;
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+            } catch (e) {
+                console.warn("[ComfyUI] Polling error:", e);
+            }
+            retries++;
+        }
+
+        if (!outputImages || outputImages.length === 0) {
+            throw new Error("ComfyUI generation timed out or returned no images.");
+        }
+
+        // Get the first image
+        const imgInfo = outputImages[0];
+        // ComfyUI View URL: /view?filename=...&subfolder=...&type=...
+        const viewUrl = `${baseUrl}/view?filename=${encodeURIComponent(imgInfo.filename)}&subfolder=${encodeURIComponent(imgInfo.subfolder)}&type=${encodeURIComponent(imgInfo.type)}`;
+
+        console.log(`[ComfyUI] Downloading image from: ${viewUrl}`);
+        return await this.fileManager.downloadImage(viewUrl);
+    }
+
+    /**
      * Get file extension from MIME type
      */
     _getExtensionFromMimeType(mimeType) {
@@ -771,12 +1025,12 @@ class ImageGenerator {
      */
     _extractTextFromParts(parts) {
         if (!parts || !Array.isArray(parts)) return '';
-        
+
         const textParts = parts
             .filter(part => part.text)
             .map(part => part.text)
             .join(' ');
-        
+
         return textParts.trim();
     }
 
@@ -805,10 +1059,10 @@ class ImageGenerator {
 
             // Error message in response
             if (responseData.error) {
-                const errorMsg = typeof responseData.error === 'string' 
-                    ? responseData.error 
+                const errorMsg = typeof responseData.error === 'string'
+                    ? responseData.error
                     : responseData.error.message || JSON.stringify(responseData.error);
-                
+
                 // Seedream API 特殊错误提示
                 if (errorMsg.includes('AuthenticationError') || errorMsg.includes('API key')) {
                     return `认证错误: ${errorMsg}
@@ -818,7 +1072,7 @@ class ImageGenerator {
 2. 是否选择了正确的 Provider (Seedream 4.5)
 3. Base URL 是否为: https://ark.cn-beijing.volces.com/api/v3/images/generations`;
                 }
-                
+
                 // Seedream 分辨率参数错误
                 if (errorMsg.includes('size') && (errorMsg.includes('not supported') || errorMsg.includes('not valid'))) {
                     return `分辨率参数错误: ${errorMsg}
@@ -828,7 +1082,7 @@ class ImageGenerator {
 - 请在插件中选择 2K 或 4K 分辨率
 - 或使用 Seedream 4.0 模型（支持 1K）`;
                 }
-                
+
                 return `Error: ${errorMsg}`;
             }
 

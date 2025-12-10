@@ -71,6 +71,56 @@ class FileManager {
     }
 
     /**
+     * Get or create the workflows directory
+     */
+    async getWorkflowsFolder() {
+        try {
+            const dataFolder = await fs.getDataFolder();
+            let workflowsFolder;
+            try {
+                workflowsFolder = await dataFolder.getEntry("Workflows");
+            } catch (e) {
+                console.log(`[FileManager] Workflows folder not found, creating...`);
+                workflowsFolder = await dataFolder.createFolder("Workflows");
+            }
+            return workflowsFolder;
+        } catch (e) {
+            console.error("[FileManager] Error getting workflows folder:", e);
+            throw e;
+        }
+    }
+
+    /**
+     * Load a workflow JSON file
+     */
+    async loadWorkflowFile(filename) {
+        try {
+            const folder = await this.getWorkflowsFolder();
+            const entry = await folder.getEntry(filename);
+            const content = await entry.read();
+            return JSON.parse(content);
+        } catch (e) {
+            return null; // File not found or error
+        }
+    }
+
+    /**
+     * Save a workflow JSON file
+     */
+    async saveWorkflowFile(filename, workflowData) {
+        try {
+            const folder = await this.getWorkflowsFolder();
+            const file = await folder.createFile(filename, { overwrite: true });
+            await file.write(JSON.stringify(workflowData, null, 4));
+            console.log(`[FileManager] Saved workflow: ${filename}`);
+            return file.nativePath;
+        } catch (e) {
+            console.error("[FileManager] Error saving workflow file:", e);
+            return null;
+        }
+    }
+
+    /**
      * Backward compatibility - getTempFolder now returns log folder
      * @deprecated Use getLogFolder() or getImageFolder() instead
      */

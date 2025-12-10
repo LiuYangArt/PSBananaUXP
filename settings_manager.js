@@ -103,6 +103,12 @@ class ProviderManager {
                         "apiKey": "",
                         "baseUrl": "https://ark.cn-beijing.volces.com/api/v3/images/generations",
                         "model": "doubao-seedream-4-5-251128"
+                    },
+                    {
+                        "name": "Local ComfyUI",
+                        "apiKey": "not-needed",
+                        "baseUrl": "http://127.0.0.1:8188",
+                        "model": "z_image_turbo_bf16.safetensors"
                     }
                 ];
                 await this.save();
@@ -184,6 +190,22 @@ class ProviderManager {
         } else if (name.toLowerCase().includes("seedream") || baseUrl.toLowerCase().includes("ark.cn-beijing.volces.com")) {
             // Seedream API 不支持 /models 端点，返回特殊标记，由 main.js 转换为多语言文本
             return { success: true, messageKey: "msg_seedream_test_success" };
+        } else if (name.toLowerCase().includes("comfyui") || baseUrl.includes(":8188")) {
+            // ComfyUI Connection Test
+            try {
+                // Check system stats to verify server is running
+                let cleanBaseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+                apiUrl = `${cleanBaseUrl}/system_stats`;
+
+                const response = await fetch(apiUrl, { method: "GET" });
+                if (response.ok) {
+                    return { success: true, message: "ComfyUI Connected!" };
+                } else {
+                    return { success: false, message: `ComfyUI Error: ${response.status}` };
+                }
+            } catch (e) {
+                return { success: false, message: `ComfyUI Connection Failed: ${e.message}` };
+            }
         } else if (name.toLowerCase().includes("gptgod") || baseUrl.toLowerCase().includes("gptgod")) {
             if (baseUrl.includes("/chat/completions")) {
                 apiUrl = baseUrl.replace("/chat/completions", "/models");
