@@ -74,7 +74,7 @@ const translations = {
         "dialog_cancel": "Cancel",
         "dialog_ok": "OK",
         "dialog_placeholder_name": "Enter name...",
-        "footer_text": "🍌PSBanana by LiuYang v2.1.0"
+        "footer_text": "🍌PSBanana by LiuYang v2.2.0"
     },
     "zh": {
         // Tabs
@@ -151,7 +151,7 @@ const translations = {
         "dialog_cancel": "取消",
         "dialog_ok": "确定",
         "dialog_placeholder_name": "输入名称...",
-        "footer_text": "🍌PSBanana by LiuYang v2.1.0"
+        "footer_text": "🍌PSBanana by LiuYang v2.2.0"
     }
 };
 
