@@ -649,9 +649,9 @@ class ImageGenerator {
                 workflow["3"].inputs.seed = seed;
             }
 
-            // Note: Qwen workflow uses FluxKontextImageScale (390) which auto-scales,
+            // Note: Qwen workflow uses ImageScaleToTotalPixels (93) which scales to 1MP,
             // so we don't need to inject width/height directly for image edit.
-            // The output will match the input image dimensions.
+            // Using 4-step Lightning LoRA for ~5x faster generation.
 
         } else {
             // === Text to Image Mode: Use Z-Image Turbo Workflow ===

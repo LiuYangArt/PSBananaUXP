@@ -99,20 +99,21 @@ const Z_IMAGE_TURBO_WORKFLOW = {
 };
 
 /**
- * Qwen Image Edit Workflow
- * Simplified from official workflow.
+ * Qwen Image Edit Workflow - 4-Step Lightning Version
+ * Uses Lightning LoRA for ~5x faster generation (4 steps instead of 20).
  * Key Nodes:
  *  - 37: UNETLoader (qwen_image_edit_2509)
+ *  - 89: LoraLoaderModelOnly (4-step Lightning LoRA)
  *  - 38: CLIPLoader
  *  - 39: VAELoader
  *  - 66: ModelSamplingAuraFlow
  *  - 75: CFGNorm
- *  - 78: LoadImage (input image 1)
- *  - 390: FluxKontextImageScale
+ *  - 78: LoadImage (input image)
+ *  - 93: ImageScaleToTotalPixels (scale to 1MP)
  *  - 88: VAEEncode
  *  - 111: TextEncodeQwenImageEditPlus (Positive prompt)
  *  - 110: TextEncodeQwenImageEditPlus (Negative prompt - empty)
- *  - 3: KSampler
+ *  - 3: KSampler (4 steps, cfg 1)
  *  - 8: VAEDecode
  *  - 60: SaveImage
  */
@@ -122,6 +123,14 @@ const QWEN_IMAGE_EDIT_WORKFLOW = {
         "inputs": {
             "unet_name": "qwen_image_edit_2509_fp8_e4m3fn.safetensors",
             "weight_dtype": "default"
+        }
+    },
+    "89": {
+        "class_type": "LoraLoaderModelOnly",
+        "inputs": {
+            "model": ["37", 0],
+            "lora_name": "Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors",
+            "strength_model": 1
         }
     },
     "38": {
@@ -141,7 +150,7 @@ const QWEN_IMAGE_EDIT_WORKFLOW = {
     "66": {
         "class_type": "ModelSamplingAuraFlow",
         "inputs": {
-            "model": ["37", 0],
+            "model": ["89", 0],
             "shift": 3
         }
     },
@@ -159,16 +168,18 @@ const QWEN_IMAGE_EDIT_WORKFLOW = {
             "upload": "image"
         }
     },
-    "390": {
-        "class_type": "FluxKontextImageScale",
+    "93": {
+        "class_type": "ImageScaleToTotalPixels",
         "inputs": {
-            "image": ["78", 0]
+            "image": ["78", 0],
+            "upscale_method": "lanczos",
+            "megapixels": 1
         }
     },
     "88": {
         "class_type": "VAEEncode",
         "inputs": {
-            "pixels": ["390", 0],
+            "pixels": ["93", 0],
             "vae": ["39", 0]
         }
     },
@@ -177,7 +188,7 @@ const QWEN_IMAGE_EDIT_WORKFLOW = {
         "inputs": {
             "clip": ["38", 0],
             "vae": ["39", 0],
-            "image1": ["390", 0],
+            "image1": ["93", 0],
             "image2": null,
             "image3": null,
             "prompt": ""
@@ -188,16 +199,16 @@ const QWEN_IMAGE_EDIT_WORKFLOW = {
         "inputs": {
             "clip": ["38", 0],
             "vae": ["39", 0],
-            "image1": ["390", 0],
+            "image1": ["93", 0],
             "image2": null,
             "image3": null,
-            "prompt": "Replace the cat with a dalmatian"
+            "prompt": ""
         }
     },
     "3": {
         "class_type": "KSampler",
         "inputs": {
-            "cfg": 2.5,
+            "cfg": 1,
             "denoise": 1,
             "latent_image": ["88", 0],
             "model": ["75", 0],
@@ -206,7 +217,7 @@ const QWEN_IMAGE_EDIT_WORKFLOW = {
             "sampler_name": "euler",
             "scheduler": "simple",
             "seed": 12345,
-            "steps": 20
+            "steps": 4
         }
     },
     "8": {
