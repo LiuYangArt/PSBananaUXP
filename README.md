@@ -40,6 +40,13 @@ photoshop + Google nano banana pro
 - 选区模式，可只把选区区域发送给ai进行生图
 - Prompt预设
 - 同时处理多生图任务功能
+- 
+## 增加了对comfyui的支持
+使用z-image-turbo 和 qwen-image-edit 实现文生图/图生图。 后续z-image-edit 出来之后再考虑替换图生图方式。 
+在高端显卡上速度极快，适合本地处理一些较简单的任务。 
+<br><img width="470" height="338" alt="image" src="https://github.com/user-attachments/assets/32069c58-6bf0-4970-8958-a0dcbc9e8c08" />
+<br><img width="602" height="144" alt="image" src="https://github.com/user-attachments/assets/daa0c418-2cef-459e-83e5-37890c7f667c" />
+
 
 
 
