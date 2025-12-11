@@ -833,7 +833,7 @@ class ImageGenerator {
                 // Inject Seed
                 if (node.inputs) {
                     node.inputs.seed = seed;
-                    if (node.inputs.steps) node.inputs.steps = 20; // Enforce default or keep? Let's enforce for consistency
+                    // Keep original steps from workflow, don't override
                     // node.inputs.cfg = 8; // Maybe keep user's CFG
                 }
 

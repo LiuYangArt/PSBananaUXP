@@ -1294,7 +1294,7 @@ function updateLanguage(lang) {
     document.getElementById('debugFolderPath').placeholder = getText('placeholder_log_path');
     document.getElementById('btnTestExport').textContent = getText('btn_test_export');
     document.getElementById('btnTestImport').textContent = getText('btn_test_import');
-    document.getElementById('footerText').textContent = getText('footer_text');
+    // document.getElementById('footerText').textContent = getText('footer_text');
 
     console.log(`[UI] Language updated to: ${lang}`);
 }
