@@ -624,19 +624,53 @@ class ImageGenerator {
             console.log("[ComfyUI] Using Qwen Image Edit workflow for imgedit mode.");
             workflow = JSON.parse(JSON.stringify(QWEN_IMAGE_EDIT_WORKFLOW)); // Deep copy
 
-            // Upload the input image to ComfyUI
-            const imageToUpload = inputImage || sourceImage;
-            let uploadedFilename;
+            // Determine which images to upload
+            // Priority: sourceImage (from layer groups) > inputImage (single image mode)
+            const primaryImage = sourceImage || inputImage;
+
+            // Upload primary image (Source) to node 78
+            let sourceFilename;
             try {
-                uploadedFilename = await this._uploadImageToComfyUI(imageToUpload, baseUrl);
+                console.log("[ComfyUI] Uploading source image...");
+                sourceFilename = await this._uploadImageToComfyUI(primaryImage, baseUrl);
+                console.log("[ComfyUI] Source image uploaded:", sourceFilename);
             } catch (uploadError) {
-                console.error("[ComfyUI] Image upload failed:", uploadError);
-                throw new Error(`Failed to upload image to ComfyUI: ${uploadError.message}`);
+                console.error("[ComfyUI] Source image upload failed:", uploadError);
+                throw new Error(`Failed to upload source image to ComfyUI: ${uploadError.message}`);
             }
 
-            // Inject uploaded image into LoadImage node (78)
+            // Inject source image into LoadImage node (78)
             if (workflow["78"] && workflow["78"].inputs) {
-                workflow["78"].inputs.image = uploadedFilename;
+                workflow["78"].inputs.image = sourceFilename;
+            }
+
+            // Upload reference image to node 120 (if provided)
+            if (referenceImage) {
+                let referenceFilename;
+                try {
+                    console.log("[ComfyUI] Uploading reference image...");
+                    referenceFilename = await this._uploadImageToComfyUI(referenceImage, baseUrl);
+                    console.log("[ComfyUI] Reference image uploaded:", referenceFilename);
+                } catch (uploadError) {
+                    console.error("[ComfyUI] Reference image upload failed:", uploadError);
+                    throw new Error(`Failed to upload reference image to ComfyUI: ${uploadError.message}`);
+                }
+
+                // Inject reference image into LoadImage node (120)
+                if (workflow["120"] && workflow["120"].inputs) {
+                    workflow["120"].inputs.image = referenceFilename;
+                }
+            } else {
+                // No reference image - set image2 to null in TextEncode nodes
+                console.log("[ComfyUI] No reference image provided, disabling image2.");
+                if (workflow["110"] && workflow["110"].inputs) {
+                    workflow["110"].inputs.image2 = null;
+                }
+                if (workflow["111"] && workflow["111"].inputs) {
+                    workflow["111"].inputs.image2 = null;
+                }
+                // Remove node 120 since it's not needed
+                delete workflow["120"];
             }
 
             // Inject prompt into positive TextEncodeQwenImageEditPlus node (111)

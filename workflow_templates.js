@@ -101,6 +101,11 @@ const Z_IMAGE_TURBO_WORKFLOW = {
 /**
  * Qwen Image Edit Workflow - 4-Step Lightning Version
  * Uses Lightning LoRA for ~5x faster generation (4 steps instead of 20).
+ * 
+ * Supports multi-image input:
+ *  - image1 (Source): The main image to be edited
+ *  - image2 (Reference): Optional style/content reference
+ * 
  * Key Nodes:
  *  - 37: UNETLoader (qwen_image_edit_2509)
  *  - 89: LoraLoaderModelOnly (4-step Lightning LoRA)
@@ -108,7 +113,8 @@ const Z_IMAGE_TURBO_WORKFLOW = {
  *  - 39: VAELoader
  *  - 66: ModelSamplingAuraFlow
  *  - 75: CFGNorm
- *  - 78: LoadImage (input image)
+ *  - 78: LoadImage (Source - image1, required)
+ *  - 120: LoadImage (Reference - image2, optional)
  *  - 93: ImageScaleToTotalPixels (scale to 1MP)
  *  - 88: VAEEncode
  *  - 111: TextEncodeQwenImageEditPlus (Positive prompt)
@@ -164,7 +170,14 @@ const QWEN_IMAGE_EDIT_WORKFLOW = {
     "78": {
         "class_type": "LoadImage",
         "inputs": {
-            "image": "example.png",
+            "image": "source.png",
+            "upload": "image"
+        }
+    },
+    "120": {
+        "class_type": "LoadImage",
+        "inputs": {
+            "image": "reference.png",
             "upload": "image"
         }
     },
@@ -189,7 +202,7 @@ const QWEN_IMAGE_EDIT_WORKFLOW = {
             "clip": ["38", 0],
             "vae": ["39", 0],
             "image1": ["93", 0],
-            "image2": null,
+            "image2": ["120", 0],
             "image3": null,
             "prompt": ""
         }
@@ -200,7 +213,7 @@ const QWEN_IMAGE_EDIT_WORKFLOW = {
             "clip": ["38", 0],
             "vae": ["39", 0],
             "image1": ["93", 0],
-            "image2": null,
+            "image2": ["120", 0],
             "image3": null,
             "prompt": ""
         }
