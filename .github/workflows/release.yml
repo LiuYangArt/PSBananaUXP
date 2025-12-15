@@ -18,7 +18,7 @@ jobs:
       - name: Zip Plugin
         # Exclude development files to keep the package clean
         run: |
-          zip -r PSBananaUXP.zip . -x "*.git*" "node_modules/*" ".github/*" ".vscode/*" "publish_release.bat" "*.DS_Store" "todo.md" ".agent/*" "update_manifest_version.js"
+          zip -r PSBananaUXP.zip . -x "*.git*" "node_modules/*" ".github/*" ".vscode/*" "*.bat" "*.DS_Store" "todo.md" ".agent/*" "update_manifest_version.js" ".qoder/*" "Plugin/*" "icons/*.psd" "icons/BananaIcon-assets/*"
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
