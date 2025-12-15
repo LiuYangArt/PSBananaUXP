@@ -1,0 +1,13 @@
+*.bat
+ps_ai*
+
+
+todo.md
+*.code-workspace
+
+.qoder
+*.md
+Profiles/*
+Profiles/.*
+
+!.agent/rules/psbananaprojectrules.md
