@@ -7,10 +7,8 @@ photoshop + Google nano banana pro
 本插件功能依赖第三方 API 服务。在使用过程中，您的数据（包括但不限于图片、提示词）将被发送至第三方服务器进行处理。开发者不对第三方服务的数据安全性、隐私保护或服务稳定性承担任何责任。请勿上传包含敏感个人信息的内容，使用本插件产生的任何数据泄露风险由用户自行承担。
 
 ## 插件下载
-
-[https://github.com/LiuYangArt/PSBananaUXP/blob/main/Plugin/PSBanana.zip](https://github.com/LiuYangArt/PSBananaUXP/blob/main/Plugin/PSBanana.zip)
-<br>
-<img width="1076" height="219" alt="image" src="https://github.com/user-attachments/assets/429413fd-a0bb-40fe-9133-38815068c8f7" />
+在release中下载最新版本的插件zip包
+[https://github.com/LiuYangArt/PSBananaUXP/releases/](https://github.com/LiuYangArt/PSBananaUXP/releases/)
 
 
 ## 插件安装
