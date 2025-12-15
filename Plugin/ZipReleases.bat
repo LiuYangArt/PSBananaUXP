@@ -1,0 +1,1 @@
+7z.exe a -tzip PSBanana.zip ..\ -mx0 -xr!Plugin -xr!*.gitignore -xr!*.git -xr!*.blend1 -xr!__pycache__ -xr!*.pyc -xr!_Backup -xr!*.cursor -xr!*.clinerules -xr!*_backup -xr!memory-bank -xr!*.bat -xr!*.code-workspace -xr!.vscode -xr!.agent -xr!.qoder -xr!Profiles -xr!todo.md -xr!*.psd
