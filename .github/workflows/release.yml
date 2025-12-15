@@ -15,16 +15,43 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Zip Plugin
-        # Exclude development files to keep the package clean
+      - name: Prepare and Zip Plugin
         run: |
-          zip -r PSBananaUXP.zip . -x "*.git*" "node_modules/*" ".github/*" ".vscode/*" "*.bat" "*.DS_Store" "todo.md" ".agent/*" "update_manifest_version.js" ".qoder/*" "Plugin/*" "icons/*.psd" "icons/BananaIcon-assets/*"
+          # Extract version from tag (e.g., v2.2.6 -> 2.2.6)
+          VERSION=${GITHUB_REF_NAME#v}
+          ZIP_NAME="PSBananaUXP_${VERSION}.zip"
+          echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
+
+          # Create staging directory structure
+          mkdir -p build_staging/PSBananaUXP
+
+          # Use rsync to copy files while excluding development artifacts
+          rsync -av . build_staging/PSBananaUXP \
+            --exclude '.git*' \
+            --exclude 'node_modules' \
+            --exclude '.github' \
+            --exclude '.vscode' \
+            --exclude '*.bat' \
+            --exclude '.DS_Store' \
+            --exclude 'todo.md' \
+            --exclude '.agent' \
+            --exclude 'update_manifest_version.js' \
+            --exclude '.qoder' \
+            --exclude 'Plugin' \
+            --exclude 'build_staging' \
+            --exclude 'icons/*.psd' \
+            --exclude 'icons/BananaIcon-assets'
+
+          # Zip the folder
+          cd build_staging
+          zip -r "../$ZIP_NAME" PSBananaUXP
+          cd ..
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: PSBananaUXP.zip
+          files: ${{ env.ZIP_NAME }}
           draft: false
           prerelease: false
           generate_release_notes: true
