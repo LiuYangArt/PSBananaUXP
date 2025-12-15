@@ -30,18 +30,17 @@ photoshop 2023 版本
   - 如果需要用户交互 (如弹窗输入)，在 `options` 中设置 `interactive: true`。
 
 ### 2. Manifest 配置 (manifest.json)
-- **Manifest Version**: 使用 `4` 或更高 (推荐 `5`)。
-- **API Version**: 必须在 `host.data` 中设置 `apiVersion: 2` 以启用现代 Modal JS Scope。
+- **Manifest Version**: 推荐使用 `5` (最新标准)，但也兼容 `4`。
+- **Host 结构 (关键)**: 必须使用 **对象 (Object)** 结构而非数组结构，以确保在 Photoshop 2023 及 UXP Developer Tool 中的兼容性。
+- **API Version**: 必须在 `host` 对象中显式设置 `apiVersion: 2` 以启用现代 Modal JS Scope (对于 executeAsModal 是必须的)。
+  **推荐配置**:
   ```json
-  "host": [
-    {
+  "host": {
       "app": "PS",
       "minVersion": "23.0.0",
-      "data": {
-        "apiVersion": 2
-      }
-    }
-  ]
+      "apiVersion": 2
+  },
+  "manifestVersion": 5,
   ```
 
 ### 3. 同步 vs 异步 (Sync vs Async)

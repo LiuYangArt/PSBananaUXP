@@ -34,4 +34,7 @@ todo.md
 Profiles/*
 Profiles/.*
 
+!.agent/
+!.agent/rules/psbananaprojectrules.md
+
 
