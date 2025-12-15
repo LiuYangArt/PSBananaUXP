@@ -1,13 +1,37 @@
-*.bat
+# 系统文件 (System Files)
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Node.js 依赖与日志 (Node & Logs)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# UXP 构建产物 (Build Artifacts)
+dist/
+build/
+*.ccx
+
+# 编辑器配置 (Editor Config)
+.vscode/
+*.code-workspace
+.idea/
+
+# 敏感信息与私有配置 (Secrets & Private Config)
+.env
+.qoder
+
+# 临时文件 (Temp Files)
 ps_ai*
 
-
+# 特定忽略 (Specific Ignores)
 todo.md
-*.code-workspace
 
-.qoder
-*.md
+# 用户配置/数据 (User Profiles)
 Profiles/*
 Profiles/.*
 
-!.agent/rules/psbananaprojectrules.md
+*.bat
