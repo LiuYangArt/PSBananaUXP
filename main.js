@@ -89,7 +89,19 @@ async function initializeApp() {
         loadProviderConfig(selectedProviderName);
     }
 
+    // Set Dynamic Version in Footer
+    try {
+        const manifest = require('./manifest.json');
+        const footerText = document.getElementById('footerText');
+        if (footerText && manifest.version) {
+            footerText.textContent = `🍌PSBanana by LiuYang v${manifest.version}`;
+        }
+    } catch (e) {
+        console.error("Failed to load version from manifest", e);
+    }
+
     // Restore latest prompt
+
     // const latestPrompt = settingsManager.get('latest_prompt', '');
     // if (latestPrompt) {
     //     document.getElementById('promptInput').value = latestPrompt;

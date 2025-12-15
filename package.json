@@ -1,0 +1,13 @@
+{
+  "name": "ps-banana-uxp",
+  "version": "2.2.5",
+  "description": "Photoshop UXP Plugin for AI Image Generation",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "LiuYang",
+  "license": "ISC",
+  "dependencies": {
+    "photoshop": "^1.0.0"
+  }
+}
