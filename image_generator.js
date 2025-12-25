@@ -1000,14 +1000,12 @@ class ImageGenerator {
      * Smartly inject parameters into a ComfyUI workflow
      */
     _injectParamsIntoWorkflow(workflow, prompt, width, height, seed, _defaultCkptName) {
-        let kSamplerNode = null;
         let positiveNodeId = null;
         let negativeNodeId = null;
 
         // 1. Find KSampler (to set Seed/Steps and find Prompts)
-        for (const [_id, node] of Object.entries(workflow)) {
+        for (const node of Object.values(workflow)) {
             if (node.class_type === 'KSampler' || node.class_type === 'KSamplerAdvanced') {
-                const _kSamplerNode = node;
                 // Inject Seed
                 if (node.inputs) {
                     node.inputs.seed = seed;
@@ -1027,7 +1025,7 @@ class ImageGenerator {
         }
 
         // 2. Inject Dimensions (EmptyLatentImage)
-        for (const [_id2, node] of Object.entries(workflow)) {
+        for (const node of Object.values(workflow)) {
             if (
                 node.class_type.startsWith('EmptyLatentImage') ||
                 node.class_type.includes('EmptySD3Latent')
@@ -1059,19 +1057,8 @@ class ImageGenerator {
             }
         }
 
-        // 4. Inject Model Name?
-        // Only if we find a CheckpointLoaderSimple AND it matches the specific "CheckpointLoaderSimple" class.
-        // If the user uses UNetLoader (like the error case), we DO NOT touch it, avoiding the "value_not_in_list" error.
-        for (const [_id3, node] of Object.entries(workflow)) {
-            if (node.class_type === 'CheckpointLoaderSimple') {
-                // Check if the current value is valid or placeholder?
-                // Strategy: If user explicitly set a model in Settings, and this is a CheckpointLoaderSimple, update it.
-                // But if they use a custom workflow, they might have set a specific model there.
-                // Given the error "value_not_in_list", better to trust the File if it's custom.
-                // So I will NOT update ckpt_name in custom workflows.
-                // console.log("Keeping custom workflow checkpoint...");
-            }
-        }
+        // 4. Model Name injection (CheckpointLoaderSimple) is disabled for custom workflows
+        // to avoid "value_not_in_list" errors when users have custom model setups.
     }
 
     /**

@@ -178,7 +178,6 @@ function setupGenerateUI() {
     const btnTestExport = document.getElementById('btnTestExport');
     const btnEnsureGroups = document.getElementById('btnEnsureGroups');
     const multiImageModeCheckbox = document.getElementById('multiImageModeCheckbox');
-    const _multiImageModeSection = document.getElementById('multiImageModeSection');
     const resolutionSelect = document.getElementById('resolutionSelect');
     const btnSmartCanvasRatio = document.getElementById('btnSmartCanvasRatio');
 
@@ -332,7 +331,6 @@ function setupSettingsUI() {
     const inputBaseUrl = document.getElementById('inputBaseUrl');
     const inputModelId = document.getElementById('inputModelId');
     const debugModeCheckbox = document.getElementById('debugModeCheckbox');
-    const _debugFolderPathInput = document.getElementById('debugFolderPath');
     const inputMaxSize = document.getElementById('inputMaxSize');
     const inputQuality = document.getElementById('inputQuality');
     const languageSelect = document.getElementById('languageSelect');
