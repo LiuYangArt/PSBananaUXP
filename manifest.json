@@ -9,6 +9,22 @@
         "apiVersion": 2
     },
     "manifestVersion": 5,
+    "requiredPermissions": {
+        "network": {
+            "domains": [
+                "https://generativelanguage.googleapis.com",
+                "https://yunwu.zeabur.app",
+                "https://yunwu.ai",
+                "https://api.gptgod.online",
+                "https://openrouter.ai",
+                "https://ark.cn-beijing.volces.com",
+                "http://127.0.0.1",
+                "http://localhost",
+                "all"
+            ]
+        },
+        "localFileSystem": "fullAccess"
+    },
     "icons": [
         {
             "width": 48,
