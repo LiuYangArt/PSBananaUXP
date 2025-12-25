@@ -1,7 +1,7 @@
 {
     "id": "com.liuyang.psbanana",
     "name": "PS Banana",
-    "version": "2.2.8",
+    "version": "2.2.9",
     "main": "index.html",
     "host": {
         "app": "PS",
