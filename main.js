@@ -30,11 +30,11 @@ const imageGenerator = new ImageGenerator(fileManager);
 // Current state
 let currentProvider = null;
 let currentPreset = null;
-let activeGenerationCount = 0;  // 当前正在执行的生成任务数量
-let isProcessing = false;  // 用于测试操作的锁
-let taskIdCounter = 0;  // 任务ID计数器，用于调试
-let taskLogs = [];  // 存储任务日志
-let generationMode = 'text2img';  // 'text2img' or 'imgedit'
+let activeGenerationCount = 0; // 当前正在执行的生成任务数量
+let isProcessing = false; // 用于测试操作的锁
+let taskIdCounter = 0; // 任务ID计数器，用于调试
+const taskLogs = []; // 存储任务日志
+let generationMode = 'text2img'; // 'text2img' or 'imgedit'
 
 // 添加任务日志并写入文件
 async function logTask(message) {
@@ -97,7 +97,7 @@ async function initializeApp() {
             footerText.textContent = `🍌PSBanana by LiuYang v${manifest.version}`;
         }
     } catch (e) {
-        console.error("Failed to load version from manifest", e);
+        console.error('Failed to load version from manifest', e);
     }
 
     // Restore latest prompt
@@ -151,7 +151,7 @@ function setupTabs() {
     // 设置初始选中状态
     setTimeout(() => {
         const radios = generationModeGroup.querySelectorAll('sp-radio');
-        radios.forEach(radio => {
+        radios.forEach((radio) => {
             if (radio.value === savedMode) {
                 radio.checked = true;
             }
@@ -463,7 +463,9 @@ function setupSettingsUI() {
             return;
         }
 
-        const confirmed = await confirmUser(getText('msg_delete_provider', { name: currentProvider.name }));
+        const confirmed = await confirmUser(
+            getText('msg_delete_provider', { name: currentProvider.name })
+        );
         if (!confirmed) return;
 
         const result = await providerManager.deleteProvider(currentProvider.name);
@@ -495,7 +497,7 @@ function setupSettingsUI() {
             name: currentProvider.name,
             apiKey: inputApiKey.value,
             baseUrl: inputBaseUrl.value,
-            model: inputModelId.value
+            model: inputModelId.value,
         };
 
         const result = await providerManager.testConnection(testConfig);
@@ -521,7 +523,7 @@ function updatePresetDropdown(selectedName = null) {
     // Use DocumentFragment to minimize reflows
     const fragment = document.createDocumentFragment();
 
-    names.forEach(name => {
+    names.forEach((name) => {
         const item = document.createElement('sp-menu-item');
         item.value = name;
         item.textContent = name;
@@ -551,7 +553,7 @@ function updateProviderDropdown() {
     menu.innerHTML = '';
 
     const names = providerManager.getAllNames();
-    names.forEach(name => {
+    names.forEach((name) => {
         const item = document.createElement('sp-menu-item');
         item.value = name;
         item.textContent = name;
@@ -643,13 +645,20 @@ async function handleSmartCanvasRatio() {
         showCanvasRatioStatus(getText('msg_analyzing_ratio'), 'info');
         btnSmartCanvasRatio.disabled = true;
 
-        const result = await executeAsModal(async () => {
-            return await PSOperations.applySmartCanvasRatio();
-        }, { commandName: "Smart Canvas Ratio" });
+        const result = await executeAsModal(
+            async () => {
+                return await PSOperations.applySmartCanvasRatio();
+            },
+            { commandName: 'Smart Canvas Ratio' }
+        );
 
         if (!result.changed) {
             showCanvasRatioStatus(
-                getText('msg_ratio_unchanged', { ratio: result.targetRatio, width: result.newWidth, height: result.newHeight }),
+                getText('msg_ratio_unchanged', {
+                    ratio: result.targetRatio,
+                    width: result.newWidth,
+                    height: result.newHeight,
+                }),
                 'success'
             );
         } else {
@@ -659,12 +668,11 @@ async function handleSmartCanvasRatio() {
                     oldWidth: result.originalWidth,
                     oldHeight: result.originalHeight,
                     newWidth: result.newWidth,
-                    newHeight: result.newHeight
+                    newHeight: result.newHeight,
                 }),
                 'success'
             );
         }
-
     } catch (e) {
         console.error('Smart Canvas Ratio failed:', e);
         const errorMessage = e?.message || String(e) || 'Unknown error';
@@ -705,7 +713,7 @@ async function handleGenerateImage() {
 
     // 增加任务计数并更新按钮状态
     activeGenerationCount++;
-    const taskId = ++taskIdCounter;  // 为此任务分配唯一ID
+    const taskId = ++taskIdCounter; // 为此任务分配唯一ID
     logTask(`[Task ${taskId}] Started - Active tasks: ${activeGenerationCount}`);
     updateGeneratingButton();
 
@@ -722,75 +730,107 @@ async function handleGenerateImage() {
         let referenceImageData = null;
 
         try {
-            const exportData = await executeAsModal(async (executionContext) => {
-                const info = await PSOperations.getCanvasInfo();
-                let region = null;
+            const exportData = await executeAsModal(
+                async (executionContext) => {
+                    const info = await PSOperations.getCanvasInfo();
+                    let region = null;
 
-                if (selectionMode) {
-                    const selectionInfo = await PSOperations.getSelectionInfo();
-                    if (selectionInfo && selectionInfo.hasSelection) {
-                        region = PSOperations.calculateGenerationRegion(selectionInfo.bounds, info.width, info.height);
-                        // 在 executeAsModal 内部，先保存到临时变量，稍后记录到日志
-                    }
-                }
-
-                let imageData = null;
-                let sourceData = null;
-                let referenceData = null;
-                const maxSize = settingsManager.get('export_max_size', 2048);
-                const quality = settingsManager.get('export_quality', 80);
-
-                if (mode === 'imgedit' && multiImageMode) {
-                    const { sourceGroup, referenceGroup } = await PSOperations.findSourceReferenceGroups();
-
-                    const missingGroups = [];
-                    if (!sourceGroup) missingGroups.push('Source');
-                    if (!referenceGroup) missingGroups.push('Reference');
-
-                    if (missingGroups.length > 0) {
-                        throw new Error(`Missing required layer groups: ${missingGroups.join(' / ')}`);
-                    }
-
-                    const sourceResult = await PSOperations.exportGroupAsWebP(sourceGroup, maxSize, quality, executionContext, region);
-                    sourceData = await fileManager.fileToBase64(sourceResult.file);
-                    // Only delete if debug mode is OFF
-                    if (!debugMode) {
-                        try {
-                            await sourceResult.file.delete();
-                            console.log(`[Cleanup] Deleted temporary source file: ${sourceResult.file.nativePath}`);
-                        } catch (e) {
-                            console.error(`[Cleanup] Failed to delete source file:`, e);
+                    if (selectionMode) {
+                        const selectionInfo = await PSOperations.getSelectionInfo();
+                        if (selectionInfo && selectionInfo.hasSelection) {
+                            region = PSOperations.calculateGenerationRegion(
+                                selectionInfo.bounds,
+                                info.width,
+                                info.height
+                            );
+                            // 在 executeAsModal 内部，先保存到临时变量，稍后记录到日志
                         }
                     }
 
-                    const referenceResult = await PSOperations.exportGroupAsWebP(referenceGroup, maxSize, quality, executionContext, region);
-                    referenceData = await fileManager.fileToBase64(referenceResult.file);
-                    // Only delete if debug mode is OFF
-                    if (!debugMode) {
-                        try {
-                            await referenceResult.file.delete();
-                            console.log(`[Cleanup] Deleted temporary reference file: ${referenceResult.file.nativePath}`);
-                        } catch (e) {
-                            console.error(`[Cleanup] Failed to delete reference file:`, e);
-                        }
-                    }
-                }
-                else if (mode === 'imgedit') {
-                    const exportResult = await PSOperations.exportVisibleLayersAsWebP(maxSize, quality, executionContext, region);
-                    imageData = await fileManager.fileToBase64(exportResult.file);
-                    // Only delete if debug mode is OFF
-                    if (!debugMode) {
-                        try {
-                            await exportResult.file.delete();
-                            console.log(`[Cleanup] Deleted temporary export file: ${exportResult.file.nativePath}`);
-                        } catch (e) {
-                            console.error(`[Cleanup] Failed to delete export file:`, e);
-                        }
-                    }
-                }
+                    let imageData = null;
+                    let sourceData = null;
+                    let referenceData = null;
+                    const maxSize = settingsManager.get('export_max_size', 2048);
+                    const quality = settingsManager.get('export_quality', 80);
 
-                return { info, imageData, region, sourceData, referenceData };
-            }, { commandName: "Get Canvas Info and Export" });
+                    if (mode === 'imgedit' && multiImageMode) {
+                        const { sourceGroup, referenceGroup } =
+                            await PSOperations.findSourceReferenceGroups();
+
+                        const missingGroups = [];
+                        if (!sourceGroup) missingGroups.push('Source');
+                        if (!referenceGroup) missingGroups.push('Reference');
+
+                        if (missingGroups.length > 0) {
+                            throw new Error(
+                                `Missing required layer groups: ${missingGroups.join(' / ')}`
+                            );
+                        }
+
+                        const sourceResult = await PSOperations.exportGroupAsWebP(
+                            sourceGroup,
+                            maxSize,
+                            quality,
+                            executionContext,
+                            region
+                        );
+                        sourceData = await fileManager.fileToBase64(sourceResult.file);
+                        // Only delete if debug mode is OFF
+                        if (!debugMode) {
+                            try {
+                                await sourceResult.file.delete();
+                                console.log(
+                                    `[Cleanup] Deleted temporary source file: ${sourceResult.file.nativePath}`
+                                );
+                            } catch (e) {
+                                console.error(`[Cleanup] Failed to delete source file:`, e);
+                            }
+                        }
+
+                        const referenceResult = await PSOperations.exportGroupAsWebP(
+                            referenceGroup,
+                            maxSize,
+                            quality,
+                            executionContext,
+                            region
+                        );
+                        referenceData = await fileManager.fileToBase64(referenceResult.file);
+                        // Only delete if debug mode is OFF
+                        if (!debugMode) {
+                            try {
+                                await referenceResult.file.delete();
+                                console.log(
+                                    `[Cleanup] Deleted temporary reference file: ${referenceResult.file.nativePath}`
+                                );
+                            } catch (e) {
+                                console.error(`[Cleanup] Failed to delete reference file:`, e);
+                            }
+                        }
+                    } else if (mode === 'imgedit') {
+                        const exportResult = await PSOperations.exportVisibleLayersAsWebP(
+                            maxSize,
+                            quality,
+                            executionContext,
+                            region
+                        );
+                        imageData = await fileManager.fileToBase64(exportResult.file);
+                        // Only delete if debug mode is OFF
+                        if (!debugMode) {
+                            try {
+                                await exportResult.file.delete();
+                                console.log(
+                                    `[Cleanup] Deleted temporary export file: ${exportResult.file.nativePath}`
+                                );
+                            } catch (e) {
+                                console.error(`[Cleanup] Failed to delete export file:`, e);
+                            }
+                        }
+                    }
+
+                    return { info, imageData, region, sourceData, referenceData };
+                },
+                { commandName: 'Get Canvas Info and Export' }
+            );
 
             canvasInfo = exportData.info;
             exportedImageData = exportData.imageData;
@@ -800,20 +840,28 @@ async function handleGenerateImage() {
 
             // 记录选区信息到日志文件
             if (selectionRegion) {
-                logTask(`[Task ${taskId}] Captured selection region: ${JSON.stringify(selectionRegion)}`);
+                logTask(
+                    `[Task ${taskId}] Captured selection region: ${JSON.stringify(selectionRegion)}`
+                );
                 aspectRatio = selectionRegion.aspectRatio;
             } else {
                 logTask(`[Task ${taskId}] No selection, using full canvas`);
                 aspectRatio = calculateAspectRatio(canvasInfo.width, canvasInfo.height);
             }
-
         } catch (e) {
             console.error('Failed to get canvas info or export:', e);
             throw e;
         }
 
         const modeText = mode === 'imgedit' ? getText('radio_imgedit') : getText('radio_text2img');
-        showGenerateStatus(getText('msg_generating_image', { mode: modeText, resolution: resolution, ratio: aspectRatio }), 'info');
+        showGenerateStatus(
+            getText('msg_generating_image', {
+                mode: modeText,
+                resolution: resolution,
+                ratio: aspectRatio,
+            }),
+            'info'
+        );
 
         const imageFile = await imageGenerator.generate({
             prompt,
@@ -825,7 +873,7 @@ async function handleGenerateImage() {
             searchWeb: searchWebMode,
             inputImage: exportedImageData,
             sourceImage: sourceImageData,
-            referenceImage: referenceImageData
+            referenceImage: referenceImageData,
         });
 
         if (!imageFile || !imageFile.nativePath) {
@@ -846,15 +894,29 @@ async function handleGenerateImage() {
 
         // Ensure we are in the correct document
         const targetDocumentId = targetDocument.id;
-        logTask(`[Task ${taskId}] Target document ID: ${targetDocumentId}, Current active: ${app.activeDocument?.id}`);
+        logTask(
+            `[Task ${taskId}] Target document ID: ${targetDocumentId}, Current active: ${app.activeDocument?.id}`
+        );
 
-        const layerName = await executeAsModal(async (executionContext) => {
-            if (selectionRegion) {
-                return await PSOperations.importImageInRegion(imageToken, selectionRegion, executionContext, targetDocumentId);
-            } else {
-                return await PSOperations.importImageByToken(imageToken, executionContext, targetDocumentId);
-            }
-        }, { commandName: "Import Generated Image" });
+        const layerName = await executeAsModal(
+            async (executionContext) => {
+                if (selectionRegion) {
+                    return await PSOperations.importImageInRegion(
+                        imageToken,
+                        selectionRegion,
+                        executionContext,
+                        targetDocumentId
+                    );
+                } else {
+                    return await PSOperations.importImageByToken(
+                        imageToken,
+                        executionContext,
+                        targetDocumentId
+                    );
+                }
+            },
+            { commandName: 'Import Generated Image' }
+        );
 
         logTask(`[Task ${taskId}] Completed successfully - Layer: ${layerName}`);
         showGenerateStatus(getText('msg_complete', { layer: layerName }), 'success');
@@ -869,7 +931,6 @@ async function handleGenerateImage() {
                 console.error(`[Cleanup] Failed to delete generated image:`, e);
             }
         }
-
     } catch (e) {
         logTask(`[Task ${taskId}] Generation failed: ${e?.message || String(e)}`);
         const errorMessage = e?.message || String(e) || 'Unknown error';
@@ -1066,27 +1127,36 @@ async function handleTestImport() {
         const regionText = selectionMode ? ' (Selection Mode)' : '';
         showGenerateStatus(`📥 Importing image${regionText}...`, 'info');
 
-        const layerName = await executeAsModal(async () => {
-            let region = null;
-            if (selectionMode) {
-                const doc = app.activeDocument;
-                if (doc) {
-                    const selectionInfo = await PSOperations.getSelectionInfo();
-                    if (selectionInfo && selectionInfo.hasSelection) {
-                        region = PSOperations.calculateGenerationRegion(selectionInfo.bounds, doc.width, doc.height);
+        const layerName = await executeAsModal(
+            async () => {
+                let region = null;
+                if (selectionMode) {
+                    const doc = app.activeDocument;
+                    if (doc) {
+                        const selectionInfo = await PSOperations.getSelectionInfo();
+                        if (selectionInfo && selectionInfo.hasSelection) {
+                            region = PSOperations.calculateGenerationRegion(
+                                selectionInfo.bounds,
+                                doc.width,
+                                doc.height
+                            );
+                        }
                     }
                 }
-            }
 
-            if (region) {
-                return await PSOperations.importImageInRegion(token, region);
-            } else {
-                return await PSOperations.importImageByToken(token);
-            }
-        }, { commandName: "Test Import Image" });
+                if (region) {
+                    return await PSOperations.importImageInRegion(token, region);
+                } else {
+                    return await PSOperations.importImageByToken(token);
+                }
+            },
+            { commandName: 'Test Import Image' }
+        );
 
-        showGenerateStatus(`✅ Test import successful${regionText}! Layer: ${layerName}`, 'success');
-
+        showGenerateStatus(
+            `✅ Test import successful${regionText}! Layer: ${layerName}`,
+            'success'
+        );
     } catch (e) {
         console.error('[TEST] ERROR:', e);
         const errorMessage = e?.message || String(e) || 'Unknown error';
@@ -1114,48 +1184,78 @@ async function handleTestExport() {
         const selectionMode = settingsManager.get('selection_mode', false);
         const multiImageMode = settingsManager.get('multi_image_mode', false);
 
-        const exportResults = await executeAsModal(async (executionContext) => {
-            let region = null;
-            if (selectionMode) {
-                const doc = app.activeDocument;
-                if (doc) {
-                    const selectionInfo = await PSOperations.getSelectionInfo();
-                    if (selectionInfo && selectionInfo.hasSelection) {
-                        region = PSOperations.calculateGenerationRegion(selectionInfo.bounds, doc.width, doc.height);
+        const exportResults = await executeAsModal(
+            async (executionContext) => {
+                let region = null;
+                if (selectionMode) {
+                    const doc = app.activeDocument;
+                    if (doc) {
+                        const selectionInfo = await PSOperations.getSelectionInfo();
+                        if (selectionInfo && selectionInfo.hasSelection) {
+                            region = PSOperations.calculateGenerationRegion(
+                                selectionInfo.bounds,
+                                doc.width,
+                                doc.height
+                            );
+                        }
                     }
                 }
-            }
 
-            if (multiImageMode && generationMode === 'imgedit') {
-                const { sourceGroup, referenceGroup } = await PSOperations.findSourceReferenceGroups();
-                const results = { mode: 'multi' };
+                if (multiImageMode && generationMode === 'imgedit') {
+                    const { sourceGroup, referenceGroup } =
+                        await PSOperations.findSourceReferenceGroups();
+                    const results = { mode: 'multi' };
 
-                if (sourceGroup) {
-                    results.source = await PSOperations.exportGroupAsWebP(sourceGroup, maxSize, quality, executionContext, region);
+                    if (sourceGroup) {
+                        results.source = await PSOperations.exportGroupAsWebP(
+                            sourceGroup,
+                            maxSize,
+                            quality,
+                            executionContext,
+                            region
+                        );
+                    }
+                    if (referenceGroup) {
+                        results.reference = await PSOperations.exportGroupAsWebP(
+                            referenceGroup,
+                            maxSize,
+                            quality,
+                            executionContext,
+                            region
+                        );
+                    }
+                    return results;
+                } else {
+                    const result = await PSOperations.exportVisibleLayersAsWebP(
+                        maxSize,
+                        quality,
+                        executionContext,
+                        region
+                    );
+                    return { mode: 'single', result };
                 }
-                if (referenceGroup) {
-                    results.reference = await PSOperations.exportGroupAsWebP(referenceGroup, maxSize, quality, executionContext, region);
-                }
-                return results;
-            } else {
-                const result = await PSOperations.exportVisibleLayersAsWebP(maxSize, quality, executionContext, region);
-                return { mode: 'single', result };
-            }
-        }, { commandName: "Test Export Layers" });
+            },
+            { commandName: 'Test Export Layers' }
+        );
 
         const regionText = selectionMode ? ' (Selection Mode)' : '';
 
         if (exportResults.mode === 'multi') {
             let message = `✅ Multi-image export successful${regionText}!\n`;
-            if (exportResults.source) message += `Source: ${exportResults.source.width}x${exportResults.source.height}\n`;
-            if (exportResults.reference) message += `Reference: ${exportResults.reference.width}x${exportResults.reference.height}`;
-            if (!exportResults.source && !exportResults.reference) message = `⚠️ Source/Reference groups not found`;
+            if (exportResults.source)
+                message += `Source: ${exportResults.source.width}x${exportResults.source.height}\n`;
+            if (exportResults.reference)
+                message += `Reference: ${exportResults.reference.width}x${exportResults.reference.height}`;
+            if (!exportResults.source && !exportResults.reference)
+                message = `⚠️ Source/Reference groups not found`;
             showGenerateStatus(message, 'success');
         } else {
             const result = exportResults.result;
-            showGenerateStatus(`✅ Export successful${regionText}!\nSize: ${result.width}x${result.height}`, 'success');
+            showGenerateStatus(
+                `✅ Export successful${regionText}!\nSize: ${result.width}x${result.height}`,
+                'success'
+            );
         }
-
     } catch (e) {
         console.error('[TEST EXPORT] ERROR:', e);
         const errorMessage = e?.message || String(e) || 'Unknown error';
@@ -1184,15 +1284,17 @@ async function handleEnsureGroups() {
     try {
         showGenerateStatus('🔧 Creating/updating layer groups...', 'info');
 
-        const result = await executeAsModal(async () => {
-            return await PSOperations.ensureSourceReferenceGroups();
-        }, { commandName: "Ensure Reference/Source Groups" });
+        const result = await executeAsModal(
+            async () => {
+                return await PSOperations.ensureSourceReferenceGroups();
+            },
+            { commandName: 'Ensure Reference/Source Groups' }
+        );
 
         if (result.success) {
-            let message = '✅ Reference (purple) and Source (green) groups exist/updated';
+            const message = '✅ Reference (purple) and Source (green) groups exist/updated';
             showGenerateStatus(message, 'success');
         }
-
     } catch (e) {
         console.error('[UI] Error ensuring groups:', e);
         const errorMessage = e?.message || String(e) || 'Unknown error';
@@ -1275,11 +1377,13 @@ function updateLanguage(lang) {
     document.getElementById('resolutionSelect').placeholder = getText('placeholder_select');
     document.getElementById('btnSmartCanvasRatio').textContent = getText('btn_smart_ratio');
     document.getElementById('searchWebCheckbox').textContent = getText('checkbox_search_web');
-    document.getElementById('selectionModeCheckbox').textContent = getText('checkbox_selection_mode');
+    document.getElementById('selectionModeCheckbox').textContent =
+        getText('checkbox_selection_mode');
     document.getElementById('btnGenerate').textContent = getText('btn_generate');
     document.getElementById('radioText2Img').textContent = getText('radio_text2img');
     document.getElementById('radioImgEdit').textContent = getText('radio_imgedit');
-    document.getElementById('multiImageModeCheckbox').textContent = getText('checkbox_layer_groups');
+    document.getElementById('multiImageModeCheckbox').textContent =
+        getText('checkbox_layer_groups');
     document.getElementById('btnEnsureGroups').textContent = getText('btn_add_groups');
 
     // Update Settings tab
@@ -1324,7 +1428,7 @@ const { entrypoints } = require('uxp');
 entrypoints.setup({
     commands: {
         // 注册重载插件命令 - 会出现在插件菜单中
-        reloadPlugin: () => reloadPlugin()
+        reloadPlugin: () => reloadPlugin(),
     },
     panels: {
         psbanana: {
@@ -1332,7 +1436,7 @@ entrypoints.setup({
                 // 面板显示时的处理
                 // 单面板应用不需要特殊处理，index.html 会自动加载
                 console.log('[Panel] PS Banana panel shown');
-            }
-        }
-    }
+            },
+        },
+    },
 });

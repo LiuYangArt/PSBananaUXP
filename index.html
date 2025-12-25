@@ -1,511 +1,577 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
+    <head>
+        <script src="main.js"></script>
+        <style>
+            body {
+                background-color: var(--uxp-host-background-color, #323232);
+                color: var(--uxp-host-text-color, #ffffff);
+                font-family: system-ui, sans-serif;
+                padding: 0;
+                margin: 0;
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+                overflow: hidden;
+            }
 
-<head>
-    <script src="main.js"></script>
-    <style>
-        body {
-            background-color: var(--uxp-host-background-color, #323232);
-            color: var(--uxp-host-text-color, #ffffff);
-            font-family: system-ui, sans-serif;
-            padding: 0;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
-        }
+            /* Main Container - Kitchen Sink Style */
+            .main-container {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                width: 100%;
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
+                padding: 12px;
+                box-sizing: border-box;
+            }
 
-        /* Main Container - Kitchen Sink Style */
-        .main-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            padding: 12px;
-            box-sizing: border-box;
-        }
+            /* Header / Tabs */
+            .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 8px;
+            }
 
-        /* Header / Tabs */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
+            /* Tabs - Kitchen Sink Style */
+            .sp-tabs {
+                flex: 0 0 auto;
+                display: flex;
+                flex-direction: row;
+                border-bottom: 2px solid #3e3e3e;
+                width: 100%;
+                margin-bottom: 12px;
+            }
 
-        /* Tabs - Kitchen Sink Style */
-        .sp-tabs {
-            flex: 0 0 auto;
-            display: flex;
-            flex-direction: row;
-            border-bottom: 2px solid #3E3E3E;
-            width: 100%;
-            margin-bottom: 12px;
-        }
+            .sp-tab {
+                margin-right: 12px;
+                cursor: pointer;
+                padding-bottom: 6px;
+            }
 
-        .sp-tab {
-            margin-right: 12px;
-            cursor: pointer;
-            padding-bottom: 6px;
-        }
+            .sp-tab sp-label {
+                color: rgba(255, 255, 255, 0.75);
+                cursor: pointer;
+            }
 
-        .sp-tab sp-label {
-            color: rgba(255, 255, 255, 0.75);
-            cursor: pointer;
-        }
+            .sp-tab:hover sp-label {
+                color: white;
+            }
 
-        .sp-tab:hover sp-label {
-            color: white;
-        }
+            .sp-tab.selected {
+                border-bottom: 2px solid white;
+                margin-bottom: -2px;
+            }
 
-        .sp-tab.selected {
-            border-bottom: 2px solid white;
-            margin-bottom: -2px;
-        }
+            .sp-tab.selected sp-label {
+                color: white;
+            }
 
-        .sp-tab.selected sp-label {
-            color: white;
-        }
+            /* Sections */
+            .section {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
 
-        /* Sections */
-        .section {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
+            /* Tab Content Pages - Scrollable */
+            #contentGenerate,
+            #contentSettings {
+                flex: 1 1 auto;
+                overflow: auto;
+                padding: 0;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
 
-        /* Tab Content Pages - Scrollable */
-        #contentGenerate,
-        #contentSettings {
-            flex: 1 1 auto;
-            overflow: auto;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
+            #contentGenerate > *,
+            #contentSettings > * {
+                flex: 0 0 auto;
+            }
 
-        #contentGenerate>*,
-        #contentSettings>* {
-            flex: 0 0 auto;
-        }
+            .row {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                width: 100%;
+            }
 
-        .row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            width: 100%;
-        }
+            .row-between {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                width: 100%;
+            }
 
-        .row-between {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-        }
+            .row-end {
+                display: flex;
+                justify-content: flex-end;
+                gap: 6px;
+            }
 
-        .row-end {
-            display: flex;
-            justify-content: flex-end;
-            gap: 6px;
-        }
+            /* Components overrides/helpers */
+            sp-dropdown {
+                width: 100%;
+            }
 
-        /* Components overrides/helpers */
-        sp-dropdown {
-            width: 100%;
-        }
+            sp-textfield,
+            sp-textarea {
+                width: 100%;
+            }
 
-        sp-textfield,
-        sp-textarea {
-            width: 100%;
-        }
+            /* Utility classes */
+            .hidden {
+                display: none !important;
+            }
 
+            .full-width {
+                width: 100%;
+            }
 
+            sp-divider {
+                margin: 4px 0;
+            }
 
+            .status-message {
+                font-size: 11px;
+                margin-top: 4px;
+                min-height: 20px;
+            }
 
-        /* Utility classes */
-        .hidden {
-            display: none !important;
-        }
+            .status-success {
+                color: #2dcc70;
+            }
 
-        .full-width {
-            width: 100%;
-        }
+            .status-error {
+                color: #ff5555;
+            }
 
-        sp-divider {
-            margin: 4px 0;
-        }
+            .status-info {
+                color: #aaaaaa;
+            }
 
-        .status-message {
-            font-size: 11px;
-            margin-top: 4px;
-            min-height: 20px;
-        }
+            /* Scrollbar styling for WebKit (UXP uses WebKit) */
+            ::-webkit-scrollbar {
+                width: 8px;
+            }
 
-        .status-success {
-            color: #2dcc70;
-        }
+            ::-webkit-scrollbar-track {
+                background: transparent;
+            }
 
-        .status-error {
-            color: #ff5555;
-        }
+            ::-webkit-scrollbar-thumb {
+                background: #505050;
+                border-radius: 4px;
+            }
 
-        .status-info {
-            color: #aaaaaa;
-        }
+            ::-webkit-scrollbar-thumb:hover {
+                background: #606060;
+            }
 
-        /* Scrollbar styling for WebKit (UXP uses WebKit) */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
+            /* 可拖拽调整大小的 Prompt 文本框样式 */
+            .textarea-container {
+                width: 100%;
+                background-color: #2a2a2a;
+                border-radius: 4px;
+                border: 1px solid #3e3e3e;
+                position: relative;
+            }
 
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
+            .textarea-wrapper {
+                position: relative;
+                width: 100%;
+                overflow: hidden;
+            }
 
-        ::-webkit-scrollbar-thumb {
-            background: #505050;
-            border-radius: 4px;
-        }
+            .resize-handler {
+                border-radius: 0 0 4px;
+                border-style: solid;
+                border-color: #505050;
+                border-width: 0 2px 2px 0;
+                width: 12px;
+                height: 12px;
+                position: absolute;
+                bottom: 2px;
+                right: 2px;
+                cursor: ns-resize;
+                z-index: 10;
+            }
 
-        ::-webkit-scrollbar-thumb:hover {
-            background: #606060;
-        }
+            .resize-handler:hover {
+                border-color: #9f9f9f;
+            }
 
-        /* 可拖拽调整大小的 Prompt 文本框样式 */
-        .textarea-container {
-            width: 100%;
-            background-color: #2a2a2a;
-            border-radius: 4px;
-            border: 1px solid #3E3E3E;
-            position: relative;
-        }
+            .resize-handler.resizing {
+                border-color: #cfcfcf;
+                cursor: ns-resize;
+            }
 
-        .textarea-wrapper {
-            position: relative;
-            width: 100%;
-            overflow: hidden;
-        }
+            /* 弹窗样式 */
+            .custom-dialog {
+                background-color: #2b2b2b;
+                color: #e8e8e8;
+                border: 1px solid #555555;
+                border-radius: 4px;
+                padding: 0;
+                min-width: 360px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            }
 
-        .resize-handler {
-            border-radius: 0 0 4px;
-            border-style: solid;
-            border-color: #505050;
-            border-width: 0 2px 2px 0;
-            width: 12px;
-            height: 12px;
-            position: absolute;
-            bottom: 2px;
-            right: 2px;
-            cursor: ns-resize;
-            z-index: 10;
-        }
+            .custom-dialog::backdrop {
+                background-color: rgba(0, 0, 0, 0.6);
+            }
 
-        .resize-handler:hover {
-            border-color: #9f9f9f;
-        }
+            .dialog-container {
+                padding: 20px 24px;
+            }
 
-        .resize-handler.resizing {
-            border-color: #cfcfcf;
-            cursor: ns-resize;
-        }
+            .dialog-title {
+                margin: 0 0 16px 0;
+            }
 
-        /* 弹窗样式 */
-        .custom-dialog {
-            background-color: #2b2b2b;
-            color: #e8e8e8;
-            border: 1px solid #555555;
-            border-radius: 4px;
-            padding: 0;
-            min-width: 360px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-        }
+            .dialog-input {
+                width: 100%;
+                margin-bottom: 20px;
+            }
 
-        .custom-dialog::backdrop {
-            background-color: rgba(0, 0, 0, 0.6);
-        }
+            .dialog-text {
+                display: block;
+                margin-bottom: 20px;
+            }
 
-        .dialog-container {
-            padding: 20px 24px;
-        }
+            .dialog-buttons {
+                display: flex;
+                gap: 8px;
+                justify-content: flex-end;
+            }
 
-        .dialog-title {
-            margin: 0 0 16px 0;
-        }
+            .dialog-button {
+                flex: 1;
+            }
 
-        .dialog-input {
-            width: 100%;
-            margin-bottom: 20px;
-        }
+            /* Generate 按钮刷光动画效果 */
+            #btnGenerate.shine-effect {
+                position: relative;
+                overflow: hidden;
+                background: linear-gradient(90deg, #9cf026 0%, #e3ff43 100%);
+                color: #363636 !important;
+                /* 深色文字，更易读 */
+            }
 
-        .dialog-text {
-            display: block;
-            margin-bottom: 20px;
-        }
-
-        .dialog-buttons {
-            display: flex;
-            gap: 8px;
-            justify-content: flex-end;
-        }
-
-        .dialog-button {
-            flex: 1;
-        }
-
-        /* Generate 按钮刷光动画效果 */
-        #btnGenerate.shine-effect {
-            position: relative;
-            overflow: hidden;
-            background: linear-gradient(90deg, #9cf026 0%, #e3ff43 100%);
-            color: #363636 !important;
-            /* 深色文字，更易读 */
-        }
-
-        #btnGenerate.shine-effect::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg,
+            #btnGenerate.shine-effect::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(
+                    90deg,
                     transparent 0%,
                     rgba(255, 255, 255, 0.3) 50%,
-                    transparent 100%);
-            animation: shine 1.5s infinite;
-        }
-
-        @keyframes shine {
-            0% {
-                left: -100%;
+                    transparent 100%
+                );
+                animation: shine 1.5s infinite;
             }
 
-            100% {
-                left: 100%;
+            @keyframes shine {
+                0% {
+                    left: -100%;
+                }
+
+                100% {
+                    left: 100%;
+                }
             }
-        }
 
-        /* Tooltip Styles */
-        .tooltip {
-            position: relative;
-            display: inline-flex;
-            width: fit-content;
-        }
+            /* Tooltip Styles */
+            .tooltip {
+                position: relative;
+                display: inline-flex;
+                width: fit-content;
+            }
 
-        .tooltip sp-tooltip {
-            display: none;
-            position: absolute;
-            bottom: 100%;
-            /* left: 50%; */
-            /* transform: translateX(-50%); */
-            margin-bottom: 5px;
-            z-index: 100;
-            /* white-space: nowrap; */
-        }
+            .tooltip sp-tooltip {
+                display: none;
+                position: absolute;
+                bottom: 100%;
+                /* left: 50%; */
+                /* transform: translateX(-50%); */
+                margin-bottom: 5px;
+                z-index: 100;
+                /* white-space: nowrap; */
+            }
 
-        .tooltip:hover sp-tooltip {
-            display: block;
-        }
-    </style>
-</head>
+            .tooltip:hover sp-tooltip {
+                display: block;
+            }
+        </style>
+    </head>
 
-<body>
-    <div class="main-container">
-        <!-- Header & Tabs -->
-        <!-- <div class="header">
+    <body>
+        <div class="main-container">
+            <!-- Header & Tabs -->
+            <!-- <div class="header">
             <sp-heading size="S" style="margin: 0; text-align: right; font-size: 13px;">PS Banana by LiuYang</sp-heading>
         </div> -->
 
-        <div class="sp-tabs">
-            <div class="sp-tab selected" id="tabGenerate"><sp-label id="labelTabGenerate">Generate</sp-label></div>
-            <div class="sp-tab" id="tabSettings"><sp-label id="labelTabSettings">Settings</sp-label></div>
-        </div>
-
-        <!-- Generate Tab Content -->
-        <div id="contentGenerate" class="section">
-
-            <!-- Prompt Presets -->
-            <div class="section">
-                <sp-label id="labelPromptPresets">Prompt Presets</sp-label>
-                <sp-dropdown size="s" id="presetSelect" placeholder="Select a preset...">
-                    <sp-menu slot="options"></sp-menu>
-                </sp-dropdown>
-                <div class="row-end">
-                    <!-- Changed to text buttons for better visibility -->
-                    <sp-action-button id="btnAddPreset" size="s" style="margin-left: 5px;">Add</sp-action-button>
-                    <sp-action-button id="btnSavePreset" size="s" style="margin-left: 5px;">Save</sp-action-button>
-                    <sp-action-button id="btnRenamePreset" size="s" style="margin-left: 5px;">Rename</sp-action-button>
-                    <sp-action-button id="btnDeletePreset" size="s" style="margin-left: 5px;">Del</sp-action-button>
+            <div class="sp-tabs">
+                <div class="sp-tab selected" id="tabGenerate">
+                    <sp-label id="labelTabGenerate">Generate</sp-label>
+                </div>
+                <div class="sp-tab" id="tabSettings">
+                    <sp-label id="labelTabSettings">Settings</sp-label>
                 </div>
             </div>
 
-            <!-- Prompt Input -->
-            <div class="section">
-                <!-- <sp-label>Prompt</sp-label> -->
-                <div class="textarea-container">
-                    <div class="textarea-wrapper">
-                        <sp-textarea size="m" id="promptInput" placeholder="Enter your image generation prompt..."
-                            style="height: 120px;"></sp-textarea>
+            <!-- Generate Tab Content -->
+            <div id="contentGenerate" class="section">
+                <!-- Prompt Presets -->
+                <div class="section">
+                    <sp-label id="labelPromptPresets">Prompt Presets</sp-label>
+                    <sp-dropdown size="s" id="presetSelect" placeholder="Select a preset...">
+                        <sp-menu slot="options"></sp-menu>
+                    </sp-dropdown>
+                    <div class="row-end">
+                        <!-- Changed to text buttons for better visibility -->
+                        <sp-action-button id="btnAddPreset" size="s" style="margin-left: 5px"
+                            >Add</sp-action-button
+                        >
+                        <sp-action-button id="btnSavePreset" size="s" style="margin-left: 5px"
+                            >Save</sp-action-button
+                        >
+                        <sp-action-button id="btnRenamePreset" size="s" style="margin-left: 5px"
+                            >Rename</sp-action-button
+                        >
+                        <sp-action-button id="btnDeletePreset" size="s" style="margin-left: 5px"
+                            >Del</sp-action-button
+                        >
                     </div>
-                    <div class="resize-handler" id="promptResizeHandler"></div>
                 </div>
-            </div>
-            <sp-divider size="m"></sp-divider>
 
-            <!-- Resolution & Smart Ratio -->
-            <div class="row" style="align-items: flex-end;">
-                <div style="flex: 0 0 auto; margin:0 5px 0 0;">
-                    <sp-label size="s" id="labelResolution">Resolution:</sp-label>
+                <!-- Prompt Input -->
+                <div class="section">
+                    <!-- <sp-label>Prompt</sp-label> -->
+                    <div class="textarea-container">
+                        <div class="textarea-wrapper">
+                            <sp-textarea
+                                size="m"
+                                id="promptInput"
+                                placeholder="Enter your image generation prompt..."
+                                style="height: 120px"
+                            ></sp-textarea>
+                        </div>
+                        <div class="resize-handler" id="promptResizeHandler"></div>
+                    </div>
                 </div>
-                <div style="flex: 1;">
-                    <sp-dropdown size="s" id="resolutionSelect" placeholder="Select" style="width: 100%;">
+                <sp-divider size="m"></sp-divider>
+
+                <!-- Resolution & Smart Ratio -->
+                <div class="row" style="align-items: flex-end">
+                    <div style="flex: 0 0 auto; margin: 0 5px 0 0">
+                        <sp-label size="s" id="labelResolution">Resolution:</sp-label>
+                    </div>
+                    <div style="flex: 1">
+                        <sp-dropdown
+                            size="s"
+                            id="resolutionSelect"
+                            placeholder="Select"
+                            style="width: 100%"
+                        >
+                            <sp-menu slot="options">
+                                <sp-menu-item value="1K" selected>1K</sp-menu-item>
+                                <sp-menu-item value="2K">2K</sp-menu-item>
+                                <sp-menu-item value="4K">4K</sp-menu-item>
+                            </sp-menu>
+                        </sp-dropdown>
+                    </div>
+                    <div style="flex: 1.8; margin: 0 0 0 10px">
+                        <sp-action-button size="s" id="btnSmartCanvasRatio" style="width: 100%">
+                            Smart Ratio
+                        </sp-action-button>
+                    </div>
+                </div>
+
+                <!-- Generate Button -->
+                <sp-action-button
+                    id="btnGenerate"
+                    class="full-width"
+                    size="l"
+                    style="margin-top: 10px; margin-bottom: 10px"
+                    >Generate Image</sp-action-button
+                >
+
+                <!-- Generation Mode Radio Group -->
+                <div class="section" id="generationModeRadio">
+                    <!-- <sp-label>Generation Mode</sp-label> -->
+                    <sp-radio-group id="generationModeGroup">
+                        <sp-radio id="radioText2Img" value="text2img" checked
+                            >Text to Image</sp-radio
+                        >
+                        <sp-radio id="radioImgEdit" value="imgedit">Image Edit</sp-radio>
+                    </sp-radio-group>
+                </div>
+                <sp-divider size="m"></sp-divider>
+
+                <!-- Multi-Image Mode (Hidden by default) -->
+                <div id="multiImageModeSection" class="section hidden">
+                    <div class="tooltip">
+                        <sp-checkbox size="s" id="multiImageModeCheckbox"
+                            >Use Layer Groups</sp-checkbox
+                        >
+                        <!-- <sp-tooltip open placement="top" variant="info">Ref / Source group will export 1 image each for
+                        server to generate image</sp-tooltip> -->
+                    </div>
+                    <sp-action-button size="s" id="btnEnsureGroups" class="full-width"
+                        >Add Reference/Source Group</sp-action-button
+                    >
+                </div>
+
+                <!-- Status -->
+                <div id="generateStatus" class="status-message"></div>
+            </div>
+
+            <!-- Settings Tab Content (Hidden by default) -->
+            <div id="contentSettings" class="section hidden">
+                <!-- Provider Settings -->
+                <div class="section">
+                    <sp-label id="labelProvider">Provider</sp-label>
+                    <sp-dropdown size="s" id="providerSelect" placeholder="Select Provider">
+                        <sp-menu slot="options"></sp-menu>
+                    </sp-dropdown>
+                    <div class="row-end">
+                        <sp-action-button id="btnAddProvider" size="s">Add</sp-action-button>
+                        <sp-action-button id="btnSaveProvider" size="s" style="margin-left: 5px"
+                            >Save</sp-action-button
+                        >
+                        <sp-action-button id="btnDeleteProvider" size="s" style="margin-left: 5px"
+                            >Del</sp-action-button
+                        >
+                        <sp-action-button id="btnTestConnection" size="s" style="margin-left: 5px"
+                            >Test Connection</sp-action-button
+                        >
+                    </div>
+                </div>
+                <!-- API Config -->
+                <div class="section">
+                    <sp-textfield
+                        size="s"
+                        id="inputApiKey"
+                        type="password"
+                        placeholder="Enter API Key"
+                    >
+                        <sp-label slot="label" id="labelApiKey">API Key</sp-label>
+                    </sp-textfield>
+                    <sp-textfield size="s" id="inputBaseUrl" placeholder="https://...">
+                        <sp-label slot="label" id="labelBaseUrl">Base URL</sp-label>
+                    </sp-textfield>
+                    <sp-textfield size="s" id="inputModelId" placeholder="model-name">
+                        <sp-label slot="label" id="labelModelId">Model ID</sp-label>
+                    </sp-textfield>
+                </div>
+                <div id="connectionStatus" class="status-message"></div>
+                <sp-divider size="m"></sp-divider>
+
+                <!-- Toggles -->
+                <div class="section">
+                    <sp-label id="labelExtraSettings">Extra Settings</sp-label>
+                    <div class="row">
+                        <sp-checkbox size="s" id="searchWebCheckbox"
+                            >Search Web (Experimental)</sp-checkbox
+                        >
+                        <!-- <sp-tooltip open placement="top" variant="info">Only works for google/yunwu api
+                        provider</sp-tooltip> -->
+                    </div>
+                    <div class="row">
+                        <sp-checkbox size="s" id="selectionModeCheckbox"
+                            >Generate by Selection Mask</sp-checkbox
+                        >
+                        <!-- <sp-tooltip open placement="top" variant="info">Generate selection area only</sp-tooltip> -->
+                    </div>
+                </div>
+
+                <!-- Export Settings -->
+                <div class="section">
+                    <sp-label id="labelExportSettings">Image to Generator Export Settings</sp-label>
+                    <div class="row">
+                        <sp-textfield
+                            size="s"
+                            id="inputMaxSize"
+                            type="number"
+                            placeholder="2048"
+                            min="512"
+                            max="8192"
+                            step="256"
+                            style="flex: 1"
+                        >
+                            <sp-label slot="label" id="labelMaxSize">Max Size</sp-label>
+                        </sp-textfield>
+                        <sp-textfield
+                            size="s"
+                            id="inputQuality"
+                            type="number"
+                            placeholder="80"
+                            min="0"
+                            max="100"
+                            step="1"
+                            style="flex: 1"
+                        >
+                            <sp-label slot="label" id="labelQuality">Quality</sp-label>
+                        </sp-textfield>
+                    </div>
+                </div>
+
+                <sp-divider size="m"></sp-divider>
+                <!-- Language Settings -->
+                <div class="section">
+                    <sp-label id="labelLanguage">Language</sp-label>
+                    <sp-dropdown size="s" id="languageSelect" placeholder="Select Provider">
                         <sp-menu slot="options">
-                            <sp-menu-item value="1K" selected>1K</sp-menu-item>
-                            <sp-menu-item value="2K">2K</sp-menu-item>
-                            <sp-menu-item value="4K">4K</sp-menu-item>
+                            <sp-menu-item value="en">English</sp-menu-item>
+                            <sp-menu-item value="zh">中文</sp-menu-item>
                         </sp-menu>
                     </sp-dropdown>
                 </div>
-                <div style="flex: 1.8; margin: 0 0 0 10px;">
-                    <sp-action-button size="s" id="btnSmartCanvasRatio" style="width: 100%;"> Smart Ratio
-                    </sp-action-button>
-                </div>
-            </div>
 
+                <sp-divider size="m" style="margin-top: 10px"></sp-divider>
 
-
-            <!-- Generate Button -->
-            <sp-action-button id="btnGenerate" class="full-width" size="l"
-                style="margin-top: 10px; margin-bottom: 10px;">Generate Image</sp-action-button>
-
-            <!-- Generation Mode Radio Group -->
-            <div class="section" id="generationModeRadio">
-                <!-- <sp-label>Generation Mode</sp-label> -->
-                <sp-radio-group id="generationModeGroup">
-                    <sp-radio id="radioText2Img" value="text2img" checked>Text to Image</sp-radio>
-                    <sp-radio id="radioImgEdit" value="imgedit">Image Edit</sp-radio>
-                </sp-radio-group>
-            </div>
-            <sp-divider size="m"></sp-divider>
-
-            <!-- Multi-Image Mode (Hidden by default) -->
-            <div id="multiImageModeSection" class="section hidden">
-                <div class="tooltip">
-                    <sp-checkbox size="s" id="multiImageModeCheckbox">Use Layer Groups</sp-checkbox>
-                    <!-- <sp-tooltip open placement="top" variant="info">Ref / Source group will export 1 image each for
-                        server to generate image</sp-tooltip> -->
-                </div>
-                <sp-action-button size="s" id="btnEnsureGroups" class="full-width">Add Reference/Source
-                    Group</sp-action-button>
-            </div>
-
-            <!-- Status -->
-            <div id="generateStatus" class="status-message"></div>
-        </div>
-
-        <!-- Settings Tab Content (Hidden by default) -->
-        <div id="contentSettings" class="section hidden">
-
-            <!-- Provider Settings -->
-            <div class="section">
-                <sp-label id="labelProvider">Provider</sp-label>
-                <sp-dropdown size="s" id="providerSelect" placeholder="Select Provider">
-                    <sp-menu slot="options"></sp-menu>
-                </sp-dropdown>
-                <div class="row-end">
-                    <sp-action-button id="btnAddProvider" size="s">Add</sp-action-button>
-                    <sp-action-button id="btnSaveProvider" size="s" style="margin-left: 5px;">Save</sp-action-button>
-                    <sp-action-button id="btnDeleteProvider" size="s" style="margin-left: 5px;">Del</sp-action-button>
-                    <sp-action-button id="btnTestConnection" size="s" style="margin-left: 5px;">Test
-                        Connection</sp-action-button>
-                </div>
-            </div>
-            <!-- API Config -->
-            <div class="section">
-                <sp-textfield size="s" id="inputApiKey" type="password" placeholder="Enter API Key">
-                    <sp-label slot="label" id="labelApiKey">API Key</sp-label>
-                </sp-textfield>
-                <sp-textfield size="s" id="inputBaseUrl" placeholder="https://...">
-                    <sp-label slot="label" id="labelBaseUrl">Base URL</sp-label>
-                </sp-textfield>
-                <sp-textfield size="s" id="inputModelId" placeholder="model-name">
-                    <sp-label slot="label" id="labelModelId">Model ID</sp-label>
-                </sp-textfield>
-            </div>
-            <div id="connectionStatus" class="status-message"></div>
-            <sp-divider size="m"></sp-divider>
-
-            <!-- Toggles -->
-            <div class="section">
-                <sp-label id="labelExtraSettings">Extra Settings</sp-label>
-                <div class="row">
-                    <sp-checkbox size="s" id="searchWebCheckbox">Search Web (Experimental)</sp-checkbox>
-                    <!-- <sp-tooltip open placement="top" variant="info">Only works for google/yunwu api
-                        provider</sp-tooltip> -->
-                </div>
-                <div class="row">
-                    <sp-checkbox size="s" id="selectionModeCheckbox">Generate by Selection Mask</sp-checkbox>
-                    <!-- <sp-tooltip open placement="top" variant="info">Generate selection area only</sp-tooltip> -->
-                </div>
-            </div>
-
-            <!-- Export Settings -->
-            <div class="section">
-                <sp-label id="labelExportSettings">Image to Generator Export Settings</sp-label>
-                <div class="row">
-                    <sp-textfield size="s" id="inputMaxSize" type="number" placeholder="2048" min="512" max="8192"
-                        step="256" style="flex:1;">
-                        <sp-label slot="label" id="labelMaxSize">Max Size</sp-label>
-                    </sp-textfield>
-                    <sp-textfield size="s" id="inputQuality" type="number" placeholder="80" min="0" max="100" step="1"
-                        style="flex:1;">
-                        <sp-label slot="label" id="labelQuality">Quality</sp-label>
-                    </sp-textfield>
-                </div>
-            </div>
-
-            <sp-divider size="m"></sp-divider>
-            <!-- Language Settings -->
-            <div class="section">
-                <sp-label id="labelLanguage">Language</sp-label>
-                <sp-dropdown size="s" id="languageSelect" placeholder="Select Provider">
-                    <sp-menu slot="options">
-                        <sp-menu-item value="en">English</sp-menu-item>
-                        <sp-menu-item value="zh">中文</sp-menu-item>
-                    </sp-menu>
-                </sp-dropdown>
-            </div>
-
-
-            <sp-divider size="m" style="margin-top: 10px;"></sp-divider>
-
-            <!-- Debug Settings -->
-            <div class="section">
-                <sp-checkbox size="s" id="debugModeCheckbox">Debug Mode</sp-checkbox>
-                <div id="debugDetailsSection" class="section hidden">
-                    <sp-textfield size="s" id="debugFolderPath" readonly placeholder="Log path will appear here" quiet>
-                        <sp-label slot="label" id="labelLogPath">Log File Path</sp-label>
-                    </sp-textfield>
-                    <!-- Debug Buttons -->
-                    <div class="row" style="gap: 8px;">
-                        <sp-action-button size="s" id="btnTestExport" style="flex: 1;">Test Export</sp-action-button>
-                        <sp-action-button size="s" id="btnTestImport" style="flex: 1;">Test Import</sp-action-button>
+                <!-- Debug Settings -->
+                <div class="section">
+                    <sp-checkbox size="s" id="debugModeCheckbox">Debug Mode</sp-checkbox>
+                    <div id="debugDetailsSection" class="section hidden">
+                        <sp-textfield
+                            size="s"
+                            id="debugFolderPath"
+                            readonly
+                            placeholder="Log path will appear here"
+                            quiet
+                        >
+                            <sp-label slot="label" id="labelLogPath">Log File Path</sp-label>
+                        </sp-textfield>
+                        <!-- Debug Buttons -->
+                        <div class="row" style="gap: 8px">
+                            <sp-action-button size="s" id="btnTestExport" style="flex: 1"
+                                >Test Export</sp-action-button
+                            >
+                            <sp-action-button size="s" id="btnTestImport" style="flex: 1"
+                                >Test Import</sp-action-button
+                            >
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="row-end" style="margin-top: auto; padding-top: 10px;">
-            <sp-body size="XS" style="color: #666;" id="footerText">🍌PSBanana by LiuYang v2.2.5</sp-body>
+            <div class="row-end" style="margin-top: auto; padding-top: 10px">
+                <sp-body size="XS" style="color: #666" id="footerText"
+                    >🍌PSBanana by LiuYang v2.2.5</sp-body
+                >
+            </div>
         </div>
-    </div>
-</body>
-
+    </body>
 </html>

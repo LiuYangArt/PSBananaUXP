@@ -1,5 +1,5 @@
-const fs = require("uxp").storage.localFileSystem;
-const { app } = require("photoshop");
+const fs = require('uxp').storage.localFileSystem;
+const { app } = require('photoshop');
 
 /**
  * Manages temporary files for AI image generation
@@ -7,9 +7,9 @@ const { app } = require("photoshop");
  */
 class FileManager {
     constructor() {
-        this.logDirName = "Logs";  // For debug logs only
+        this.logDirName = 'Logs'; // For debug logs only
         this.logDirPath = null;
-        this.imageDirName = "GeneratedImages";  // For generated images
+        this.imageDirName = 'GeneratedImages'; // For generated images
         this.imageDirPath = null;
     }
 
@@ -33,10 +33,10 @@ class FileManager {
                 this.logDirPath = await dataFolder.createFolder(this.logDirName);
             }
 
-            console.log("[FileManager] Log folder path:", this.logDirPath.nativePath);
+            console.log('[FileManager] Log folder path:', this.logDirPath.nativePath);
             return this.logDirPath;
         } catch (e) {
-            console.error("[FileManager] Error getting log folder:", e);
+            console.error('[FileManager] Error getting log folder:', e);
             throw e;
         }
     }
@@ -62,10 +62,10 @@ class FileManager {
                 this.imageDirPath = await dataFolder.createFolder(this.imageDirName);
             }
 
-            console.log("[FileManager] Image folder path:", this.imageDirPath.nativePath);
+            console.log('[FileManager] Image folder path:', this.imageDirPath.nativePath);
             return this.imageDirPath;
         } catch (e) {
-            console.error("[FileManager] Error getting image folder:", e);
+            console.error('[FileManager] Error getting image folder:', e);
             throw e;
         }
     }
@@ -78,14 +78,14 @@ class FileManager {
             const dataFolder = await fs.getDataFolder();
             let workflowsFolder;
             try {
-                workflowsFolder = await dataFolder.getEntry("Workflows");
+                workflowsFolder = await dataFolder.getEntry('Workflows');
             } catch (e) {
                 console.log(`[FileManager] Workflows folder not found, creating...`);
-                workflowsFolder = await dataFolder.createFolder("Workflows");
+                workflowsFolder = await dataFolder.createFolder('Workflows');
             }
             return workflowsFolder;
         } catch (e) {
-            console.error("[FileManager] Error getting workflows folder:", e);
+            console.error('[FileManager] Error getting workflows folder:', e);
             throw e;
         }
     }
@@ -115,7 +115,7 @@ class FileManager {
             console.log(`[FileManager] Saved workflow: ${filename}`);
             return file.nativePath;
         } catch (e) {
-            console.error("[FileManager] Error saving workflow file:", e);
+            console.error('[FileManager] Error saving workflow file:', e);
             return null;
         }
     }
@@ -142,7 +142,7 @@ class FileManager {
             console.log(`[DEBUG] Payload saved to: ${file.nativePath}`);
             return file.nativePath;
         } catch (e) {
-            console.error("Error saving payload:", e);
+            console.error('Error saving payload:', e);
             return null;
         }
     }
@@ -161,7 +161,7 @@ class FileManager {
             console.log(`[DEBUG] Response saved to: ${file.nativePath}`);
             return file.nativePath;
         } catch (e) {
-            console.error("Error saving response:", e);
+            console.error('Error saving response:', e);
             return null;
         }
     }
@@ -179,7 +179,7 @@ class FileManager {
             console.log(`[DEBUG] Log saved to: ${file.nativePath}`);
             return file.nativePath;
         } catch (e) {
-            console.error("Error saving log:", e);
+            console.error('Error saving log:', e);
             return null;
         }
     }
@@ -197,7 +197,7 @@ class FileManager {
             await file.write(content);
             return file.nativePath;
         } catch (e) {
-            console.error("Error saving task log:", e);
+            console.error('Error saving task log:', e);
             return null;
         }
     }
@@ -208,7 +208,7 @@ class FileManager {
      * @param {string} extension - File extension (png, jpg, webp)
      * @returns {Promise<File>}
      */
-    async saveImageFromBase64(base64Data, extension = "png") {
+    async saveImageFromBase64(base64Data, extension = 'png') {
         try {
             const folder = await this.getImageFolder();
             const timestamp = this._getTimestamp();
@@ -222,12 +222,12 @@ class FileManager {
             }
 
             const file = await folder.createFile(filename, { overwrite: true });
-            await file.write(bytes.buffer, { format: require("uxp").storage.formats.binary });
+            await file.write(bytes.buffer, { format: require('uxp').storage.formats.binary });
 
             console.log(`[IMAGE] Image saved to: ${file.nativePath}`);
             return file;
         } catch (e) {
-            console.error("Error saving image from base64:", e);
+            console.error('Error saving image from base64:', e);
             throw e;
         }
     }
@@ -243,9 +243,9 @@ class FileManager {
             const timestamp = this._getTimestamp();
 
             // Determine extension from URL
-            let extension = "png";
-            if (url.includes(".webp")) extension = "webp";
-            else if (url.includes(".jpg") || url.includes(".jpeg")) extension = "jpg";
+            let extension = 'png';
+            if (url.includes('.webp')) extension = 'webp';
+            else if (url.includes('.jpg') || url.includes('.jpeg')) extension = 'jpg';
 
             const filename = `generated_image_${timestamp}.${extension}`;
 
@@ -258,12 +258,12 @@ class FileManager {
             const arrayBuffer = await response.arrayBuffer();
 
             const file = await folder.createFile(filename, { overwrite: true });
-            await file.write(arrayBuffer, { format: require("uxp").storage.formats.binary });
+            await file.write(arrayBuffer, { format: require('uxp').storage.formats.binary });
 
             console.log(`[IMAGE] Image downloaded to: ${file.nativePath}`);
             return file;
         } catch (e) {
-            console.error("Error downloading image:", e);
+            console.error('Error downloading image:', e);
             throw e;
         }
     }
@@ -273,12 +273,14 @@ class FileManager {
      */
     _getTimestamp() {
         const now = new Date();
-        return now.getFullYear().toString() +
+        return (
+            now.getFullYear().toString() +
             (now.getMonth() + 1).toString().padStart(2, '0') +
             now.getDate().toString().padStart(2, '0') +
             now.getHours().toString().padStart(2, '0') +
             now.getMinutes().toString().padStart(2, '0') +
-            now.getSeconds().toString().padStart(2, '0');
+            now.getSeconds().toString().padStart(2, '0')
+        );
     }
 
     /**
@@ -297,7 +299,7 @@ class FileManager {
             const imageFolder = await this.getImageFolder();
             await this._cleanupFolder(imageFolder, now, maxAge);
         } catch (e) {
-            console.error("Error cleaning up files:", e);
+            console.error('Error cleaning up files:', e);
         }
     }
 
@@ -309,7 +311,7 @@ class FileManager {
 
                 try {
                     const stats = await entry.getMetadata();
-                    if (stats.modificationTime && (now - stats.modificationTime) > maxAge) {
+                    if (stats.modificationTime && now - stats.modificationTime > maxAge) {
                         await entry.delete();
                     }
                 } catch (e) {
@@ -317,14 +319,14 @@ class FileManager {
                 }
             }
         } catch (e) {
-            console.error("Error cleaning folder:", e);
+            console.error('Error cleaning folder:', e);
         }
     }
 
     /**
-      * Open the log folder in system file explorer
-      * @returns {Promise<boolean>} Success status
-      */
+     * Open the log folder in system file explorer
+     * @returns {Promise<boolean>} Success status
+     */
     async openLogFolder() {
         try {
             console.log('[FileManager] Opening log folder...');
@@ -337,7 +339,7 @@ class FileManager {
 
             // 方法 1: 尝试 shell.openPath()
             console.log('[FileManager] Method 1: Attempting shell.openPath...');
-            let result = await shell.openPath(folderPath);
+            const result = await shell.openPath(folderPath);
             console.log('[FileManager] shell.openPath result:', result, 'type:', typeof result);
 
             if (result === '') {
@@ -360,8 +362,8 @@ class FileManager {
             }
 
             // 其他错误，也尝试复制路径
-            console.error("[FileManager] Unexpected error in openLogFolder:", e);
-            console.error("[FileManager] Error details:", e.message, e.stack);
+            console.error('[FileManager] Unexpected error in openLogFolder:', e);
+            console.error('[FileManager] Error details:', e.message, e.stack);
 
             try {
                 const folder = await this.getLogFolder();
@@ -384,12 +386,16 @@ class FileManager {
             const entries = await folder.getEntries();
 
             // Filter for image files
-            const imageFiles = entries.filter(entry => {
+            const imageFiles = entries.filter((entry) => {
                 if (!entry.isFile) return false;
                 const name = entry.name.toLowerCase();
-                return name.startsWith('generated_image_') &&
-                    (name.endsWith('.png') || name.endsWith('.jpg') ||
-                        name.endsWith('.jpeg') || name.endsWith('.webp'));
+                return (
+                    name.startsWith('generated_image_') &&
+                    (name.endsWith('.png') ||
+                        name.endsWith('.jpg') ||
+                        name.endsWith('.jpeg') ||
+                        name.endsWith('.webp'))
+                );
             });
 
             if (imageFiles.length === 0) {
@@ -417,7 +423,7 @@ class FileManager {
             console.log('[FileManager] Token:', token);
             return token;
         } catch (e) {
-            console.error("[FileManager] Error getting latest image token:", e);
+            console.error('[FileManager] Error getting latest image token:', e);
             return null;
         }
     }
@@ -441,9 +447,9 @@ class FileManager {
 
             return file;
         } catch (e) {
-            console.error("[FileManager] ERROR getting file from token:", e);
-            console.error("[FileManager] - Token:", token);
-            console.error("[FileManager] - Error message:", e.message);
+            console.error('[FileManager] ERROR getting file from token:', e);
+            console.error('[FileManager] - Token:', token);
+            console.error('[FileManager] - Error message:', e.message);
             throw new Error(`Cannot access file from token - ${e.message}`);
         }
     }
@@ -458,7 +464,7 @@ class FileManager {
             console.log(`[FileManager] Converting file to base64: ${file.name}`);
 
             // 读取文件为二进制
-            const arrayBuffer = await file.read({ format: require("uxp").storage.formats.binary });
+            const arrayBuffer = await file.read({ format: require('uxp').storage.formats.binary });
             const bytes = new Uint8Array(arrayBuffer);
 
             // 转换为base64
@@ -471,7 +477,7 @@ class FileManager {
             console.log(`[FileManager] Base64 conversion complete, length: ${base64.length}`);
             return base64;
         } catch (e) {
-            console.error("[FileManager] Error converting file to base64:", e);
+            console.error('[FileManager] Error converting file to base64:', e);
             throw e;
         }
     }
@@ -493,7 +499,7 @@ class FileManager {
 
             return `data:${mimeType};base64,${base64}`;
         } catch (e) {
-            console.error("[FileManager] Error converting file to data URL:", e);
+            console.error('[FileManager] Error converting file to data URL:', e);
             throw e;
         }
     }

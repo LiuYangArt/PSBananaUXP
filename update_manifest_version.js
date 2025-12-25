@@ -18,7 +18,6 @@ try {
     } else {
         console.log('manifest.json version is already up to date.');
     }
-
 } catch (error) {
     console.error('Error updating manifest version:', error);
     process.exit(1);

@@ -1,7 +1,7 @@
-const { app } = require("photoshop");
-const { batchPlay } = require("photoshop").action;
-const { executeAsModal } = require("photoshop").core;
-const fs = require("uxp").storage.localFileSystem;
+const { app } = require('photoshop');
+const { batchPlay } = require('photoshop').action;
+const { executeAsModal } = require('photoshop').core;
+const fs = require('uxp').storage.localFileSystem;
 const { calculateAspectRatio, ASPECT_RATIOS } = require('./aspect_ratio');
 
 /**
@@ -17,16 +17,16 @@ class PSOperations {
         try {
             const doc = app.activeDocument;
             if (!doc) {
-                throw new Error("No active document");
+                throw new Error('No active document');
             }
 
             return {
                 width: doc.width,
                 height: doc.height,
-                documentId: doc.id
+                documentId: doc.id,
             };
         } catch (e) {
-            console.error("Error getting canvas info:", e);
+            console.error('Error getting canvas info:', e);
             throw e;
         }
     }
@@ -40,28 +40,31 @@ class PSOperations {
         try {
             const doc = app.activeDocument;
             if (!doc) {
-                throw new Error("No active document");
+                throw new Error('No active document');
             }
 
             // 使用batchPlay获取选区边界
-            const result = await batchPlay([
+            const result = await batchPlay(
+                [
+                    {
+                        _obj: 'get',
+                        _target: [
+                            {
+                                _property: 'selection',
+                            },
+                            {
+                                _ref: 'document',
+                                _enum: 'ordinal',
+                                _value: 'targetEnum',
+                            },
+                        ],
+                    },
+                ],
                 {
-                    "_obj": "get",
-                    "_target": [
-                        {
-                            "_property": "selection"
-                        },
-                        {
-                            "_ref": "document",
-                            "_enum": "ordinal",
-                            "_value": "targetEnum"
-                        }
-                    ]
+                    synchronousExecution: true,
+                    modalBehavior: 'wait',
                 }
-            ], {
-                "synchronousExecution": true,
-                "modalBehavior": "wait"
-            });
+            );
 
             // 检查是否有选区
             if (!result || !result[0] || !result[0].selection) {
@@ -76,11 +79,11 @@ class PSOperations {
                     left: selection.left._value,
                     top: selection.top._value,
                     right: selection.right._value,
-                    bottom: selection.bottom._value
-                }
+                    bottom: selection.bottom._value,
+                },
             };
         } catch (e) {
-            console.error("Error getting selection info:", e);
+            console.error('Error getting selection info:', e);
             // 如果没有选区，返回false
             return { hasSelection: false };
         }
@@ -99,7 +102,9 @@ class PSOperations {
         const selectionWidth = right - left;
         const selectionHeight = bottom - top;
 
-        console.log(`[PS] Selection bounds: ${selectionWidth}x${selectionHeight} at (${left}, ${top})`);
+        console.log(
+            `[PS] Selection bounds: ${selectionWidth}x${selectionHeight} at (${left}, ${top})`
+        );
 
         // 计算选区的宽高比
         const selectionRatio = selectionWidth / selectionHeight;
@@ -116,7 +121,9 @@ class PSOperations {
             }
         }
 
-        console.log(`[PS] Selection ratio: ${selectionRatio.toFixed(4)}, closest: ${closestRatio.name}`);
+        console.log(
+            `[PS] Selection ratio: ${selectionRatio.toFixed(4)}, closest: ${closestRatio.name}`
+        );
 
         // 根据标准比例计算生图区域尺寸
         let regionWidth, regionHeight;
@@ -146,7 +153,9 @@ class PSOperations {
         const finalRight = finalLeft + regionWidth;
         const finalBottom = finalTop + regionHeight;
 
-        console.log(`[PS] Generation region: ${regionWidth}x${regionHeight} at (${finalLeft}, ${finalTop})`);
+        console.log(
+            `[PS] Generation region: ${regionWidth}x${regionHeight} at (${finalLeft}, ${finalTop})`
+        );
 
         return {
             left: finalLeft,
@@ -155,7 +164,7 @@ class PSOperations {
             bottom: finalBottom,
             width: regionWidth,
             height: regionHeight,
-            aspectRatio: closestRatio.name
+            aspectRatio: closestRatio.name,
         };
     }
 
@@ -175,21 +184,24 @@ class PSOperations {
             console.log(`[PS] Switching to document ID: ${documentId}`);
 
             // Use batchPlay to select the document
-            await batchPlay([
+            await batchPlay(
+                [
+                    {
+                        _obj: 'select',
+                        _target: [
+                            {
+                                _ref: 'document',
+                                _id: documentId,
+                            },
+                        ],
+                        _isCommand: true,
+                    },
+                ],
                 {
-                    "_obj": "select",
-                    "_target": [
-                        {
-                            "_ref": "document",
-                            "_id": documentId
-                        }
-                    ],
-                    "_isCommand": true
+                    synchronousExecution: true,
+                    modalBehavior: 'wait',
                 }
-            ], {
-                "synchronousExecution": true,
-                "modalBehavior": "wait"
-            });
+            );
 
             console.log(`[PS] Successfully switched to document ID: ${documentId}`);
         } catch (e) {
@@ -206,14 +218,14 @@ class PSOperations {
         try {
             const doc = app.activeDocument;
             if (!doc) {
-                return "BananaImage00";
+                return 'BananaImage00';
             }
 
             let maxNumber = -1;
             const layers = doc.layers;
 
             for (const layer of layers) {
-                if (layer.name.startsWith("BananaImage")) {
+                if (layer.name.startsWith('BananaImage')) {
                     const numberPart = layer.name.substring(11); // After "BananaImage"
                     const num = parseInt(numberPart, 10);
                     if (!isNaN(num) && num > maxNumber) {
@@ -225,8 +237,8 @@ class PSOperations {
             const nextNumber = maxNumber + 1;
             return `BananaImage${nextNumber.toString().padStart(2, '0')}`;
         } catch (e) {
-            console.error("Error getting next layer name:", e);
-            return "BananaImage00";
+            console.error('Error getting next layer name:', e);
+            return 'BananaImage00';
         }
     }
 
@@ -241,19 +253,19 @@ class PSOperations {
         try {
             // Validate input
             if (!imageFile || !imageFile.nativePath) {
-                throw new Error("Invalid image file: file or path is missing");
+                throw new Error('Invalid image file: file or path is missing');
             }
 
             const doc = app.activeDocument;
             if (!doc) {
-                throw new Error("No active document");
+                throw new Error('No active document');
             }
 
             // Suspend history
             if (executionContext && executionContext.hostControl) {
                 suspensionID = await executionContext.hostControl.suspendHistory({
-                    "documentID": doc.id,
-                    "name": "Import Image"
+                    documentID: doc.id,
+                    name: 'Import Image',
                 });
             }
 
@@ -262,28 +274,31 @@ class PSOperations {
             const layerName = await this.getNextLayerName();
 
             // Use batchPlay to place the image
-            await batchPlay([
+            await batchPlay(
+                [
+                    {
+                        _obj: 'placeEvent',
+                        null: {
+                            _path: imageFile.nativePath,
+                            _kind: 'local',
+                        },
+                        freeTransformCenterState: {
+                            _enum: 'quadCenterState',
+                            _value: 'QCSAverage',
+                        },
+                        _isCommand: true,
+                    },
+                ],
                 {
-                    "_obj": "placeEvent",
-                    "null": {
-                        "_path": imageFile.nativePath,
-                        "_kind": "local"
-                    },
-                    "freeTransformCenterState": {
-                        "_enum": "quadCenterState",
-                        "_value": "QCSAverage"
-                    },
-                    "_isCommand": true
+                    synchronousExecution: true,
+                    modalBehavior: 'wait',
                 }
-            ], {
-                "synchronousExecution": true,
-                "modalBehavior": "wait"
-            });
+            );
 
             // Rename the layer
             const newLayer = doc.activeLayers[0];
             if (!newLayer) {
-                throw new Error("Failed to get the newly created layer");
+                throw new Error('Failed to get the newly created layer');
             }
 
             newLayer.name = layerName;
@@ -303,8 +318,8 @@ class PSOperations {
             if (suspensionID !== null && executionContext && executionContext.hostControl) {
                 await executionContext.hostControl.resumeHistory(suspensionID, false);
             }
-            console.error("Error importing image:", e);
-            const errorMsg = e.message || String(e) || "Unknown error during image import";
+            console.error('Error importing image:', e);
+            const errorMsg = e.message || String(e) || 'Unknown error during image import';
             throw new Error(`Failed to import image: ${errorMsg}`);
         }
     }
@@ -321,7 +336,7 @@ class PSOperations {
         try {
             // Validate input
             if (!token) {
-                throw new Error("Invalid file token");
+                throw new Error('Invalid file token');
             }
 
             // If targetDocumentId is provided, activate that document first
@@ -332,14 +347,14 @@ class PSOperations {
 
             const doc = app.activeDocument;
             if (!doc) {
-                throw new Error("No active document");
+                throw new Error('No active document');
             }
 
             // Suspend history
             if (executionContext && executionContext.hostControl) {
                 suspensionID = await executionContext.hostControl.suspendHistory({
-                    "documentID": doc.id,
-                    "name": "Import Generated Image"
+                    documentID: doc.id,
+                    name: 'Import Generated Image',
                 });
             }
 
@@ -353,30 +368,33 @@ class PSOperations {
             console.log(`[PS] Calling batchPlay with session token`);
 
             // 先导入图片（会导入到当前活动图层的位置）
-            const result = await batchPlay([
+            const result = await batchPlay(
+                [
+                    {
+                        _obj: 'placeEvent',
+                        null: {
+                            _path: token, // 直接使用 session token！
+                            _kind: 'local',
+                        },
+                        freeTransformCenterState: {
+                            _enum: 'quadCenterState',
+                            _value: 'QCSAverage',
+                        },
+                        _isCommand: true,
+                    },
+                ],
                 {
-                    "_obj": "placeEvent",
-                    "null": {
-                        "_path": token,  // 直接使用 session token！
-                        "_kind": "local"
-                    },
-                    "freeTransformCenterState": {
-                        "_enum": "quadCenterState",
-                        "_value": "QCSAverage"
-                    },
-                    "_isCommand": true
+                    synchronousExecution: true,
+                    modalBehavior: 'wait',
                 }
-            ], {
-                "synchronousExecution": true,
-                "modalBehavior": "wait"
-            });
+            );
 
             console.log(`[PS] batchPlay completed successfully`);
 
             // Rename the layer
             const newLayer = doc.activeLayers[0];
             if (!newLayer) {
-                throw new Error("Failed to get the newly created layer");
+                throw new Error('Failed to get the newly created layer');
             }
 
             newLayer.name = layerName;
@@ -401,10 +419,10 @@ class PSOperations {
                 await executionContext.hostControl.resumeHistory(suspensionID, false);
             }
 
-            console.error("[PS] ERROR in importImageByToken:", e);
-            console.error("[PS] Error message:", e.message);
-            console.error("[PS] Token was:", token);
-            const errorMsg = e.message || String(e) || "Unknown error during image import";
+            console.error('[PS] ERROR in importImageByToken:', e);
+            console.error('[PS] Error message:', e.message);
+            console.error('[PS] Token was:', token);
+            const errorMsg = e.message || String(e) || 'Unknown error during image import';
             throw new Error(`Failed to import image from token: ${errorMsg}`);
         }
     }
@@ -417,14 +435,19 @@ class PSOperations {
      * @param {Object} executionContext - Context from executeAsModal
      * @param {number} targetDocumentId - Optional target document ID to import into
      */
-    static async importImageInRegion(token, region, executionContext = null, targetDocumentId = null) {
+    static async importImageInRegion(
+        token,
+        region,
+        executionContext = null,
+        targetDocumentId = null
+    ) {
         let suspensionID = null;
         try {
             if (!token) {
-                throw new Error("Invalid file token");
+                throw new Error('Invalid file token');
             }
             if (!region) {
-                throw new Error("Invalid region");
+                throw new Error('Invalid region');
             }
 
             // If targetDocumentId is provided, activate that document first
@@ -435,43 +458,48 @@ class PSOperations {
 
             const doc = app.activeDocument;
             if (!doc) {
-                throw new Error("No active document");
+                throw new Error('No active document');
             }
 
             // Suspend history
             if (executionContext && executionContext.hostControl) {
                 suspensionID = await executionContext.hostControl.suspendHistory({
-                    "documentID": doc.id,
-                    "name": "Import Generated Image (Selection)"
+                    documentID: doc.id,
+                    name: 'Import Generated Image (Selection)',
                 });
             }
 
-            console.log(`[PS] Importing image in region: ${region.width}x${region.height} at (${region.left}, ${region.top})`);
+            console.log(
+                `[PS] Importing image in region: ${region.width}x${region.height} at (${region.left}, ${region.top})`
+            );
 
             const layerName = await this.getNextLayerName();
 
             // 导入图片
-            await batchPlay([
+            await batchPlay(
+                [
+                    {
+                        _obj: 'placeEvent',
+                        null: {
+                            _path: token,
+                            _kind: 'local',
+                        },
+                        freeTransformCenterState: {
+                            _enum: 'quadCenterState',
+                            _value: 'QCSAverage',
+                        },
+                        _isCommand: true,
+                    },
+                ],
                 {
-                    "_obj": "placeEvent",
-                    "null": {
-                        "_path": token,
-                        "_kind": "local"
-                    },
-                    "freeTransformCenterState": {
-                        "_enum": "quadCenterState",
-                        "_value": "QCSAverage"
-                    },
-                    "_isCommand": true
+                    synchronousExecution: true,
+                    modalBehavior: 'wait',
                 }
-            ], {
-                "synchronousExecution": true,
-                "modalBehavior": "wait"
-            });
+            );
 
             const newLayer = doc.activeLayers[0];
             if (!newLayer) {
-                throw new Error("Failed to get the newly created layer");
+                throw new Error('Failed to get the newly created layer');
             }
 
             newLayer.name = layerName;
@@ -495,8 +523,8 @@ class PSOperations {
             if (suspensionID !== null && executionContext && executionContext.hostControl) {
                 await executionContext.hostControl.resumeHistory(suspensionID, false);
             }
-            console.error("[PS] ERROR in importImageInRegion:", e);
-            const errorMsg = e.message || String(e) || "Unknown error";
+            console.error('[PS] ERROR in importImageInRegion:', e);
+            const errorMsg = e.message || String(e) || 'Unknown error';
             throw new Error(`Failed to import image in region: ${errorMsg}`);
         }
     }
@@ -516,7 +544,9 @@ class PSOperations {
             const layerWidth = layerBounds.right - layerBounds.left;
             const layerHeight = layerBounds.bottom - layerBounds.top;
 
-            console.log(`[PS] Canvas: ${canvasWidth}x${canvasHeight}, Layer: ${layerWidth}x${layerHeight}`);
+            console.log(
+                `[PS] Canvas: ${canvasWidth}x${canvasHeight}, Layer: ${layerWidth}x${layerHeight}`
+            );
 
             // 使用高度进行缩放计算（测试表明这样最准确）
             // 例如: 目标1800x2048，1K生成896x1024，应使用1024->2048的比例
@@ -525,45 +555,47 @@ class PSOperations {
             console.log(`[PS] Scaling layer by height: ${scale.toFixed(2)}%`);
 
             // Transform layer using batchPlay
-            await batchPlay([
+            await batchPlay(
+                [
+                    {
+                        _obj: 'transform',
+                        _target: [
+                            {
+                                _ref: 'layer',
+                                _enum: 'ordinal',
+                                _value: 'targetEnum',
+                            },
+                        ],
+                        freeTransformCenterState: {
+                            _enum: 'quadCenterState',
+                            _value: 'QCSAverage',
+                        },
+                        width: {
+                            _unit: 'percentUnit',
+                            _value: scale,
+                        },
+                        height: {
+                            _unit: 'percentUnit',
+                            _value: scale,
+                        },
+                        interfaceIconFrameDimmed: {
+                            _enum: 'interpolationType',
+                            _value: 'bicubic',
+                        },
+                        _isCommand: true,
+                    },
+                ],
                 {
-                    "_obj": "transform",
-                    "_target": [
-                        {
-                            "_ref": "layer",
-                            "_enum": "ordinal",
-                            "_value": "targetEnum"
-                        }
-                    ],
-                    "freeTransformCenterState": {
-                        "_enum": "quadCenterState",
-                        "_value": "QCSAverage"
-                    },
-                    "width": {
-                        "_unit": "percentUnit",
-                        "_value": scale
-                    },
-                    "height": {
-                        "_unit": "percentUnit",
-                        "_value": scale
-                    },
-                    "interfaceIconFrameDimmed": {
-                        "_enum": "interpolationType",
-                        "_value": "bicubic"
-                    },
-                    "_isCommand": true
+                    synchronousExecution: true,
+                    modalBehavior: 'wait',
                 }
-            ], {
-                "synchronousExecution": true,
-                "modalBehavior": "wait"
-            });
+            );
 
             // Center the layer
             await this.centerLayer(layer);
-
         } catch (e) {
-            console.error("Error resizing layer:", e);
-            const errorMsg = e.message || String(e) || "Unknown error during resize";
+            console.error('Error resizing layer:', e);
+            const errorMsg = e.message || String(e) || 'Unknown error during resize';
             throw new Error(`Failed to resize layer: ${errorMsg}`);
         }
     }
@@ -581,13 +613,17 @@ class PSOperations {
             const layerWidth = layerBounds.right - layerBounds.left;
             const layerHeight = layerBounds.bottom - layerBounds.top;
 
-            console.log(`[PS] Region: ${region.width}x${region.height}, Layer: ${layerWidth}x${layerHeight}`);
+            console.log(
+                `[PS] Region: ${region.width}x${region.height}, Layer: ${layerWidth}x${layerHeight}`
+            );
 
             // 计算region和layer的宽高比
             const regionRatio = region.width / region.height;
             const layerRatio = layerWidth / layerHeight;
 
-            console.log(`[PS] Region ratio: ${regionRatio.toFixed(4)}, Layer ratio: ${layerRatio.toFixed(4)}`);
+            console.log(
+                `[PS] Region ratio: ${regionRatio.toFixed(4)}, Layer ratio: ${layerRatio.toFixed(4)}`
+            );
 
             // 根据宽高比关系决定缩放基准：
             // - 如果region比layer更宽（regionRatio > layerRatio），按高度缩放
@@ -605,45 +641,47 @@ class PSOperations {
             }
 
             // 缩放图层
-            await batchPlay([
+            await batchPlay(
+                [
+                    {
+                        _obj: 'transform',
+                        _target: [
+                            {
+                                _ref: 'layer',
+                                _enum: 'ordinal',
+                                _value: 'targetEnum',
+                            },
+                        ],
+                        freeTransformCenterState: {
+                            _enum: 'quadCenterState',
+                            _value: 'QCSAverage',
+                        },
+                        width: {
+                            _unit: 'percentUnit',
+                            _value: scale,
+                        },
+                        height: {
+                            _unit: 'percentUnit',
+                            _value: scale,
+                        },
+                        interfaceIconFrameDimmed: {
+                            _enum: 'interpolationType',
+                            _value: 'bicubic',
+                        },
+                        _isCommand: true,
+                    },
+                ],
                 {
-                    "_obj": "transform",
-                    "_target": [
-                        {
-                            "_ref": "layer",
-                            "_enum": "ordinal",
-                            "_value": "targetEnum"
-                        }
-                    ],
-                    "freeTransformCenterState": {
-                        "_enum": "quadCenterState",
-                        "_value": "QCSAverage"
-                    },
-                    "width": {
-                        "_unit": "percentUnit",
-                        "_value": scale
-                    },
-                    "height": {
-                        "_unit": "percentUnit",
-                        "_value": scale
-                    },
-                    "interfaceIconFrameDimmed": {
-                        "_enum": "interpolationType",
-                        "_value": "bicubic"
-                    },
-                    "_isCommand": true
+                    synchronousExecution: true,
+                    modalBehavior: 'wait',
                 }
-            ], {
-                "synchronousExecution": true,
-                "modalBehavior": "wait"
-            });
+            );
 
             // 将图层居中到区域
             await this.centerLayerToRegion(layer, region);
-
         } catch (e) {
-            console.error("Error resizing layer to region:", e);
-            const errorMsg = e.message || String(e) || "Unknown error";
+            console.error('Error resizing layer to region:', e);
+            const errorMsg = e.message || String(e) || 'Unknown error';
             throw new Error(`Failed to resize layer to region: ${errorMsg}`);
         }
     }
@@ -664,35 +702,38 @@ class PSOperations {
             const offsetX = (canvasWidth - layerWidth) / 2 - layerBounds.left;
             const offsetY = (canvasHeight - layerHeight) / 2 - layerBounds.top;
 
-            await batchPlay([
-                {
-                    "_obj": "move",
-                    "_target": [
-                        {
-                            "_ref": "layer",
-                            "_enum": "ordinal",
-                            "_value": "targetEnum"
-                        }
-                    ],
-                    "to": {
-                        "_obj": "offset",
-                        "horizontal": {
-                            "_unit": "pixelsUnit",
-                            "_value": offsetX
+            await batchPlay(
+                [
+                    {
+                        _obj: 'move',
+                        _target: [
+                            {
+                                _ref: 'layer',
+                                _enum: 'ordinal',
+                                _value: 'targetEnum',
+                            },
+                        ],
+                        to: {
+                            _obj: 'offset',
+                            horizontal: {
+                                _unit: 'pixelsUnit',
+                                _value: offsetX,
+                            },
+                            vertical: {
+                                _unit: 'pixelsUnit',
+                                _value: offsetY,
+                            },
                         },
-                        "vertical": {
-                            "_unit": "pixelsUnit",
-                            "_value": offsetY
-                        }
+                        _isCommand: true,
                     },
-                    "_isCommand": true
+                ],
+                {
+                    synchronousExecution: true,
+                    modalBehavior: 'wait',
                 }
-            ], {
-                "synchronousExecution": true,
-                "modalBehavior": "wait"
-            });
+            );
         } catch (e) {
-            console.error("Error centering layer:", e);
+            console.error('Error centering layer:', e);
         }
     }
 
@@ -717,37 +758,42 @@ class PSOperations {
             const offsetX = regionCenterX - (layerBounds.left + layerWidth / 2);
             const offsetY = regionCenterY - (layerBounds.top + layerHeight / 2);
 
-            console.log(`[PS] Centering layer to region: offset (${offsetX.toFixed(2)}, ${offsetY.toFixed(2)})`);
+            console.log(
+                `[PS] Centering layer to region: offset (${offsetX.toFixed(2)}, ${offsetY.toFixed(2)})`
+            );
 
-            await batchPlay([
-                {
-                    "_obj": "move",
-                    "_target": [
-                        {
-                            "_ref": "layer",
-                            "_enum": "ordinal",
-                            "_value": "targetEnum"
-                        }
-                    ],
-                    "to": {
-                        "_obj": "offset",
-                        "horizontal": {
-                            "_unit": "pixelsUnit",
-                            "_value": offsetX
+            await batchPlay(
+                [
+                    {
+                        _obj: 'move',
+                        _target: [
+                            {
+                                _ref: 'layer',
+                                _enum: 'ordinal',
+                                _value: 'targetEnum',
+                            },
+                        ],
+                        to: {
+                            _obj: 'offset',
+                            horizontal: {
+                                _unit: 'pixelsUnit',
+                                _value: offsetX,
+                            },
+                            vertical: {
+                                _unit: 'pixelsUnit',
+                                _value: offsetY,
+                            },
                         },
-                        "vertical": {
-                            "_unit": "pixelsUnit",
-                            "_value": offsetY
-                        }
+                        _isCommand: true,
                     },
-                    "_isCommand": true
+                ],
+                {
+                    synchronousExecution: true,
+                    modalBehavior: 'wait',
                 }
-            ], {
-                "synchronousExecution": true,
-                "modalBehavior": "wait"
-            });
+            );
         } catch (e) {
-            console.error("Error centering layer to region:", e);
+            console.error('Error centering layer to region:', e);
         }
     }
 
@@ -761,32 +807,37 @@ class PSOperations {
 
             // 先将图层移出组（如果在组内）
             // 多次检查，确保完全移出所有嵌套组
-            let maxAttempts = 5;  // 最多尝试5次，处理深度嵌套的情况
+            const maxAttempts = 5; // 最多尝试5次，处理深度嵌套的情况
             for (let i = 0; i < maxAttempts; i++) {
-                if (layer.parent && layer.parent.typename === "LayerSet") {
-                    console.log(`[PS] Layer is inside group '${layer.parent.name}' (depth ${i + 1}), moving out...`);
+                if (layer.parent && layer.parent.typename === 'LayerSet') {
+                    console.log(
+                        `[PS] Layer is inside group '${layer.parent.name}' (depth ${i + 1}), moving out...`
+                    );
                     // 将图层移到文档根层级
-                    await batchPlay([
-                        {
-                            "_obj": "move",
-                            "_target": [
-                                {
-                                    "_ref": "layer",
-                                    "_enum": "ordinal",
-                                    "_value": "targetEnum"
-                                }
-                            ],
-                            "to": {
-                                "_ref": "document",
-                                "_enum": "ordinal",
-                                "_value": "targetEnum"
+                    await batchPlay(
+                        [
+                            {
+                                _obj: 'move',
+                                _target: [
+                                    {
+                                        _ref: 'layer',
+                                        _enum: 'ordinal',
+                                        _value: 'targetEnum',
+                                    },
+                                ],
+                                to: {
+                                    _ref: 'document',
+                                    _enum: 'ordinal',
+                                    _value: 'targetEnum',
+                                },
+                                _isCommand: true,
                             },
-                            "_isCommand": true
+                        ],
+                        {
+                            synchronousExecution: true,
+                            modalBehavior: 'wait',
                         }
-                    ], {
-                        "synchronousExecution": true,
-                        "modalBehavior": "wait"
-                    });
+                    );
 
                     // 重新获取图层引用（移动后可能需要刷新）
                     const currentLayers = doc.activeLayers;
@@ -801,32 +852,35 @@ class PSOperations {
 
             // 然后移到最顶层
             console.log(`[PS] Moving layer to front of all layers...`);
-            await batchPlay([
-                {
-                    "_obj": "move",
-                    "_target": [
-                        {
-                            "_ref": "layer",
-                            "_enum": "ordinal",
-                            "_value": "targetEnum"
-                        }
-                    ],
-                    "to": {
-                        "_ref": "layer",
-                        "_enum": "ordinal",
-                        "_value": "front"
+            await batchPlay(
+                [
+                    {
+                        _obj: 'move',
+                        _target: [
+                            {
+                                _ref: 'layer',
+                                _enum: 'ordinal',
+                                _value: 'targetEnum',
+                            },
+                        ],
+                        to: {
+                            _ref: 'layer',
+                            _enum: 'ordinal',
+                            _value: 'front',
+                        },
+                        _isCommand: true,
                     },
-                    "_isCommand": true
+                ],
+                {
+                    synchronousExecution: true,
+                    modalBehavior: 'wait',
                 }
-            ], {
-                "synchronousExecution": true,
-                "modalBehavior": "wait"
-            });
+            );
 
             console.log(`[PS] Layer successfully moved to top`);
         } catch (e) {
-            console.error("Error moving layer to top:", e);
-            throw e;  // 抛出错误，让调用者知道移动失败
+            console.error('Error moving layer to top:', e);
+            throw e; // 抛出错误，让调用者知道移动失败
         }
     }
 
@@ -839,14 +893,21 @@ class PSOperations {
      * @param {Object} region - 可选，需要导出的区域 {left, top, width, height}
      * @returns {Promise<Object>} - 包含file和token的对象
      */
-    static async exportVisibleLayersAsWebP(maxSize = 2048, quality = 80, executionContext = null, region = null) {
+    static async exportVisibleLayersAsWebP(
+        maxSize = 2048,
+        quality = 80,
+        executionContext = null,
+        region = null
+    ) {
         try {
             const doc = app.activeDocument;
             if (!doc) {
-                throw new Error("No active document");
+                throw new Error('No active document');
             }
 
-            console.log(`[PS] Exporting visible layers as WebP (maxSize: ${maxSize}, quality: ${quality})`);
+            console.log(
+                `[PS] Exporting visible layers as WebP (maxSize: ${maxSize}, quality: ${quality})`
+            );
 
             // 获取导出区域尺寸
             let exportSourceWidth, exportSourceHeight;
@@ -854,12 +915,16 @@ class PSOperations {
                 // 如果指定了区域，使用区域尺寸
                 exportSourceWidth = region.width;
                 exportSourceHeight = region.height;
-                console.log(`[PS] Exporting region: ${exportSourceWidth}x${exportSourceHeight} at (${region.left}, ${region.top})`);
+                console.log(
+                    `[PS] Exporting region: ${exportSourceWidth}x${exportSourceHeight} at (${region.left}, ${region.top})`
+                );
             } else {
                 // 否则使用画布尺寸
                 exportSourceWidth = doc.width;
                 exportSourceHeight = doc.height;
-                console.log(`[PS] Exporting full canvas: ${exportSourceWidth}x${exportSourceHeight}`);
+                console.log(
+                    `[PS] Exporting full canvas: ${exportSourceWidth}x${exportSourceHeight}`
+                );
             }
 
             // 计算导出尺寸,保持宽高比
@@ -894,8 +959,8 @@ class PSOperations {
             let suspensionID = null;
             if (executionContext && executionContext.hostControl) {
                 suspensionID = await executionContext.hostControl.suspendHistory({
-                    "documentID": doc.id,
-                    "name": "导出图片"
+                    documentID: doc.id,
+                    name: '导出图片',
                 });
                 console.log('[PS] History suspended - all export operations will be combined');
             }
@@ -908,14 +973,19 @@ class PSOperations {
 
                     // 合并可见图层到新图层
                     console.log('[PS] Merging visible layers...');
-                    await batchPlay([{
-                        "_obj": "mergeVisible",
-                        "duplicate": true,
-                        "_isCommand": true
-                    }], {
-                        "synchronousExecution": true,
-                        "modalBehavior": "wait"
-                    });
+                    await batchPlay(
+                        [
+                            {
+                                _obj: 'mergeVisible',
+                                duplicate: true,
+                                _isCommand: true,
+                            },
+                        ],
+                        {
+                            synchronousExecution: true,
+                            modalBehavior: 'wait',
+                        }
+                    );
 
                     // 如果有区域，先裁切到区域
                     if (region) {
@@ -924,7 +994,7 @@ class PSOperations {
                             left: region.left,
                             top: region.top,
                             right: region.right,
-                            bottom: region.bottom
+                            bottom: region.bottom,
                         });
                     }
 
@@ -936,7 +1006,9 @@ class PSOperations {
                 }
 
                 // 展平图像（自动将透明背景填充为白色）
-                console.log('[PS] Flattening image (transparent areas will be filled with white)...');
+                console.log(
+                    '[PS] Flattening image (transparent areas will be filled with white)...'
+                );
                 await doc.flatten();
                 console.log('[PS] Image flattened with white background');
 
@@ -944,30 +1016,35 @@ class PSOperations {
                 console.log('[PS] Saving WebP file...');
                 const fileToken = fs.createSessionToken(webpFile);
 
-                await batchPlay([{
-                    "_obj": "save",
-                    "as": {
-                        "_obj": "WebPFormat",
-                        "compression": {
-                            "_enum": "WebPCompression",
-                            "_value": "compressionLossy"
+                await batchPlay(
+                    [
+                        {
+                            _obj: 'save',
+                            as: {
+                                _obj: 'WebPFormat',
+                                compression: {
+                                    _enum: 'WebPCompression',
+                                    _value: 'compressionLossy',
+                                },
+                                quality: quality,
+                                includeXMPData: false,
+                                includeEXIFData: false,
+                                includePsExtras: false,
+                            },
+                            in: {
+                                _path: fileToken,
+                                _kind: 'local',
+                            },
+                            copy: true,
+                            lowerCase: true,
+                            _isCommand: true,
                         },
-                        "quality": quality,
-                        "includeXMPData": false,
-                        "includeEXIFData": false,
-                        "includePsExtras": false
-                    },
-                    "in": {
-                        "_path": fileToken,
-                        "_kind": "local"
-                    },
-                    "copy": true,
-                    "lowerCase": true,
-                    "_isCommand": true
-                }], {
-                    "synchronousExecution": true,
-                    "modalBehavior": "wait"
-                });
+                    ],
+                    {
+                        synchronousExecution: true,
+                        modalBehavior: 'wait',
+                    }
+                );
 
                 console.log(`[PS] Export completed: ${webpFile.nativePath}`);
 
@@ -978,9 +1055,8 @@ class PSOperations {
                     file: webpFile,
                     token: token,
                     width: exportWidth,
-                    height: exportHeight
+                    height: exportHeight,
                 };
-
             } finally {
                 // 回滚所有历史记录,恢复文档到导出前的状态
                 // commit=false表示不提交更改,相当于撤销所有操作
@@ -989,10 +1065,9 @@ class PSOperations {
                     console.log('[PS] History rolled back - document restored to original state');
                 }
             }
-
         } catch (e) {
-            console.error("[PS] Error exporting visible layers:", e);
-            const errorMsg = e.message || String(e) || "Unknown error during export";
+            console.error('[PS] Error exporting visible layers:', e);
+            const errorMsg = e.message || String(e) || 'Unknown error during export';
             throw new Error(`Failed to export visible layers: ${errorMsg}`);
         }
     }
@@ -1006,7 +1081,7 @@ class PSOperations {
         try {
             const doc = app.activeDocument;
             if (!doc) {
-                throw new Error("No active document");
+                throw new Error('No active document');
             }
 
             let sourceGroup = null;
@@ -1014,22 +1089,24 @@ class PSOperations {
 
             // 遍历顶层图层查找Source和Reference组
             for (const layer of doc.layers) {
-                if (layer.kind === "group") {
+                if (layer.kind === 'group') {
                     const layerName = layer.name.toLowerCase();
-                    if (layerName === "source") {
+                    if (layerName === 'source') {
                         sourceGroup = layer;
-                    } else if (layerName === "reference") {
+                    } else if (layerName === 'reference') {
                         referenceGroup = layer;
                     }
                 }
             }
 
             console.log(`[PS] Found Source group: ${sourceGroup ? sourceGroup.name : 'None'}`);
-            console.log(`[PS] Found Reference group: ${referenceGroup ? referenceGroup.name : 'None'}`);
+            console.log(
+                `[PS] Found Reference group: ${referenceGroup ? referenceGroup.name : 'None'}`
+            );
 
             return { sourceGroup, referenceGroup };
         } catch (e) {
-            console.error("Error finding source/reference groups:", e);
+            console.error('Error finding source/reference groups:', e);
             throw e;
         }
     }
@@ -1045,14 +1122,22 @@ class PSOperations {
      * @param {Object} region - 可选,需要导出的区域 {left, top, width, height}
      * @returns {Promise<Object>} - 包含file和base64的对象
      */
-    static async exportGroupAsWebP(group, maxSize = 2048, quality = 80, executionContext = null, region = null) {
+    static async exportGroupAsWebP(
+        group,
+        maxSize = 2048,
+        quality = 80,
+        executionContext = null,
+        region = null
+    ) {
         try {
             const doc = app.activeDocument;
             if (!doc || !group) {
-                throw new Error("Invalid document or group");
+                throw new Error('Invalid document or group');
             }
 
-            console.log(`[PS] Exporting group: ${group.name} (maxSize: ${maxSize}, quality: ${quality})`);
+            console.log(
+                `[PS] Exporting group: ${group.name} (maxSize: ${maxSize}, quality: ${quality})`
+            );
 
             // 获取导出区域尺寸
             let exportSourceWidth, exportSourceHeight;
@@ -1096,8 +1181,8 @@ class PSOperations {
             let suspensionID = null;
             if (executionContext && executionContext.hostControl) {
                 suspensionID = await executionContext.hostControl.suspendHistory({
-                    "documentID": doc.id,
-                    "name": `导出组: ${group.name}`
+                    documentID: doc.id,
+                    name: `导出组: ${group.name}`,
                 });
                 console.log('[PS] History suspended - all export operations will be combined');
             }
@@ -1121,14 +1206,19 @@ class PSOperations {
 
                 // 合并可见图层到新图层
                 console.log('[PS] Merging visible layers in group...');
-                await batchPlay([{
-                    "_obj": "mergeVisible",
-                    "duplicate": true,
-                    "_isCommand": true
-                }], {
-                    "synchronousExecution": true,
-                    "modalBehavior": "wait"
-                });
+                await batchPlay(
+                    [
+                        {
+                            _obj: 'mergeVisible',
+                            duplicate: true,
+                            _isCommand: true,
+                        },
+                    ],
+                    {
+                        synchronousExecution: true,
+                        modalBehavior: 'wait',
+                    }
+                );
 
                 // 如果有区域,裁切到区域
                 if (region) {
@@ -1137,7 +1227,7 @@ class PSOperations {
                         left: region.left,
                         top: region.top,
                         right: region.right,
-                        bottom: region.bottom
+                        bottom: region.bottom,
                     });
                 }
 
@@ -1148,46 +1238,52 @@ class PSOperations {
                 }
 
                 // 展平图像（自动将透明背景填充为白色）
-                console.log('[PS] Flattening image (transparent areas will be filled with white)...');
+                console.log(
+                    '[PS] Flattening image (transparent areas will be filled with white)...'
+                );
                 await doc.flatten();
                 console.log('[PS] Image flattened with white background');
 
                 // 保存为WebP
                 console.log('[PS] Saving as WebP...');
                 const fileToken = fs.createSessionToken(webpFile);
-                await batchPlay([{
-                    "_obj": "save",
-                    "as": {
-                        "_obj": "WebPFormat",
-                        "compression": {
-                            "_enum": "WebPCompression",
-                            "_value": "compressionLossy"
+                await batchPlay(
+                    [
+                        {
+                            _obj: 'save',
+                            as: {
+                                _obj: 'WebPFormat',
+                                compression: {
+                                    _enum: 'WebPCompression',
+                                    _value: 'compressionLossy',
+                                },
+                                quality: quality,
+                                includeXMPData: false,
+                                includeEXIFData: false,
+                                includePsExtras: false,
+                            },
+                            in: {
+                                _path: fileToken,
+                                _kind: 'local',
+                            },
+                            copy: true,
+                            lowerCase: true,
+                            _isCommand: true,
                         },
-                        "quality": quality,
-                        "includeXMPData": false,
-                        "includeEXIFData": false,
-                        "includePsExtras": false
-                    },
-                    "in": {
-                        "_path": fileToken,
-                        "_kind": "local"
-                    },
-                    "copy": true,
-                    "lowerCase": true,
-                    "_isCommand": true
-                }], {
-                    "synchronousExecution": true,
-                    "modalBehavior": "wait"
-                });
+                    ],
+                    {
+                        synchronousExecution: true,
+                        modalBehavior: 'wait',
+                    }
+                );
 
                 console.log(`[PS] Group export completed: ${webpFile.nativePath}`);
 
                 return {
                     file: webpFile,
                     width: exportWidth,
-                    height: exportHeight
+                    height: exportHeight,
                 };
-
             } finally {
                 // 回滚所有历史记录,恢复文档到导出前的状态
                 // commit=false表示不提交更改,相当于撤销所有操作
@@ -1196,10 +1292,9 @@ class PSOperations {
                     console.log('[PS] History rolled back - document restored to original state');
                 }
             }
-
         } catch (e) {
-            console.error("[PS] Error exporting group:", e);
-            const errorMsg = e.message || String(e) || "Unknown error during group export";
+            console.error('[PS] Error exporting group:', e);
+            const errorMsg = e.message || String(e) || 'Unknown error during group export';
             throw new Error(`Failed to export group: ${errorMsg}`);
         }
     }
@@ -1215,7 +1310,7 @@ class PSOperations {
         try {
             const doc = app.activeDocument;
             if (!doc) {
-                throw new Error("No active document");
+                throw new Error('No active document');
             }
 
             console.log('[PS] Checking for Reference/Source groups...');
@@ -1225,11 +1320,11 @@ class PSOperations {
             let sourceGroup = null;
 
             for (const layer of doc.layers) {
-                if (layer.kind === "group") {
+                if (layer.kind === 'group') {
                     const layerName = layer.name.toLowerCase();
-                    if (layerName === "reference") {
+                    if (layerName === 'reference') {
                         referenceGroup = layer;
-                    } else if (layerName === "source") {
+                    } else if (layerName === 'source') {
                         sourceGroup = layer;
                     }
                 }
@@ -1242,7 +1337,7 @@ class PSOperations {
             if (!sourceGroup) {
                 console.log('[PS] Creating Source group...');
                 sourceGroup = await doc.createLayerGroup({
-                    name: "Source"
+                    name: 'Source',
                 });
                 sourceCreated = true;
             }
@@ -1251,50 +1346,64 @@ class PSOperations {
             if (!referenceGroup) {
                 console.log('[PS] Creating Reference group...');
                 referenceGroup = await doc.createLayerGroup({
-                    name: "Reference"
+                    name: 'Reference',
                 });
                 referenceCreated = true;
             }
 
             // 设置Reference组颜色为紫色
             console.log('[PS] Setting Reference group color to violet...');
-            await batchPlay([{
-                "_obj": "set",
-                "_target": [{
-                    "_ref": "layer",
-                    "_id": referenceGroup.id
-                }],
-                "to": {
-                    "_obj": "layer",
-                    "color": {
-                        "_enum": "color",
-                        "_value": "violet"
-                    }
+            await batchPlay(
+                [
+                    {
+                        _obj: 'set',
+                        _target: [
+                            {
+                                _ref: 'layer',
+                                _id: referenceGroup.id,
+                            },
+                        ],
+                        to: {
+                            _obj: 'layer',
+                            color: {
+                                _enum: 'color',
+                                _value: 'violet',
+                            },
+                        },
+                    },
+                ],
+                {
+                    synchronousExecution: true,
+                    modalBehavior: 'wait',
                 }
-            }], {
-                "synchronousExecution": true,
-                "modalBehavior": "wait"
-            });
+            );
 
             // 设置Source组颜色为绿色
             console.log('[PS] Setting Source group color to green...');
-            await batchPlay([{
-                "_obj": "set",
-                "_target": [{
-                    "_ref": "layer",
-                    "_id": sourceGroup.id
-                }],
-                "to": {
-                    "_obj": "layer",
-                    "color": {
-                        "_enum": "color",
-                        "_value": "green"
-                    }
+            await batchPlay(
+                [
+                    {
+                        _obj: 'set',
+                        _target: [
+                            {
+                                _ref: 'layer',
+                                _id: sourceGroup.id,
+                            },
+                        ],
+                        to: {
+                            _obj: 'layer',
+                            color: {
+                                _enum: 'color',
+                                _value: 'green',
+                            },
+                        },
+                    },
+                ],
+                {
+                    synchronousExecution: true,
+                    modalBehavior: 'wait',
                 }
-            }], {
-                "synchronousExecution": true,
-                "modalBehavior": "wait"
-            });
+            );
 
             console.log('[PS] Reference/Source groups ready');
 
@@ -1303,12 +1412,11 @@ class PSOperations {
                 referenceCreated,
                 sourceCreated,
                 referenceGroup: referenceGroup.name,
-                sourceGroup: sourceGroup.name
+                sourceGroup: sourceGroup.name,
             };
-
         } catch (e) {
-            console.error("[PS] Error ensuring source/reference groups:", e);
-            const errorMsg = e.message || String(e) || "Unknown error";
+            console.error('[PS] Error ensuring source/reference groups:', e);
+            const errorMsg = e.message || String(e) || 'Unknown error';
             throw new Error(`Failed to ensure source/reference groups: ${errorMsg}`);
         }
     }
@@ -1324,7 +1432,7 @@ class PSOperations {
         try {
             const doc = app.activeDocument;
             if (!doc) {
-                throw new Error("No active document");
+                throw new Error('No active document');
             }
 
             const currentWidth = doc.width;
@@ -1333,16 +1441,16 @@ class PSOperations {
 
             // 支持的标准比例列表
             const standardRatios = [
-                { name: "1:1", ratio: 1 / 1 },
-                { name: "2:3", ratio: 2 / 3 },
-                { name: "3:2", ratio: 3 / 2 },
-                { name: "3:4", ratio: 3 / 4 },
-                { name: "4:3", ratio: 4 / 3 },
-                { name: "4:5", ratio: 4 / 5 },
-                { name: "5:4", ratio: 5 / 4 },
-                { name: "9:16", ratio: 9 / 16 },
-                { name: "16:9", ratio: 16 / 9 },
-                { name: "21:9", ratio: 21 / 9 }
+                { name: '1:1', ratio: 1 / 1 },
+                { name: '2:3', ratio: 2 / 3 },
+                { name: '3:2', ratio: 3 / 2 },
+                { name: '3:4', ratio: 3 / 4 },
+                { name: '4:3', ratio: 4 / 3 },
+                { name: '4:5', ratio: 4 / 5 },
+                { name: '5:4', ratio: 5 / 4 },
+                { name: '9:16', ratio: 9 / 16 },
+                { name: '16:9', ratio: 16 / 9 },
+                { name: '21:9', ratio: 21 / 9 },
             ];
 
             // 计算当前画布的宽高比
@@ -1361,7 +1469,9 @@ class PSOperations {
                 }
             }
 
-            console.log(`[PS] Closest ratio: ${closestRatio.name} (${closestRatio.ratio.toFixed(4)})`);
+            console.log(
+                `[PS] Closest ratio: ${closestRatio.name} (${closestRatio.ratio.toFixed(4)})`
+            );
 
             // 计算新的画布尺寸(只扩展,不缩小)
             let newWidth = currentWidth;
@@ -1383,14 +1493,14 @@ class PSOperations {
                     newWidth: currentWidth,
                     newHeight: currentHeight,
                     targetRatio: closestRatio.name,
-                    changed: false
+                    changed: false,
                 };
             }
 
             console.log(`[PS] New canvas size: ${newWidth}x${newHeight}`);
 
             // 使用resizeCanvas扩展画布(居中,不裁切)
-            await doc.resizeCanvas(newWidth, newHeight, "center");
+            await doc.resizeCanvas(newWidth, newHeight, 'center');
 
             console.log(`[PS] Canvas resized successfully to ${closestRatio.name}`);
 
@@ -1400,12 +1510,11 @@ class PSOperations {
                 newWidth: newWidth,
                 newHeight: newHeight,
                 targetRatio: closestRatio.name,
-                changed: true
+                changed: true,
             };
-
         } catch (e) {
-            console.error("[PS] Error applying smart canvas ratio:", e);
-            const errorMsg = e.message || String(e) || "Unknown error";
+            console.error('[PS] Error applying smart canvas ratio:', e);
+            const errorMsg = e.message || String(e) || 'Unknown error';
             throw new Error(`Failed to apply smart canvas ratio: ${errorMsg}`);
         }
     }

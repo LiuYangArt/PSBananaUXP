@@ -3,16 +3,16 @@
  */
 
 const ASPECT_RATIOS = [
-    { name: "1:1", value: 1.0 },
-    { name: "2:3", value: 2 / 3 },
-    { name: "3:2", value: 3 / 2 },
-    { name: "3:4", value: 3 / 4 },
-    { name: "4:3", value: 4 / 3 },
-    { name: "4:5", value: 4 / 5 },
-    { name: "5:4", value: 5 / 4 },
-    { name: "9:16", value: 9 / 16 },
-    { name: "16:9", value: 16 / 9 },
-    { name: "21:9", value: 21 / 9 }
+    { name: '1:1', value: 1.0 },
+    { name: '2:3', value: 2 / 3 },
+    { name: '3:2', value: 3 / 2 },
+    { name: '3:4', value: 3 / 4 },
+    { name: '4:3', value: 4 / 3 },
+    { name: '4:5', value: 4 / 5 },
+    { name: '5:4', value: 5 / 4 },
+    { name: '9:16', value: 9 / 16 },
+    { name: '16:9', value: 16 / 9 },
+    { name: '21:9', value: 21 / 9 },
 ];
 
 /**
@@ -23,7 +23,7 @@ const ASPECT_RATIOS = [
  */
 function calculateAspectRatio(width, height) {
     if (!width || !height || width <= 0 || height <= 0) {
-        return "1:1"; // Default fallback
+        return '1:1'; // Default fallback
     }
 
     const canvasRatio = width / height;
