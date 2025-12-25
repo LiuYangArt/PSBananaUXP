@@ -9,6 +9,7 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
 
 # UXP 构建产物 (Build Artifacts)
 dist/
@@ -20,21 +21,23 @@ build/
 *.code-workspace
 .idea/
 
+# ESLint 缓存
+.eslintcache
+
 # 敏感信息与私有配置 (Secrets & Private Config)
 .env
-.qoder
+.qoder/
 
 # 临时文件 (Temp Files)
 ps_ai*
+*.bak
+*.tmp
 
 # 特定忽略 (Specific Ignores)
 todo.md
 
 # 用户配置/数据 (User Profiles)
-Profiles/*
-Profiles/.*
+Profiles/
 
+# 保留 Agent 规则文件
 !.agent/
-!.agent/rules/psbananaprojectrules.md
-
-
