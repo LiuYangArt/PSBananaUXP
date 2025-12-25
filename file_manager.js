@@ -1,5 +1,4 @@
 const fs = require('uxp').storage.localFileSystem;
-const { app } = require('photoshop');
 
 /**
  * Manages temporary files for AI image generation
@@ -27,7 +26,7 @@ class FileManager {
             // 尝试获取现有目录，如果不存在则创建
             try {
                 this.logDirPath = await dataFolder.getEntry(this.logDirName);
-            } catch (e) {
+            } catch {
                 // 目录不存在，创建新目录
                 console.log(`[FileManager] Log folder not found, creating: ${this.logDirName}`);
                 this.logDirPath = await dataFolder.createFolder(this.logDirName);
@@ -56,7 +55,7 @@ class FileManager {
             // 尝试获取现有目录，如果不存在则创建
             try {
                 this.imageDirPath = await dataFolder.getEntry(this.imageDirName);
-            } catch (e) {
+            } catch {
                 // 目录不存在，创建新目录
                 console.log(`[FileManager] Image folder not found, creating: ${this.imageDirName}`);
                 this.imageDirPath = await dataFolder.createFolder(this.imageDirName);
@@ -79,7 +78,7 @@ class FileManager {
             let workflowsFolder;
             try {
                 workflowsFolder = await dataFolder.getEntry('Workflows');
-            } catch (e) {
+            } catch {
                 console.log(`[FileManager] Workflows folder not found, creating...`);
                 workflowsFolder = await dataFolder.createFolder('Workflows');
             }
@@ -99,7 +98,7 @@ class FileManager {
             const entry = await folder.getEntry(filename);
             const content = await entry.read();
             return JSON.parse(content);
-        } catch (e) {
+        } catch {
             return null; // File not found or error
         }
     }
@@ -314,7 +313,7 @@ class FileManager {
                     if (stats.modificationTime && now - stats.modificationTime > maxAge) {
                         await entry.delete();
                     }
-                } catch (e) {
+                } catch {
                     // Metadata not available, skip
                 }
             }
@@ -369,7 +368,7 @@ class FileManager {
                 const folder = await this.getLogFolder();
                 await navigator.clipboard.writeText(folder.nativePath);
                 throw new Error(`发生错误，路径已复制到剪贴板: ${folder.nativePath}`);
-            } catch (copyError) {
+            } catch {
                 throw new Error(`无法打开文件夹: ${e.message}`);
             }
         }

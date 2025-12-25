@@ -178,7 +178,7 @@ function setupGenerateUI() {
     const btnTestExport = document.getElementById('btnTestExport');
     const btnEnsureGroups = document.getElementById('btnEnsureGroups');
     const multiImageModeCheckbox = document.getElementById('multiImageModeCheckbox');
-    const multiImageModeSection = document.getElementById('multiImageModeSection');
+    const _multiImageModeSection = document.getElementById('multiImageModeSection');
     const resolutionSelect = document.getElementById('resolutionSelect');
     const btnSmartCanvasRatio = document.getElementById('btnSmartCanvasRatio');
 
@@ -332,7 +332,7 @@ function setupSettingsUI() {
     const inputBaseUrl = document.getElementById('inputBaseUrl');
     const inputModelId = document.getElementById('inputModelId');
     const debugModeCheckbox = document.getElementById('debugModeCheckbox');
-    const debugFolderPathInput = document.getElementById('debugFolderPath');
+    const _debugFolderPathInput = document.getElementById('debugFolderPath');
     const inputMaxSize = document.getElementById('inputMaxSize');
     const inputQuality = document.getElementById('inputQuality');
     const languageSelect = document.getElementById('languageSelect');
@@ -957,7 +957,7 @@ Stack: ${e?.stack || 'N/A'}`;
     }
 }
 
-async function promptUser(message, defaultValue = '') {
+function promptUser(message, defaultValue = '') {
     return new Promise((resolve) => {
         const dialog = document.createElement('dialog');
         dialog.className = 'custom-dialog';
@@ -1030,7 +1030,7 @@ async function promptUser(message, defaultValue = '') {
     });
 }
 
-async function confirmUser(message) {
+function confirmUser(message) {
     try {
         return new Promise((resolve) => {
             const dialog = document.createElement('dialog');
@@ -1432,7 +1432,7 @@ entrypoints.setup({
     },
     panels: {
         psbanana: {
-            show({ node } = {}) {
+            show({ node: _node } = {}) {
                 // 面板显示时的处理
                 // 单面板应用不需要特殊处理，index.html 会自动加载
                 console.log('[Panel] PS Banana panel shown');

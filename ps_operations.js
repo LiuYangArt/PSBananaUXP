@@ -1,8 +1,7 @@
 const { app } = require('photoshop');
 const { batchPlay } = require('photoshop').action;
-const { executeAsModal } = require('photoshop').core;
 const fs = require('uxp').storage.localFileSystem;
-const { calculateAspectRatio, ASPECT_RATIOS } = require('./aspect_ratio');
+const { ASPECT_RATIOS } = require('./aspect_ratio');
 
 /**
  * Photoshop operations for image generation
@@ -13,7 +12,7 @@ class PSOperations {
      * Get current canvas info (width, height)
      * Must be called within executeAsModal
      */
-    static async getCanvasInfo() {
+    static getCanvasInfo() {
         try {
             const doc = app.activeDocument;
             if (!doc) {
@@ -214,7 +213,7 @@ class PSOperations {
      * Get the next available BananaImage layer name
      * Returns: BananaImage00, BananaImage01, etc.
      */
-    static async getNextLayerName() {
+    static getNextLayerName() {
         try {
             const doc = app.activeDocument;
             if (!doc) {
@@ -368,7 +367,7 @@ class PSOperations {
             console.log(`[PS] Calling batchPlay with session token`);
 
             // 先导入图片（会导入到当前活动图层的位置）
-            const result = await batchPlay(
+            await batchPlay(
                 [
                     {
                         _obj: 'placeEvent',
@@ -945,7 +944,7 @@ class PSOperations {
             let exportFolder;
             try {
                 exportFolder = await dataFolder.getEntry('ExportedImages');
-            } catch (e) {
+            } catch {
                 // 文件夹不存在,创建新的
                 exportFolder = await dataFolder.createFolder('ExportedImages');
             }
@@ -1077,7 +1076,7 @@ class PSOperations {
      * 必须在executeAsModal中调用
      * @returns {Promise<Object>} - 返回 {sourceGroup, referenceGroup}
      */
-    static async findSourceReferenceGroups() {
+    static findSourceReferenceGroups() {
         try {
             const doc = app.activeDocument;
             if (!doc) {
@@ -1168,7 +1167,7 @@ class PSOperations {
             let exportFolder;
             try {
                 exportFolder = await dataFolder.getEntry('ExportedImages');
-            } catch (e) {
+            } catch {
                 exportFolder = await dataFolder.createFolder('ExportedImages');
             }
             const timestamp = Date.now();

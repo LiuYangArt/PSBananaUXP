@@ -19,7 +19,7 @@ class PresetManager {
             let entry;
             try {
                 entry = await dataFolder.getEntry('presets.json');
-            } catch (e) {
+            } catch {
                 // File doesn't exist, use defaults
                 this.presets = [
                     { name: 'Photorealistic', prompt: 'A highly detailed, photorealistic image' },

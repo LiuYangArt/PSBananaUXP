@@ -485,7 +485,7 @@ class ImageGenerator {
         resolution,
         provider,
         mode = 'text2img',
-        searchWeb = false,
+        _searchWeb = false,
         inputImage = null,
         sourceImage = null,
         referenceImage = null
@@ -587,7 +587,7 @@ class ImageGenerator {
         resolution,
         provider,
         mode = 'text2img',
-        searchWeb = false,
+        _searchWeb = false,
         inputImage = null,
         sourceImage = null,
         referenceImage = null
@@ -682,7 +682,7 @@ class ImageGenerator {
         resolution,
         provider,
         mode = 'text2img',
-        searchWeb = false,
+        _searchWeb = false,
         inputImage = null,
         sourceImage = null,
         referenceImage = null
@@ -999,15 +999,15 @@ class ImageGenerator {
     /**
      * Smartly inject parameters into a ComfyUI workflow
      */
-    _injectParamsIntoWorkflow(workflow, prompt, width, height, seed, defaultCkptName) {
+    _injectParamsIntoWorkflow(workflow, prompt, width, height, seed, _defaultCkptName) {
         let kSamplerNode = null;
         let positiveNodeId = null;
         let negativeNodeId = null;
 
         // 1. Find KSampler (to set Seed/Steps and find Prompts)
-        for (const [id, node] of Object.entries(workflow)) {
+        for (const [_id, node] of Object.entries(workflow)) {
             if (node.class_type === 'KSampler' || node.class_type === 'KSamplerAdvanced') {
-                kSamplerNode = node;
+                const _kSamplerNode = node;
                 // Inject Seed
                 if (node.inputs) {
                     node.inputs.seed = seed;
@@ -1027,7 +1027,7 @@ class ImageGenerator {
         }
 
         // 2. Inject Dimensions (EmptyLatentImage)
-        for (const [id, node] of Object.entries(workflow)) {
+        for (const [_id2, node] of Object.entries(workflow)) {
             if (
                 node.class_type.startsWith('EmptyLatentImage') ||
                 node.class_type.includes('EmptySD3Latent')
@@ -1062,7 +1062,7 @@ class ImageGenerator {
         // 4. Inject Model Name?
         // Only if we find a CheckpointLoaderSimple AND it matches the specific "CheckpointLoaderSimple" class.
         // If the user uses UNetLoader (like the error case), we DO NOT touch it, avoiding the "value_not_in_list" error.
-        for (const [id, node] of Object.entries(workflow)) {
+        for (const [_id3, node] of Object.entries(workflow)) {
             if (node.class_type === 'CheckpointLoaderSimple') {
                 // Check if the current value is valid or placeholder?
                 // Strategy: If user explicitly set a model in Settings, and this is a CheckpointLoaderSimple, update it.
@@ -1430,7 +1430,7 @@ class ImageGenerator {
             const jsonStr = JSON.stringify(responseData);
             const truncated = jsonStr.length > 200 ? jsonStr.substring(0, 200) + '...' : jsonStr;
             return `Response: ${truncated}`;
-        } catch (e) {
+        } catch {
             return 'Unable to parse server response';
         }
     }

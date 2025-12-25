@@ -1,5 +1,4 @@
 const fs = require('uxp').storage.localFileSystem;
-const { domains } = require('uxp').storage;
 
 class SettingsManager {
     constructor() {
@@ -23,7 +22,7 @@ class SettingsManager {
             let entry;
             try {
                 entry = await dataFolder.getEntry('settings.json');
-            } catch (e) {
+            } catch {
                 // File doesn't exist
                 await this.save();
                 this.loaded = true;
@@ -71,7 +70,7 @@ class ProviderManager {
             let entry;
             try {
                 entry = await dataFolder.getEntry('providers.json');
-            } catch (e) {
+            } catch {
                 // File doesn't exist, use defaults
                 this.providers = [
                     {
