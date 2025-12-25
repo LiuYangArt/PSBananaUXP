@@ -15,12 +15,19 @@
                 "https://generativelanguage.googleapis.com",
                 "https://yunwu.zeabur.app",
                 "https://yunwu.ai",
+                "https://googlecdn.datas.systems",
+                "https://*.datas.systems",
                 "https://api.gptgod.online",
+                "https://*.gptgod.online",
                 "https://openrouter.ai",
+                "https://*.openrouter.ai",
                 "https://ark.cn-beijing.volces.com",
+                "https://*.volces.com",
+                "https://*.volccdn.com",
+                "https://*.googleapis.com",
+                "https://*.googleusercontent.com",
                 "http://127.0.0.1",
-                "http://localhost",
-                "all"
+                "http://localhost"
             ]
         },
         "localFileSystem": "fullAccess"
