@@ -176,16 +176,42 @@ class ProviderManager {
     async testConnection(providerConfig) {
         const { apiKey, baseUrl, name } = providerConfig;
 
+        // 日志输出函数 - 写入文件
+        const logToFile = async (message) => {
+            console.log(`[TestConnection] ${message}`);
+            try {
+                const dataFolder = await fs.getDataFolder();
+                const logFile = await dataFolder.createFile('connection_test.log', {
+                    overwrite: true,
+                });
+                const timestamp = new Date().toISOString();
+                await logFile.write(`[${timestamp}] ${message}`);
+            } catch (e) {
+                console.error('Failed to write log:', e);
+            }
+        };
+
+        await logToFile(`Testing connection - Name: ${name}, BaseUrl: ${baseUrl}`);
+
         if (!apiKey || !baseUrl) {
+            await logToFile('Error: Missing API Key or Base URL');
             return { success: false, message: 'Missing API Key or Base URL.' };
         }
 
         let apiUrl = '';
         const headers = { 'Content-Type': 'application/json' };
 
-        if (name === 'Google Gemini' || name === 'Yunwu Gemini') {
+        // 识别 Gemini 风格的 URL (包括本地代理)
+        const isGeminiStyle =
+            name === 'Google Gemini' ||
+            name === 'Yunwu Gemini' ||
+            baseUrl.includes('v1beta') ||
+            baseUrl.includes('generativelanguage.googleapis.com');
+
+        if (isGeminiStyle) {
             const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
             apiUrl = `${cleanBaseUrl}/models?key=${apiKey}`;
+            await logToFile(`Using Gemini API style - URL: ${apiUrl}`);
         } else if (
             name.toLowerCase().includes('seedream') ||
             baseUrl.toLowerCase().includes('ark.cn-beijing.volces.com')
@@ -250,11 +276,16 @@ class ProviderManager {
             }
         }
 
+        await logToFile(`Final API URL: ${apiUrl}`);
+
         try {
+            await logToFile('Attempting real fetch...');
             const response = await fetch(apiUrl, {
                 method: 'GET',
                 headers: headers,
             });
+
+            await logToFile(`Fetch succeeded - Status: ${response.status}`);
 
             if (response.ok) {
                 const data = await response.json();
@@ -269,6 +300,7 @@ class ProviderManager {
                 return { success: false, message: `HTTP Error: ${response.status}` };
             }
         } catch (e) {
+            await logToFile(`Fetch FAILED: ${e.message}`);
             return { success: false, message: `Error: ${e.message}` };
         }
     }

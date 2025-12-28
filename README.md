@@ -40,7 +40,10 @@ photoshop + Google nano banana pro
 - 选区模式，可只把选区区域发送给ai进行生图
 - Prompt预设
 - 同时处理多生图任务功能
--
+- 同时处理多生图任务功能
+- 本地 API 支持:
+  - 支持连接本地运行的 Gemini/OpenAI 兼容接口 (如 `http://localhost:8045`).
+  - **注意**: 修改 Manifest 权限或连接本地服务时，建议使用 `localhost` 而非 `127.0.0.1` 以避免 UXP 权限问题，且如果遇到 Permission denied 错误，请尝试**重启 Photoshop**。
 
 ## 增加了对comfyui的支持
 
