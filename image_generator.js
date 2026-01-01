@@ -216,6 +216,18 @@ class ImageGenerator {
                 sourceImage,
                 referenceImage
             );
+        } else if (providerType === 'antigravity_tools') {
+            return this._buildAntigravityPayload(
+                prompt,
+                aspectRatio,
+                resolution,
+                provider,
+                mode,
+                searchWeb,
+                inputImage,
+                sourceImage,
+                referenceImage
+            );
         }
     }
 
@@ -603,6 +615,88 @@ class ImageGenerator {
             image_config: imageConfig,
         };
         // 注：OpenRouter的格式可能不支持google_search工具，忽略searchWeb参数
+    }
+
+    /**
+     * Build Antigravity Tools payload
+     * Uses model name suffixes for resolution and aspect ratio.
+     * Endpoint: /v1/chat/completions
+     */
+    _buildAntigravityPayload(
+        prompt,
+        aspectRatio,
+        resolution,
+        provider,
+        mode = 'text2img',
+        _searchWeb = false,
+        inputImage = null,
+        sourceImage = null,
+        referenceImage = null
+    ) {
+        let model = provider.model;
+
+        // 1. Handle Resolution Suffix
+        if (resolution === '4K') {
+            model += '-4k';
+        }
+
+        // 2. Handle Aspect Ratio Suffix
+        if (aspectRatio && aspectRatio !== '1:1') {
+            const ratioSuffix = '-' + aspectRatio.replace(':', 'x');
+            model += ratioSuffix;
+        }
+
+        // 3. Build Content
+        const content = [];
+
+        // Multi-image handling (Source/Reference)
+        if (sourceImage || referenceImage) {
+            let imageIndex = 0;
+            let introText = prompt;
+
+            // Add images (Reference -> Source)
+            if (referenceImage) {
+                imageIndex++;
+                introText += `\n[Reference Image: See attached image ${imageIndex}]`;
+            }
+            if (sourceImage) {
+                imageIndex++;
+                introText += `\n[Source Image: See attached image ${imageIndex}]`;
+            }
+            
+            content.push({ type: 'text', text: introText });
+
+            if (referenceImage) {
+                content.push({
+                    type: 'image_url',
+                    image_url: { url: `data:image/webp;base64,${referenceImage}` }
+                });
+            }
+            if (sourceImage) {
+                content.push({
+                    type: 'image_url',
+                    image_url: { url: `data:image/webp;base64,${sourceImage}` }
+                });
+            }
+        } 
+        // Single image edit
+        else if (mode === 'imgedit' && inputImage) {
+            content.push({ type: 'text', text: prompt });
+            content.push({
+                type: 'image_url',
+                image_url: { url: `data:image/png;base64,${inputImage}` }
+            });
+        } 
+        // Text to Image
+        else {
+            content.push({ type: 'text', text: prompt });
+        }
+
+        return {
+            model: model,
+            messages: [{ role: 'user', content: content }],
+            stream: false
+        };
     }
 
     /**

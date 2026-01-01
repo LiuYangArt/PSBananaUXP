@@ -78,6 +78,20 @@ const PROVIDER_CONFIGS = {
         authType: 'bearer_token',
         requiresAuth: true,
     },
+    antigravity_tools: {
+        id: 'antigravity_tools',
+        name: 'Antigravity Tools',
+        type: 'antigravity_tools',
+        defaultBaseUrl: 'http://localhost:8045',
+        basePath: '/v1', // API 基础路径
+        defaultModel: 'gemini-3-pro-image',
+        endpoints: {
+            generate: '/chat/completions',
+            test: '/models',
+        },
+        authType: 'bearer_token',
+        requiresAuth: true,
+    },
     comfyui: {
         id: 'comfyui',
         name: 'Local ComfyUI',
@@ -238,6 +252,8 @@ function detectProviderType(name, baseUrl) {
         return 'openrouter';
     } else if (nameLower.includes('comfyui') || urlLower.includes(':8188')) {
         return 'comfyui';
+    } else if (nameLower.includes('antigravity')) {
+        return 'antigravity_tools';
     } else {
         // 默认为 Yunwu/Gemini-compatible 格式
         return 'yunwu';
