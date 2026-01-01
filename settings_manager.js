@@ -1,4 +1,5 @@
 const fs = require('uxp').storage.localFileSystem;
+const { getAllProviderConfigs, getProviderConfig } = require('./api_providers');
 
 class SettingsManager {
     constructor() {
@@ -71,52 +72,35 @@ class ProviderManager {
             try {
                 entry = await dataFolder.getEntry('providers.json');
             } catch {
-                // File doesn't exist, use defaults
-                this.providers = [
-                    {
-                        name: 'Google Gemini',
-                        apiKey: '',
-                        baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
-                        model: 'models/gemini-3-pro-image-preview',
-                    },
-                    {
-                        name: 'Yunwu Gemini',
-                        apiKey: '',
-                        baseUrl: 'https://yunwu.zeabur.app/v1beta',
-                        model: 'gemini-3-pro-image-preview',
-                    },
-                    {
-                        name: 'GPTGod NanoBanana Pro',
-                        apiKey: '',
-                        baseUrl: 'https://api.gptgod.online/v1/chat/completions',
-                        model: 'gemini-3-pro-image-preview',
-                    },
-                    {
-                        name: 'OpenRouter',
-                        apiKey: '',
-                        baseUrl: 'https://openrouter.ai/api/v1/chat/completions',
-                        model: 'google/gemini-3-pro-image-preview',
-                    },
-                    {
-                        name: 'Seedream 4.5',
-                        apiKey: '',
-                        baseUrl: 'https://ark.cn-beijing.volces.com/api/v3/images/generations',
-                        model: 'doubao-seedream-4-5-251128',
-                    },
-                    {
-                        name: 'Local ComfyUI',
-                        apiKey: 'not-needed',
-                        baseUrl: 'http://127.0.0.1:8188',
-                        model: 'z_image_turbo_bf16.safetensors',
-                    },
-                ];
+                // File doesn't exist, initialize with default provider configs
+                const defaultConfigs = getAllProviderConfigs();
+                this.providers = defaultConfigs.map((config) => ({
+                    name: config.name,
+                    apiKey: config.id === 'comfyui' ? 'not-needed' : '',
+                    baseUrl: config.defaultBaseUrl,
+                    model: config.defaultModel,
+                }));
                 await this.save();
                 this.loaded = true;
                 return;
             }
 
             const data = await entry.read();
-            this.providers = JSON.parse(data);
+            const savedProviders = JSON.parse(data);
+
+            // 合并保存的配置和默认配置
+            // 确保所有预定义的 providers 都存在
+            const defaultConfigs = getAllProviderConfigs();
+            this.providers = defaultConfigs.map((config) => {
+                const saved = savedProviders.find((p) => p.name === config.name);
+                return {
+                    name: config.name,
+                    apiKey: saved?.apiKey || (config.id === 'comfyui' ? 'not-needed' : ''),
+                    baseUrl: saved?.baseUrl || config.defaultBaseUrl,
+                    model: saved?.model || config.defaultModel,
+                };
+            });
+
             this.loaded = true;
         } catch (e) {
             console.error('Error loading providers:', e);
@@ -138,15 +122,6 @@ class ProviderManager {
         return this.providers.find((p) => p.name === name);
     }
 
-    async addProvider(name, apiKey = '', baseUrl = '', model = '') {
-        if (this.providers.find((p) => p.name === name)) {
-            return { success: false, message: 'Provider name already exists.' };
-        }
-        this.providers.push({ name, apiKey, baseUrl, model });
-        await this.save();
-        return { success: true, message: 'Provider added.' };
-    }
-
     async updateProvider(originalName, apiKey, baseUrl, model) {
         const provider = this.providers.find((p) => p.name === originalName);
         if (provider) {
@@ -159,22 +134,12 @@ class ProviderManager {
         return { success: false, message: 'Provider not found.' };
     }
 
-    async deleteProvider(name) {
-        const index = this.providers.findIndex((p) => p.name === name);
-        if (index !== -1) {
-            this.providers.splice(index, 1);
-            await this.save();
-            return { success: true, message: 'Provider deleted.' };
-        }
-        return { success: false, message: 'Provider not found.' };
-    }
-
     getAllNames() {
         return this.providers.map((p) => p.name);
     }
 
     async testConnection(providerConfig) {
-        const { apiKey, baseUrl, name } = providerConfig;
+        const { apiKey, baseUrl, name, model } = providerConfig;
 
         // 日志输出函数 - 写入文件
         const logToFile = async (message) => {
@@ -198,87 +163,22 @@ class ProviderManager {
             return { success: false, message: 'Missing API Key or Base URL.' };
         }
 
-        let apiUrl = '';
-        const headers = { 'Content-Type': 'application/json' };
-
-        // 识别 Gemini 风格的 URL (包括本地代理)
-        const isGeminiStyle =
-            name === 'Google Gemini' ||
-            name === 'Yunwu Gemini' ||
-            baseUrl.includes('v1beta') ||
-            baseUrl.includes('generativelanguage.googleapis.com');
-
-        if (isGeminiStyle) {
-            const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-            apiUrl = `${cleanBaseUrl}/models?key=${apiKey}`;
-            await logToFile(`Using Gemini API style - URL: ${apiUrl}`);
-        } else if (
-            name.toLowerCase().includes('seedream') ||
-            baseUrl.toLowerCase().includes('ark.cn-beijing.volces.com')
-        ) {
-            // Seedream API 不支持 /models 端点，返回特殊标记，由 main.js 转换为多语言文本
-            return { success: true, messageKey: 'msg_seedream_test_success' };
-        } else if (name.toLowerCase().includes('comfyui') || baseUrl.includes(':8188')) {
-            // ComfyUI Connection Test
-            try {
-                // Check system stats to verify server is running
-                const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-                apiUrl = `${cleanBaseUrl}/system_stats`;
-
-                const response = await fetch(apiUrl, { method: 'GET' });
-                if (response.ok) {
-                    return { success: true, message: 'ComfyUI Connected!' };
-                } else {
-                    return { success: false, message: `ComfyUI Error: ${response.status}` };
-                }
-            } catch (e) {
-                return { success: false, message: `ComfyUI Connection Failed: ${e.message}` };
-            }
-        } else if (
-            name.toLowerCase().includes('gptgod') ||
-            baseUrl.toLowerCase().includes('gptgod')
-        ) {
-            if (baseUrl.includes('/chat/completions')) {
-                apiUrl = baseUrl.replace('/chat/completions', '/models');
-            } else {
-                const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
-                apiUrl = cleanBaseUrl + 'models';
-            }
-            headers['Authorization'] = `Bearer ${apiKey}`;
-        } else if (
-            name.toLowerCase().includes('openrouter') ||
-            baseUrl.toLowerCase().includes('openrouter.ai')
-        ) {
-            if (baseUrl.includes('/chat/completions')) {
-                apiUrl = baseUrl.replace('/chat/completions', '/models');
-            } else {
-                const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
-                apiUrl = cleanBaseUrl + 'models';
-            }
-            headers['Authorization'] = `Bearer ${apiKey}`;
-        } else {
-            // Custom / OpenAI compatible fallback
-            if (baseUrl.includes('v1')) {
-                apiUrl = baseUrl;
-                if (apiUrl.includes('/chat/completions')) {
-                    apiUrl = apiUrl.replace('/chat/completions', '');
-                }
-                if (!apiUrl.endsWith('/')) {
-                    apiUrl += '/';
-                }
-                apiUrl += 'models';
-                headers['Authorization'] = `Bearer ${apiKey}`;
-            } else {
-                return {
-                    success: true,
-                    message: 'Custom provider: Cannot automatically test. Please verify manually.',
-                };
-            }
-        }
-
-        await logToFile(`Final API URL: ${apiUrl}`);
-
         try {
+            // 使用 ProviderConfig 构建 URL 和 headers
+            const config = getProviderConfig(name, baseUrl);
+
+            // Seedream 特殊处理:不支持测试端点
+            if (config.type === 'seedream') {
+                return { success: true, messageKey: 'msg_seedream_test_success' };
+            }
+
+            const apiUrl = config.buildApiUrl('test', { model, apiKey });
+            const headers = config.buildHeaders(apiKey);
+
+            await logToFile(`Provider type: ${config.type}`);
+            await logToFile(`API URL: ${apiUrl}`);
+
+            // 发送测试请求
             await logToFile('Attempting real fetch...');
             const response = await fetch(apiUrl, {
                 method: 'GET',

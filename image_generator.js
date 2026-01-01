@@ -3,6 +3,7 @@
  * Supports: Google Gemini, Yunwu, GPTGod, OpenRouter, Seedream, ComfyUI
  */
 const { Z_IMAGE_TURBO_WORKFLOW, QWEN_IMAGE_EDIT_WORKFLOW } = require('./workflow_templates.js');
+const { getProviderConfig } = require('./api_providers');
 
 class ImageGenerator {
     constructor(fileManager) {
@@ -42,9 +43,9 @@ class ImageGenerator {
             throw new Error('Invalid provider configuration');
         }
 
-        // Detect provider type
-        const providerType = this._detectProviderType(provider);
-        console.log(`[DEBUG] Provider type detected: ${providerType}`);
+        // 使用 ProviderConfig 获取配置
+        const config = getProviderConfig(provider.name, provider.baseUrl);
+        console.log(`[DEBUG] Provider type detected: ${config.type}`);
         console.log(`[DEBUG] Generation mode: ${mode}`);
         console.log(`[DEBUG] Search web mode: ${searchWeb}`);
 
@@ -54,15 +55,15 @@ class ImageGenerator {
             aspectRatio,
             resolution,
             provider,
-            providerType,
+            config.type,
             mode,
             searchWeb,
             inputImage,
             sourceImage,
             referenceImage
         );
-        const apiUrl = this._buildApiUrl(provider, providerType);
-        const headers = this._buildHeaders(provider, providerType);
+        const apiUrl = config.buildApiUrl('generate', { model: provider.model, apiKey: provider.apiKey });
+        const headers = config.buildHeaders(provider.apiKey);
 
         console.log(`[DEBUG] API URL: ${apiUrl}`);
         console.log(`[DEBUG] Headers:`, headers);
@@ -110,7 +111,7 @@ class ImageGenerator {
             }
 
             // Process response and download/save image
-            return await this._processResponse(responseData, providerType, provider);
+            return await this._processResponse(responseData, config.type, provider);
         } catch (e) {
             console.error('Image generation failed:', e);
 
@@ -118,7 +119,7 @@ class ImageGenerator {
                 await this.fileManager.saveLog(
                     `=== Generation Error ===\n` +
                         `Time: ${new Date().toISOString()}\n` +
-                        `Provider: ${provider.name} (${providerType})\n` +
+                        `Provider: ${provider.name} (${config.type})\n` +
                         `Prompt: ${prompt}\n` +
                         `Resolution: ${resolution}\n` +
                         `Aspect Ratio: ${aspectRatio}\n` +
@@ -129,68 +130,6 @@ class ImageGenerator {
 
             throw new Error(`Generation failed: ${e.message}`);
         }
-    }
-
-    /**
-     * Detect provider type from config
-     */
-    _detectProviderType(provider) {
-        const { name, baseUrl } = provider;
-        const nameLower = (name || '').toLowerCase();
-        const urlLower = (baseUrl || '').toLowerCase();
-
-        if (urlLower.includes('generativelanguage.googleapis.com')) {
-            return 'google_official';
-        } else if (
-            nameLower.includes('seedream') ||
-            urlLower.includes('ark.cn-beijing.volces.com')
-        ) {
-            return 'seedream';
-        } else if (nameLower.includes('gptgod') || urlLower.includes('gptgod')) {
-            return 'gptgod';
-        } else if (nameLower.includes('openrouter') || urlLower.includes('openrouter.ai')) {
-            return 'openrouter';
-        } else if (nameLower.includes('comfyui') || urlLower.includes(':8188')) {
-            return 'comfyui';
-        } else {
-            // Default to Yunwu/Gemini-compatible format
-            return 'yunwu';
-        }
-    }
-
-    /**
-     * Build API URL
-     */
-    _buildApiUrl(provider, providerType) {
-        const { apiKey, baseUrl, model } = provider;
-        const url = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-
-        if (providerType === 'google_official' || providerType === 'yunwu') {
-            return `${url}/models/${model}:generateContent?key=${apiKey}`;
-        } else if (providerType === 'comfyui') {
-            // ComfyUI uses /prompt for queuing
-            return `${url}/prompt`;
-        } else {
-            // OpenAI-compatible (GPTGod, OpenRouter, Seedream)
-            return url;
-        }
-    }
-
-    /**
-     * Build request headers
-     */
-    _buildHeaders(provider, providerType) {
-        const headers = { 'Content-Type': 'application/json' };
-
-        if (
-            providerType === 'gptgod' ||
-            providerType === 'openrouter' ||
-            providerType === 'seedream'
-        ) {
-            headers['Authorization'] = `Bearer ${provider.apiKey}`;
-        }
-
-        return headers;
     }
 
     /**

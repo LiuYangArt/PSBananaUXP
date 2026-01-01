@@ -323,9 +323,7 @@ function setupSettingsUI() {
     const selectionModeCheckbox = document.getElementById('selectionModeCheckbox');
     const searchWebCheckbox = document.getElementById('searchWebCheckbox');
     const providerSelect = document.getElementById('providerSelect');
-    const btnAddProvider = document.getElementById('btnAddProvider');
     const btnSaveProvider = document.getElementById('btnSaveProvider');
-    const btnDeleteProvider = document.getElementById('btnDeleteProvider');
     const btnTestConnection = document.getElementById('btnTestConnection');
     const inputApiKey = document.getElementById('inputApiKey');
     const inputBaseUrl = document.getElementById('inputBaseUrl');
@@ -413,22 +411,6 @@ function setupSettingsUI() {
         await settingsManager.set('selected_provider', e.target.value);
     });
 
-    // Add Provider
-    btnAddProvider.addEventListener('click', async () => {
-        const newName = await promptUser(getText('msg_enter_provider_name'));
-        if (!newName) return;
-
-        const result = await providerManager.addProvider(newName, '', '', '');
-        if (result.success) {
-            updateProviderDropdown();
-            providerSelect.value = newName;
-            loadProviderConfig(newName);
-            showStatus(result.message, 'success');
-        } else {
-            showStatus(result.message, 'error');
-        }
-    });
-
     // Save Provider
     btnSaveProvider.addEventListener('click', async () => {
         if (!currentProvider) {
@@ -449,34 +431,6 @@ function setupSettingsUI() {
             currentProvider.model = inputModelId.value;
             await settingsManager.set('selected_provider', currentProvider.name);
             showStatus(getText('msg_provider_saved'), 'success');
-        } else {
-            showStatus(result.message, 'error');
-        }
-    });
-
-    // Delete Provider
-    btnDeleteProvider.addEventListener('click', async () => {
-        if (!currentProvider) {
-            showStatus(getText('msg_no_provider_selected'), 'error');
-            return;
-        }
-
-        const confirmed = await confirmUser(
-            getText('msg_delete_provider', { name: currentProvider.name })
-        );
-        if (!confirmed) return;
-
-        const result = await providerManager.deleteProvider(currentProvider.name);
-        if (result.success) {
-            updateProviderDropdown();
-            const options = providerSelect.querySelectorAll('sp-menu-item');
-            if (options.length > 0) {
-                providerSelect.value = options[0].value;
-                loadProviderConfig(options[0].value);
-            } else {
-                clearProviderConfig();
-            }
-            showStatus(result.message, 'success');
         } else {
             showStatus(result.message, 'error');
         }
