@@ -1,6 +1,6 @@
 {
     "name": "ps-banana-uxp",
-    "version": "2.2.11",
+    "version": "2.3.0",
     "description": "Photoshop UXP Plugin for AI Image Generation",
     "scripts": {
         "lint": "eslint .",
