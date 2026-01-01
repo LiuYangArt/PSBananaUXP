@@ -80,32 +80,7 @@ async function initializeApp() {
     updateLanguage(currentLanguage);
 
     // Load selected provider
-    // Load selected provider
-    const selectedProviderName = settingsManager.get('selected_provider');
-    console.log(`[Init] Loaded selected provider from settings: "${selectedProviderName}"`);
 
-    if (selectedProviderName) {
-        // We need to wait for dropdown to be populated, but updateProviderDropdown is called in setupSettingsUI
-        // Just set the value
-        const providerSelect = document.getElementById('providerSelect');
-        providerSelect.value = selectedProviderName;
-        
-        // Also explicitly select the menu item
-        const menu = providerSelect.querySelector('sp-menu');
-        const items = menu.querySelectorAll('sp-menu-item');
-        items.forEach(item => {
-            if (item.value === selectedProviderName) {
-                item.selected = true;
-                console.log(`[Init] Selected menu item: ${item.value}`);
-            } else {
-                item.selected = false;
-            }
-        });
-
-        loadProviderConfig(selectedProviderName);
-    } else {
-        console.log('[Init] No selected provider found in settings');
-    }
 
     // Set Dynamic Version in Footer
     try {
@@ -378,7 +353,11 @@ function setupSettingsUI() {
     });
 
     // Populate provider dropdown
-    updateProviderDropdown();
+    const savedProvider = settingsManager.get('selected_provider');
+    updateProviderDropdown(savedProvider);
+    if (savedProvider) {
+        loadProviderConfig(savedProvider);
+    }
 
     // Debug Mode
     debugModeCheckbox.checked = settingsManager.get('debug_mode', false);
@@ -518,7 +497,7 @@ function loadPreset(presetName) {
     document.getElementById('promptInput').value = prompt;
 }
 
-function updateProviderDropdown() {
+function updateProviderDropdown(selectedName = null) {
     const providerSelect = document.getElementById('providerSelect');
     const menu = providerSelect.querySelector('sp-menu');
     menu.innerHTML = '';
@@ -528,8 +507,15 @@ function updateProviderDropdown() {
         const item = document.createElement('sp-menu-item');
         item.value = name;
         item.textContent = name;
+        if (selectedName && name === selectedName) {
+            item.selected = true;
+        }
         menu.appendChild(item);
     });
+
+    if (selectedName) {
+        providerSelect.value = selectedName;
+    }
 }
 
 function loadProviderConfig(providerName) {
