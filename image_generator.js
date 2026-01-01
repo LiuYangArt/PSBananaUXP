@@ -1167,6 +1167,8 @@ class ImageGenerator {
             // Since _processResponse signature doesn't pass it, I'll assume I can pass it or fix the architecture.
             // Wait, I can just change _processResponse signature in the next step or rely on a class property?
             // Actually, I should pass provider to _processResponse in the main generate method.
+        } else if (providerType === 'antigravity_tools') {
+            return await this._processAntigravityResponse(responseData);
         }
     }
 
@@ -1453,6 +1455,46 @@ class ImageGenerator {
         } catch {
             return 'Unable to parse server response';
         }
+    }
+
+
+    /**
+     * Process Antigravity Tools response
+     * Format: Markdown image with base64 data URI in content
+     * "content": "![image](data:image/jpeg;base64,...)"
+     */
+    async _processAntigravityResponse(responseData) {
+        if (!responseData.choices || !responseData.choices.length === 0) {
+            const serverMessage = this._extractServerMessage(responseData);
+            throw new Error(`No image generated. ${serverMessage}`);
+        }
+
+        const content = responseData.choices[0].message?.content;
+        
+        if (!content || typeof content !== 'string') {
+            const serverMessage = this._extractServerMessage(responseData);
+            throw new Error(`Invalid response format. ${serverMessage}`);
+        }
+
+        // Regex to extract base64 data from markdown image syntax
+        // Matches: ![label](data:image/jpeg;base64,...)
+        const match = content.match(/!\[.*?\]\((data:image\/([a-zA-Z]+);base64,[^\)]+)\)/);
+
+        if (match) {
+            const dataUrl = match[1];
+            const extension = match[2] === 'jpeg' ? 'jpg' : match[2];
+            const base64Data = dataUrl.split(';base64,')[1];
+            
+            return await this.fileManager.saveImageFromBase64(base64Data, extension);
+        }
+
+        // Fallback: check if content is just a raw URL or error message
+        if (content.startsWith('http')) {
+             return await this.fileManager.downloadImage(content); 
+        }
+
+        const serverMessage = this._extractServerMessage(responseData);
+        throw new Error(`No image found in response. ${serverMessage}`);
     }
 }
 
