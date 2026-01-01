@@ -10,7 +10,7 @@
 const PROVIDER_CONFIGS = {
     google_official: {
         id: 'google_official',
-        name: 'Google Gemini',
+        name: 'Gemini',
         type: 'google_official',
         defaultBaseUrl: 'https://generativelanguage.googleapis.com',
         basePath: '/v1beta', // API 基础路径
@@ -22,9 +22,23 @@ const PROVIDER_CONFIGS = {
         authType: 'query_param', // API key 通过 query parameter 传递
         requiresAuth: true,
     },
+    openrouter: {
+        id: 'openrouter',
+        name: 'OpenRouter',
+        type: 'openrouter',
+        defaultBaseUrl: 'https://openrouter.ai',
+        basePath: '/api/v1', // API 基础路径
+        defaultModel: 'google/gemini-3-pro-image-preview',
+        endpoints: {
+            generate: '/chat/completions',
+            test: '/models',
+        },
+        authType: 'bearer_token',
+        requiresAuth: true,
+    },
     yunwu: {
         id: 'yunwu',
-        name: 'Yunwu Gemini',
+        name: 'Yunwu',
         type: 'yunwu',
         defaultBaseUrl: 'https://yunwu.zeabur.app',
         basePath: '/v1beta', // API 基础路径
@@ -38,25 +52,11 @@ const PROVIDER_CONFIGS = {
     },
     gptgod: {
         id: 'gptgod',
-        name: 'GPTGod NanoBanana Pro',
+        name: 'GPTGod',
         type: 'gptgod',
         defaultBaseUrl: 'https://api.gptgod.online',
         basePath: '/v1', // API 基础路径
         defaultModel: 'gemini-3-pro-image-preview',
-        endpoints: {
-            generate: '/chat/completions',
-            test: '/models',
-        },
-        authType: 'bearer_token',
-        requiresAuth: true,
-    },
-    openrouter: {
-        id: 'openrouter',
-        name: 'OpenRouter',
-        type: 'openrouter',
-        defaultBaseUrl: 'https://openrouter.ai',
-        basePath: '/api/v1', // API 基础路径
-        defaultModel: 'google/gemini-3-pro-image-preview',
         endpoints: {
             generate: '/chat/completions',
             test: '/models',
