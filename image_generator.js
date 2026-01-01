@@ -1,6 +1,6 @@
 /**
  * Image Generator - handles AI image generation with multiple providers
- * Supports: Google Gemini, Yunwu, GPTGod, OpenRouter, Seedream, ComfyUI
+ * Supports: Gemini, Yunwu, GPTGod, OpenRouter, Seedream, ComfyUI
  */
 const { Z_IMAGE_TURBO_WORKFLOW, QWEN_IMAGE_EDIT_WORKFLOW } = require('./workflow_templates.js');
 const { getProviderConfig } = require('./api_providers');
