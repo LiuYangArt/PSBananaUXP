@@ -80,13 +80,31 @@ async function initializeApp() {
     updateLanguage(currentLanguage);
 
     // Load selected provider
+    // Load selected provider
     const selectedProviderName = settingsManager.get('selected_provider');
+    console.log(`[Init] Loaded selected provider from settings: "${selectedProviderName}"`);
+
     if (selectedProviderName) {
         // We need to wait for dropdown to be populated, but updateProviderDropdown is called in setupSettingsUI
         // Just set the value
         const providerSelect = document.getElementById('providerSelect');
         providerSelect.value = selectedProviderName;
+        
+        // Also explicitly select the menu item
+        const menu = providerSelect.querySelector('sp-menu');
+        const items = menu.querySelectorAll('sp-menu-item');
+        items.forEach(item => {
+            if (item.value === selectedProviderName) {
+                item.selected = true;
+                console.log(`[Init] Selected menu item: ${item.value}`);
+            } else {
+                item.selected = false;
+            }
+        });
+
         loadProviderConfig(selectedProviderName);
+    } else {
+        console.log('[Init] No selected provider found in settings');
     }
 
     // Set Dynamic Version in Footer
@@ -407,6 +425,7 @@ function setupSettingsUI() {
 
     // Provider Selection
     providerSelect.addEventListener('change', async (e) => {
+        console.log(`[Settings] Provider changed to: ${e.target.value}`);
         loadProviderConfig(e.target.value);
         await settingsManager.set('selected_provider', e.target.value);
     });
