@@ -1,6 +1,6 @@
 <img width="512" height="512" alt="generated_image_20251129224205" src="https://github.com/user-attachments/assets/54661238-b11e-40be-ab12-4a49f6a036dd" />
 
-photoshop + Google nano banana pro
+photoshop + Google nano banana 
 
 ## 免责声明
 
@@ -44,11 +44,3 @@ photoshop + Google nano banana pro
 - 本地 API 支持:
   - 支持连接本地运行的 Gemini/OpenAI 兼容接口 (如 `http://localhost:8045`).
   - **注意**: 修改 Manifest 权限或连接本地服务时，建议使用 `localhost` 而非 `127.0.0.1` 以避免 UXP 权限问题，且如果遇到 Permission denied 错误，请尝试**重启 Photoshop**。
-
-## 增加了对comfyui的支持
-
-使用z-image-turbo 和 qwen-image-edit 实现文生图/图生图。 后续z-image-edit 出来之后再考虑替换图生图方式。
-在高端显卡上速度极快，适合本地处理一些较简单的任务。
-<br><img width="470" height="338" alt="image" src="https://github.com/user-attachments/assets/32069c58-6bf0-4970-8958-a0dcbc9e8c08" />
-<br>comfyui中对应的工作流，在template中搜索安装。并安装对应的模型。
-<br><img width="602" height="144" alt="image" src="https://github.com/user-attachments/assets/daa0c418-2cef-459e-83e5-37890c7f667c" />
