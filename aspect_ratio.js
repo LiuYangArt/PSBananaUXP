@@ -4,12 +4,16 @@
 
 const ASPECT_RATIOS = [
     { name: '1:1', value: 1.0 },
+    { name: '1:8', value: 1 / 8 },
+    { name: '1:4', value: 1 / 4 },
     { name: '2:3', value: 2 / 3 },
     { name: '3:2', value: 3 / 2 },
     { name: '3:4', value: 3 / 4 },
     { name: '4:3', value: 4 / 3 },
+    { name: '4:1', value: 4 / 1 },
     { name: '4:5', value: 4 / 5 },
     { name: '5:4', value: 5 / 4 },
+    { name: '8:1', value: 8 / 1 },
     { name: '9:16', value: 9 / 16 },
     { name: '16:9', value: 16 / 9 },
     { name: '21:9', value: 21 / 9 },

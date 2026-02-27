@@ -1137,6 +1137,10 @@ class ImageGenerator {
      */
     _getAspectRatioDescription(aspectRatio) {
         const ratioMap = {
+            '1:8': 'Aspect ratio 1:8, ultra-tall portrait format',
+            '1:4': 'Aspect ratio 1:4, very tall portrait format',
+            '4:1': 'Aspect ratio 4:1, very wide landscape format',
+            '8:1': 'Aspect ratio 8:1, ultra-wide landscape format',
             '16:9': 'Aspect ratio 16:9, wide landscape format',
             '9:16': 'Aspect ratio 9:16, tall portrait format',
             '4:3': 'Aspect ratio 4:3, landscape format',
