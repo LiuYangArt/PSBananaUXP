@@ -354,9 +354,16 @@ function setupSettingsUI() {
 
     // Populate provider dropdown
     const savedProvider = settingsManager.get('selected_provider');
-    updateProviderDropdown(savedProvider);
-    if (savedProvider) {
-        loadProviderConfig(savedProvider);
+    const providerNames = providerManager.getAllNames();
+    const initialProvider = providerNames.includes(savedProvider) ? savedProvider : providerNames[0] || null;
+    updateProviderDropdown(initialProvider);
+    if (initialProvider) {
+        loadProviderConfig(initialProvider);
+        if (initialProvider !== savedProvider) {
+            settingsManager.set('selected_provider', initialProvider).catch((err) => {
+                console.error('Failed to migrate selected provider:', err);
+            });
+        }
     }
 
     // Debug Mode

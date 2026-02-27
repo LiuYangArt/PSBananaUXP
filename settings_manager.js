@@ -65,6 +65,26 @@ class ProviderManager {
         this.loaded = false;
     }
 
+    /**
+     * 迁移历史默认模型到新默认模型
+     * 仅在用户未自定义（仍是旧默认值）时替换
+     */
+    _migrateLegacyDefaultModel(config, savedModel) {
+        if (!savedModel) return null;
+
+        const legacyDefaultModelMap = {
+            openrouter: 'google/gemini-3-pro-image-preview',
+            gptgod: 'gemini-3-pro-image-preview',
+        };
+
+        const legacyDefaultModel = legacyDefaultModelMap[config.id];
+        if (legacyDefaultModel && savedModel === legacyDefaultModel) {
+            return config.defaultModel;
+        }
+
+        return savedModel;
+    }
+
     async load() {
         try {
             const dataFolder = await fs.getDataFolder();
@@ -93,11 +113,12 @@ class ProviderManager {
             const defaultConfigs = getAllProviderConfigs();
             this.providers = defaultConfigs.map((config) => {
                 const saved = savedProviders.find((p) => p.name === config.name);
+                const migratedModel = this._migrateLegacyDefaultModel(config, saved?.model);
                 return {
                     name: config.name,
                     apiKey: saved?.apiKey || (config.id === 'comfyui' ? 'not-needed' : ''),
                     baseUrl: saved?.baseUrl || config.defaultBaseUrl,
-                    model: saved?.model || config.defaultModel,
+                    model: migratedModel || config.defaultModel,
                 };
             });
 

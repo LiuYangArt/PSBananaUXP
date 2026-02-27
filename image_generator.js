@@ -216,18 +216,6 @@ class ImageGenerator {
                 sourceImage,
                 referenceImage
             );
-        } else if (providerType === 'antigravity_tools') {
-            return this._buildAntigravityPayload(
-                prompt,
-                aspectRatio,
-                resolution,
-                provider,
-                mode,
-                searchWeb,
-                inputImage,
-                sourceImage,
-                referenceImage
-            );
         }
     }
 
@@ -442,14 +430,17 @@ class ImageGenerator {
         referenceImage = null
     ) {
         let model = provider.model;
+        const isGptgodOfficial = provider.baseUrl.includes('gptgod.online');
+        const isDefaultGptgodModel =
+            model === 'gemini-3.1-flash-image-preview' || model === 'gemini-3-pro-image-preview';
+        const resolutionModelMap = {
+            '2K': 'gemini-3.1-flash-image-preview-2k',
+            '4K': 'gemini-3.1-flash-image-preview-4k',
+        };
 
-        // Auto-switch model for resolution if using default gptgod model
-        if (provider.baseUrl.includes('gptgod.online') && model === 'gemini-3-pro-image-preview') {
-            if (resolution === '2K') {
-                model = 'gemini-3-pro-image-preview-2k';
-            } else if (resolution === '4K') {
-                model = 'gemini-3-pro-image-preview-4k';
-            }
+        // 使用 GPTGod 默认模型时，根据分辨率自动切换到对应后缀模型
+        if (isGptgodOfficial && isDefaultGptgodModel) {
+            model = resolutionModelMap[resolution] || model;
         }
 
         // Append aspect ratio to prompt (GPTGod requires newline + "Aspect Ratio:" format)
@@ -615,88 +606,6 @@ class ImageGenerator {
             image_config: imageConfig,
         };
         // 注：OpenRouter的格式可能不支持google_search工具，忽略searchWeb参数
-    }
-
-    /**
-     * Build Antigravity Tools payload
-     * Uses model name suffixes for resolution and aspect ratio.
-     * Endpoint: /v1/chat/completions
-     */
-    _buildAntigravityPayload(
-        prompt,
-        aspectRatio,
-        resolution,
-        provider,
-        mode = 'text2img',
-        _searchWeb = false,
-        inputImage = null,
-        sourceImage = null,
-        referenceImage = null
-    ) {
-        let model = provider.model;
-
-        // 1. Handle Resolution Suffix
-        if (resolution === '4K') {
-            model += '-4k';
-        }
-
-        // 2. Handle Aspect Ratio Suffix
-        if (aspectRatio && aspectRatio !== '1:1') {
-            const ratioSuffix = '-' + aspectRatio.replace(':', 'x');
-            model += ratioSuffix;
-        }
-
-        // 3. Build Content
-        const content = [];
-
-        // Multi-image handling (Source/Reference)
-        if (sourceImage || referenceImage) {
-            let imageIndex = 0;
-            let introText = prompt;
-
-            // Add images (Reference -> Source)
-            if (referenceImage) {
-                imageIndex++;
-                introText += `\n[Reference Image: See attached image ${imageIndex}]`;
-            }
-            if (sourceImage) {
-                imageIndex++;
-                introText += `\n[Source Image: See attached image ${imageIndex}]`;
-            }
-            
-            content.push({ type: 'text', text: introText });
-
-            if (referenceImage) {
-                content.push({
-                    type: 'image_url',
-                    image_url: { url: `data:image/webp;base64,${referenceImage}` }
-                });
-            }
-            if (sourceImage) {
-                content.push({
-                    type: 'image_url',
-                    image_url: { url: `data:image/webp;base64,${sourceImage}` }
-                });
-            }
-        } 
-        // Single image edit
-        else if (mode === 'imgedit' && inputImage) {
-            content.push({ type: 'text', text: prompt });
-            content.push({
-                type: 'image_url',
-                image_url: { url: `data:image/png;base64,${inputImage}` }
-            });
-        } 
-        // Text to Image
-        else {
-            content.push({ type: 'text', text: prompt });
-        }
-
-        return {
-            model: model,
-            messages: [{ role: 'user', content: content }],
-            stream: false
-        };
     }
 
     /**
@@ -1171,8 +1080,6 @@ class ImageGenerator {
             // Since _processResponse signature doesn't pass it, I'll assume I can pass it or fix the architecture.
             // Wait, I can just change _processResponse signature in the next step or rely on a class property?
             // Actually, I should pass provider to _processResponse in the main generate method.
-        } else if (providerType === 'antigravity_tools') {
-            return await this._processAntigravityResponse(responseData);
         }
     }
 
@@ -1459,46 +1366,6 @@ class ImageGenerator {
         } catch {
             return 'Unable to parse server response';
         }
-    }
-
-
-    /**
-     * Process Antigravity Tools response
-     * Format: Markdown image with base64 data URI in content
-     * "content": "![image](data:image/jpeg;base64,...)"
-     */
-    async _processAntigravityResponse(responseData) {
-        if (!responseData.choices || !responseData.choices.length === 0) {
-            const serverMessage = this._extractServerMessage(responseData);
-            throw new Error(`No image generated. ${serverMessage}`);
-        }
-
-        const content = responseData.choices[0].message?.content;
-        
-        if (!content || typeof content !== 'string') {
-            const serverMessage = this._extractServerMessage(responseData);
-            throw new Error(`Invalid response format. ${serverMessage}`);
-        }
-
-        // Regex to extract base64 data from markdown image syntax
-        // Matches: ![label](data:image/jpeg;base64,...)
-        const match = content.match(/!\[.*?\]\((data:image\/([a-zA-Z]+);base64,[^\)]+)\)/);
-
-        if (match) {
-            const dataUrl = match[1];
-            const extension = match[2] === 'jpeg' ? 'jpg' : match[2];
-            const base64Data = dataUrl.split(';base64,')[1];
-            
-            return await this.fileManager.saveImageFromBase64(base64Data, extension);
-        }
-
-        // Fallback: check if content is just a raw URL or error message
-        if (content.startsWith('http')) {
-             return await this.fileManager.downloadImage(content); 
-        }
-
-        const serverMessage = this._extractServerMessage(responseData);
-        throw new Error(`No image found in response. ${serverMessage}`);
     }
 }
 
