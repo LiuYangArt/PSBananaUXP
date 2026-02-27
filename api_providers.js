@@ -14,7 +14,7 @@ const PROVIDER_CONFIGS = {
         type: 'google_official',
         defaultBaseUrl: 'https://generativelanguage.googleapis.com',
         basePath: '/v1beta', // API 基础路径
-        defaultModel: 'gemini-3-pro-image-preview',
+        defaultModel: 'gemini-3.1-flash-image-preview',
         endpoints: {
             generate: '/models/{model}:generateContent',
             test: '/models',
@@ -42,7 +42,7 @@ const PROVIDER_CONFIGS = {
         type: 'yunwu',
         defaultBaseUrl: 'https://yunwu.zeabur.app',
         basePath: '/v1beta', // API 基础路径
-        defaultModel: 'gemini-3-pro-image-preview',
+        defaultModel: 'gemini-3.1-flash-image-preview',
         endpoints: {
             generate: '/models/{model}:generateContent',
             test: '/models',
