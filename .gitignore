@@ -33,6 +33,7 @@ build/
 ps_ai*
 *.bak
 *.tmp
+tmp/
 
 # 特定忽略 (Specific Ignores)
 todo.md
