@@ -372,6 +372,26 @@
                 </div>
                 <sp-divider size="m"></sp-divider>
 
+                <!-- Image API & Resolution -->
+                <div class="row" style="align-items: flex-end; margin-bottom: 8px">
+                    <div style="flex: 0 0 auto; margin: 0 5px 0 0">
+                        <sp-label size="s" id="labelImageApi">Image API:</sp-label>
+                    </div>
+                    <div style="flex: 1">
+                        <sp-dropdown
+                            size="s"
+                            id="imageApiSelect"
+                            placeholder="Select"
+                            style="width: 100%"
+                        >
+                            <sp-menu slot="options">
+                                <sp-menu-item value="banana" selected>Nano Banana</sp-menu-item>
+                                <sp-menu-item value="gpt_image_2">GPT Image 2</sp-menu-item>
+                            </sp-menu>
+                        </sp-dropdown>
+                    </div>
+                </div>
+
                 <!-- Resolution & Smart Ratio -->
                 <div class="row" style="align-items: flex-end">
                     <div style="flex: 0 0 auto; margin: 0 5px 0 0">
@@ -465,8 +485,11 @@
                     <sp-textfield size="s" id="inputBaseUrl" placeholder="https://...">
                         <sp-label slot="label" id="labelBaseUrl">Base URL</sp-label>
                     </sp-textfield>
-                    <sp-textfield size="s" id="inputModelId" placeholder="model-name">
-                        <sp-label slot="label" id="labelModelId">Model ID</sp-label>
+                    <sp-textfield size="s" id="inputBananaModelId" placeholder="gemini-...">
+                        <sp-label slot="label" id="labelBananaModelId">Nano Banana Model</sp-label>
+                    </sp-textfield>
+                    <sp-textfield size="s" id="inputGptImage2ModelId" placeholder="gpt-image-2">
+                        <sp-label slot="label" id="labelGptImage2ModelId">GPT Image 2 Model</sp-label>
                     </sp-textfield>
                 </div>
                 <div id="connectionStatus" class="status-message"></div>
@@ -563,7 +586,7 @@
 
             <div class="row-end" style="margin-top: auto; padding-top: 10px">
                 <sp-body size="XS" style="color: #666" id="footerText"
-                    >🍌PSBanana by LiuYang v2.2.5</sp-body
+                    >🍌PSBanana by LiuYang</sp-body
                 >
             </div>
         </div>

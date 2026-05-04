@@ -25,6 +25,9 @@ photoshop + Google nano banana
 
 ## 使用
 
+- 在 Settings 页面分别配置 `Nano Banana Model` 和 `GPT Image 2 Model`。
+- 在生成页通过 `Image API` 下拉切换当前协议：`Nano Banana` / `GPT Image 2`。
+- 目前 GPT Image 2 路线仅面向 `Yunwu`、`GPTGod`、`OpenRouter`；`Google 官方 Gemini`、`Seedream`、`ComfyUI` 仍只支持 Banana 路线。
 - 在Settings页面填入API。目前只在yunwu/gptgod/openrouter跑通，google 官方的API我这边没有条件测。
   [yunwu](https://yunwu.ai/register?aff=VE3i) | [gptgod](https://gptgod.site/#/register?invite_code=5ax35dxlk4bys0j7jnzqypwkc)
 

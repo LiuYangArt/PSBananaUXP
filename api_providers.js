@@ -3,6 +3,8 @@
  * 统一管理所有支持的 AI 图像生成 API providers
  */
 
+const { BANANA_IMAGE_API, GPT_IMAGE_2_API } = require('./aspect_ratio');
+
 /**
  * Provider 配置定义
  * 每个 provider 包含固定的 endpoint 模板和 URL 拼接规则
@@ -13,13 +15,20 @@ const PROVIDER_CONFIGS = {
         name: 'Gemini',
         type: 'google_official',
         defaultBaseUrl: 'https://generativelanguage.googleapis.com',
-        basePath: '/v1beta', // API 基础路径
+        basePath: '/v1beta',
         defaultModel: 'gemini-3.1-flash-image-preview',
+        defaultModels: {
+            [BANANA_IMAGE_API]: 'gemini-3.1-flash-image-preview',
+            [GPT_IMAGE_2_API]: '',
+        },
         endpoints: {
             generate: '/models/{model}:generateContent',
+            gptImage2Generate: null,
+            gptImage2Edit: null,
             test: '/models',
         },
-        authType: 'query_param', // API key 通过 query parameter 传递
+        supportedImageApis: [BANANA_IMAGE_API],
+        authType: 'query_param',
         requiresAuth: true,
     },
     openrouter: {
@@ -27,12 +36,19 @@ const PROVIDER_CONFIGS = {
         name: 'OpenRouter',
         type: 'openrouter',
         defaultBaseUrl: 'https://openrouter.ai',
-        basePath: '/api/v1', // API 基础路径
+        basePath: '/api/v1',
         defaultModel: 'google/gemini-3.1-flash-image-preview',
+        defaultModels: {
+            [BANANA_IMAGE_API]: 'google/gemini-3.1-flash-image-preview',
+            [GPT_IMAGE_2_API]: 'gpt-image-2',
+        },
         endpoints: {
             generate: '/chat/completions',
+            gptImage2Generate: '/images/generations',
+            gptImage2Edit: '/images/edits',
             test: '/models',
         },
+        supportedImageApis: [BANANA_IMAGE_API, GPT_IMAGE_2_API],
         authType: 'bearer_token',
         requiresAuth: true,
     },
@@ -40,14 +56,28 @@ const PROVIDER_CONFIGS = {
         id: 'yunwu',
         name: 'Yunwu',
         type: 'yunwu',
-        defaultBaseUrl: 'https://yunwu.zeabur.app',
-        basePath: '/v1beta', // API 基础路径
+        defaultBaseUrl: 'https://yunwu.ai',
+        preferredBaseUrl: 'https://yunwu.ai',
+        legacyBaseUrls: ['https://api3.wlai.vip', 'https://yunwu.zeabur.app'],
+        basePath: '/v1beta',
         defaultModel: 'gemini-3.1-flash-image-preview',
+        defaultModels: {
+            [BANANA_IMAGE_API]: 'gemini-3.1-flash-image-preview',
+            [GPT_IMAGE_2_API]: 'gpt-image-2-all',
+        },
         endpoints: {
             generate: '/models/{model}:generateContent',
+            gptImage2Generate: '/v1/images/generations',
+            gptImage2Edit: '/v1/images/edits',
             test: '/models',
         },
+        supportedImageApis: [BANANA_IMAGE_API, GPT_IMAGE_2_API],
         authType: 'query_param',
+        // Yunwu 的 GPT Image 接口实际要求 Bearer；Gemini 兼容接口仍走 query key。
+        endpointAuthTypes: {
+            gptImage2Generate: 'bearer_token',
+            gptImage2Edit: 'bearer_token',
+        },
         requiresAuth: true,
     },
     gptgod: {
@@ -55,12 +85,19 @@ const PROVIDER_CONFIGS = {
         name: 'GPTGod',
         type: 'gptgod',
         defaultBaseUrl: 'https://api.gptgod.online',
-        basePath: '/v1', // API 基础路径
+        basePath: '/v1',
         defaultModel: 'gemini-3.1-flash-image-preview',
+        defaultModels: {
+            [BANANA_IMAGE_API]: 'gemini-3.1-flash-image-preview',
+            [GPT_IMAGE_2_API]: 'gpt-image-2',
+        },
         endpoints: {
             generate: '/chat/completions',
+            gptImage2Generate: '/images/generations',
+            gptImage2Edit: '/images/edits',
             test: '/models',
         },
+        supportedImageApis: [BANANA_IMAGE_API, GPT_IMAGE_2_API],
         authType: 'bearer_token',
         requiresAuth: true,
     },
@@ -69,35 +106,47 @@ const PROVIDER_CONFIGS = {
         name: 'Seedream',
         type: 'seedream',
         defaultBaseUrl: 'https://ark.cn-beijing.volces.com',
-        basePath: '/api/v3', // API 基础路径
+        basePath: '/api/v3',
         defaultModel: 'doubao-seedream-4-5-251128',
+        defaultModels: {
+            [BANANA_IMAGE_API]: 'doubao-seedream-4-5-251128',
+            [GPT_IMAGE_2_API]: '',
+        },
         endpoints: {
             generate: '/images/generations',
-            test: null, // Seedream 不支持 test endpoint
+            gptImage2Generate: null,
+            gptImage2Edit: null,
+            test: null,
         },
+        supportedImageApis: [BANANA_IMAGE_API],
         authType: 'bearer_token',
         requiresAuth: true,
+        visibleInUi: false,
     },
     comfyui: {
         id: 'comfyui',
         name: 'Local ComfyUI',
         type: 'comfyui',
         defaultBaseUrl: 'http://127.0.0.1:8188',
-        basePath: '', // ComfyUI 没有 basePath
+        basePath: '',
         defaultModel: 'z_image_turbo_bf16.safetensors',
+        defaultModels: {
+            [BANANA_IMAGE_API]: 'z_image_turbo_bf16.safetensors',
+            [GPT_IMAGE_2_API]: '',
+        },
         endpoints: {
             generate: '/prompt',
+            gptImage2Generate: null,
+            gptImage2Edit: null,
             test: '/system_stats',
         },
+        supportedImageApis: [BANANA_IMAGE_API],
         authType: 'none',
         requiresAuth: false,
+        visibleInUi: false,
     },
 };
 
-/**
- * Provider 配置类
- * 封装单个 provider 的配置和 URL 构建逻辑
- */
 class ProviderConfig {
     constructor(configId, userBaseUrl = null) {
         const config = PROVIDER_CONFIGS[configId];
@@ -109,109 +158,150 @@ class ProviderConfig {
         this.name = config.name;
         this.type = config.type;
         this.defaultBaseUrl = config.defaultBaseUrl;
+        this.preferredBaseUrl = config.preferredBaseUrl || config.defaultBaseUrl;
+        this.legacyBaseUrls = config.legacyBaseUrls || [];
         this.basePath = config.basePath || '';
         this.defaultModel = config.defaultModel;
+        this.defaultModels = config.defaultModels || {
+            [BANANA_IMAGE_API]: config.defaultModel,
+            [GPT_IMAGE_2_API]: '',
+        };
         this.endpoints = config.endpoints;
+        this.supportedImageApis = config.supportedImageApis || [BANANA_IMAGE_API];
         this.authType = config.authType;
+        this.endpointAuthTypes = config.endpointAuthTypes || {};
         this.requiresAuth = config.requiresAuth;
-
-        // 使用用户提供的 baseUrl 或默认值
+        this.visibleInUi = config.visibleInUi !== false;
         this.baseUrl = userBaseUrl || this.defaultBaseUrl;
     }
 
-    /**
-     * 规范化 Base URL
-     * 移除尾部斜杠,保持 scheme://host:port/path 格式
-     */
     static normalizeBaseUrl(url) {
         if (!url) return '';
-        // 移除尾部斜杠
         return url.replace(/\/+$/, '');
     }
 
-    /**
-     * 智能提取域名部分
-     * 如果用户输入包含 API 路径,只保留域名部分
-     * 例如: https://yunwu.zeabur.app/v1beta -> https://yunwu.zeabur.app
-     */
     _extractDomain(url) {
         const normalized = ProviderConfig.normalizeBaseUrl(url);
-        
-        // 如果 URL 已经包含 basePath,移除它
+
         if (this.basePath && normalized.endsWith(this.basePath)) {
             return normalized.slice(0, -this.basePath.length);
         }
-        
-        // 检查是否包含其他已知的 API 路径模式
-        // 按长度从长到短排序,优先匹配更具体的路径
+
         const apiPathPatterns = [
             '/chat/completions',
             '/images/generations',
+            '/images/edits',
             '/api/v3',
             '/api/v1',
             '/v1beta',
             '/v1',
         ];
-        
+
         for (const pattern of apiPathPatterns) {
             if (normalized.includes(pattern)) {
                 const index = normalized.indexOf(pattern);
                 return normalized.substring(0, index);
             }
         }
-        
-        // 如果没有匹配到任何模式,返回原始 URL
+
         return normalized;
     }
 
-    /**
-     * 构建 API URL
-     * @param {string} endpointType - 'generate' 或 'test'
-     * @param {Object} params - URL 参数 { model, apiKey }
-     */
-    buildApiUrl(endpointType, params = {}) {
+    getRequestBaseUrls() {
+        const currentDomain = this._extractDomain(this.baseUrl);
+
+        if (this.type !== 'yunwu') {
+            return [currentDomain];
+        }
+
+        const legacyDomains = this.legacyBaseUrls.map((url) => this._extractDomain(url));
+        const uniqueBaseUrls = new Set();
+
+        if (legacyDomains.includes(currentDomain)) {
+            uniqueBaseUrls.add(this.preferredBaseUrl);
+        }
+
+        uniqueBaseUrls.add(currentDomain);
+
+        if (currentDomain === this.preferredBaseUrl) {
+            legacyDomains.forEach((url) => uniqueBaseUrls.add(url));
+        }
+
+        return [...uniqueBaseUrls];
+    }
+
+    supportsImageApi(imageApiKind) {
+        return this.supportedImageApis.includes(imageApiKind);
+    }
+
+    getDefaultModel(imageApiKind = BANANA_IMAGE_API) {
+        return this.defaultModels[imageApiKind] || '';
+    }
+
+    getAuthType(endpointType) {
+        return this.endpointAuthTypes[endpointType] || this.authType;
+    }
+
+    _buildApiUrlForBase(baseUrl, endpointType, params = {}) {
         const { model, apiKey } = params;
-        
-        // 提取域名部分(移除可能的 API 路径)
-        const domain = this._extractDomain(this.baseUrl);
+        const domain = this._extractDomain(baseUrl);
         const endpoint = this.endpoints[endpointType];
+        const authType = this.getAuthType(endpointType);
 
-        // 特殊处理: Seedream 的 test (不支持)
         if (endpointType === 'test' && this.type === 'seedream') {
-            return null; // 返回 null 表示不支持测试
+            return null;
         }
 
-        // 构建完整 URL: domain + basePath + endpoint
+        if (!endpoint) {
+            return null;
+        }
+
         let fullUrl = domain;
-        
-        // 添加 basePath
-        if (this.basePath) {
-            fullUrl += this.basePath;
-        }
-        
-        // 添加 endpoint
-        if (endpoint) {
-            // 替换 {model} 占位符
-            const processedEndpoint = endpoint.replace('{model}', model || this.defaultModel);
-            fullUrl += processedEndpoint;
+
+        if (endpoint.startsWith('/v1/')) {
+            fullUrl += endpoint;
+        } else {
+            if (this.basePath) {
+                fullUrl += this.basePath;
+            }
+            fullUrl += endpoint;
         }
 
-        // 添加 API key (如果是 query_param 类型)
-        if (this.authType === 'query_param' && apiKey) {
+        if (model) {
+            fullUrl = fullUrl.replace('{model}', model || this.defaultModel);
+        }
+
+        if (authType === 'query_param' && apiKey) {
             fullUrl += `?key=${apiKey}`;
         }
 
         return fullUrl;
     }
 
-    /**
-     * 构建请求头
-     * @param {string} apiKey - API Key
-     */
-    buildHeaders(apiKey) {
-        const headers = { 'Content-Type': 'application/json' };
+    buildApiUrl(endpointType, params = {}) {
+        return this._buildApiUrlForBase(this.baseUrl, endpointType, params);
+    }
 
-        if (this.authType === 'bearer_token' && apiKey) {
+    buildApiUrls(endpointType, params = {}) {
+        return [
+            ...new Set(
+                this.getRequestBaseUrls()
+                    .map((baseUrl) => this._buildApiUrlForBase(baseUrl, endpointType, params))
+                    .filter(Boolean)
+            ),
+        ];
+    }
+
+    buildHeaders(apiKey, options = {}) {
+        const { includeContentType = true, endpointType = null } = options;
+        const authType = this.getAuthType(endpointType);
+        const headers = {};
+
+        if (includeContentType) {
+            headers['Content-Type'] = 'application/json';
+        }
+
+        if (authType === 'bearer_token' && apiKey) {
             headers['Authorization'] = `Bearer ${apiKey}`;
         }
 
@@ -219,44 +309,37 @@ class ProviderConfig {
     }
 }
 
-/**
- * 根据 provider name 检测 provider 类型
- * @param {string} name - Provider 名称
- * @param {string} baseUrl - Base URL
- */
 function detectProviderType(name, baseUrl) {
     const nameLower = (name || '').toLowerCase();
     const urlLower = (baseUrl || '').toLowerCase();
 
-    if (urlLower.includes('generativelanguage.googleapis.com')) {
+    if (
+        nameLower === 'gemini' ||
+        nameLower.includes('google official') ||
+        urlLower.includes('generativelanguage.googleapis.com')
+    ) {
         return 'google_official';
-    } else if (nameLower.includes('seedream') || urlLower.includes('ark.cn-beijing.volces.com')) {
-        return 'seedream';
-    } else if (nameLower.includes('gptgod') || urlLower.includes('gptgod')) {
-        return 'gptgod';
-    } else if (nameLower.includes('openrouter') || urlLower.includes('openrouter.ai')) {
-        return 'openrouter';
-    } else if (nameLower.includes('comfyui') || urlLower.includes(':8188')) {
-        return 'comfyui';
-    } else {
-        // 默认为 Yunwu/Gemini-compatible 格式
-        return 'yunwu';
     }
+    if (nameLower.includes('seedream') || urlLower.includes('ark.cn-beijing.volces.com')) {
+        return 'seedream';
+    }
+    if (nameLower.includes('gptgod') || urlLower.includes('gptgod')) {
+        return 'gptgod';
+    }
+    if (nameLower.includes('openrouter') || urlLower.includes('openrouter.ai')) {
+        return 'openrouter';
+    }
+    if (nameLower.includes('comfyui') || urlLower.includes(':8188')) {
+        return 'comfyui';
+    }
+    return 'yunwu';
 }
 
-/**
- * 获取 Provider 配置实例
- * @param {string} name - Provider 名称
- * @param {string} baseUrl - Base URL
- */
 function getProviderConfig(name, baseUrl) {
     const type = detectProviderType(name, baseUrl);
     return new ProviderConfig(type, baseUrl);
 }
 
-/**
- * 获取所有预定义的 provider 列表
- */
 function getAllProviderConfigs() {
     return Object.values(PROVIDER_CONFIGS);
 }

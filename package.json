@@ -6,7 +6,8 @@
         "lint": "eslint .",
         "lint:fix": "eslint . --fix",
         "format": "prettier --write \"**/*.{js,json,html,css,md}\"",
-        "format:check": "prettier --check \"**/*.{js,json,html,css,md}\""
+        "format:check": "prettier --check \"**/*.{js,json,html,css,md}\"",
+        "test": "node --test tests/*.test.js"
     },
     "author": "LiuYang",
     "license": "ISC",

@@ -1,4 +1,5 @@
 const fs = require('uxp').storage.localFileSystem;
+const { request } = require('./network_client');
 
 /**
  * Manages temporary files for AI image generation
@@ -209,24 +210,27 @@ class FileManager {
      */
     async saveImageFromBase64(base64Data, extension = 'png') {
         try {
-            const folder = await this.getImageFolder();
-            const timestamp = this._getTimestamp();
-            const filename = `generated_image_${timestamp}.${extension}`;
-
-            // Decode base64 to binary
-            const binaryString = atob(base64Data);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
-
-            const file = await folder.createFile(filename, { overwrite: true });
-            await file.write(bytes.buffer, { format: require('uxp').storage.formats.binary });
-
-            console.log(`[IMAGE] Image saved to: ${file.nativePath}`);
-            return file;
+            const bytes = this._base64ToBytes(base64Data);
+            return await this._saveBytesAsImage(bytes, extension);
         } catch (e) {
             console.error('Error saving image from base64:', e);
+            throw e;
+        }
+    }
+
+    async saveImageFromBase64Auto(base64Data, mimeType = null) {
+        try {
+            const bytes = this._base64ToBytes(base64Data);
+            const detectedExtension = this.detectImageExtensionFromBytes(bytes);
+            const extension = detectedExtension || this._getExtensionFromMimeType(mimeType);
+
+            if (!extension) {
+                throw new Error('Failed to determine image extension from base64 data');
+            }
+
+            return await this._saveBytesAsImage(bytes, extension);
+        } catch (e) {
+            console.error('Error saving image from base64 automatically:', e);
             throw e;
         }
     }
@@ -237,34 +241,92 @@ class FileManager {
      * @returns {Promise<File>}
      */
     async downloadImage(url) {
+        return await this.downloadImageAndDetectType(url);
+    }
+
+    async downloadImageAndDetectType(url) {
         try {
-            const folder = await this.getImageFolder();
-            const timestamp = this._getTimestamp();
-
-            // Determine extension from URL
-            let extension = 'png';
-            if (url.includes('.webp')) extension = 'webp';
-            else if (url.includes('.jpg') || url.includes('.jpeg')) extension = 'jpg';
-
-            const filename = `generated_image_${timestamp}.${extension}`;
-
-            // Fetch the image
-            const response = await fetch(url);
+            const response = await request(url, { responseType: 'arraybuffer' });
             if (!response.ok) {
                 throw new Error(`Failed to download image: ${response.status}`);
             }
 
             const arrayBuffer = await response.arrayBuffer();
+            const bytes = new Uint8Array(arrayBuffer);
+            const detectedExtension = this.detectImageExtensionFromBytes(bytes);
+            const mimeType = response.headers && response.headers.get ? response.headers.get('content-type') : null;
+            const extension = detectedExtension || this._getExtensionFromMimeType(mimeType) || this._getExtensionFromUrl(url);
 
-            const file = await folder.createFile(filename, { overwrite: true });
-            await file.write(arrayBuffer, { format: require('uxp').storage.formats.binary });
+            if (!extension) {
+                throw new Error(`Downloaded content is not a supported image: ${url}`);
+            }
 
-            console.log(`[IMAGE] Image downloaded to: ${file.nativePath}`);
-            return file;
+            return await this._saveBytesAsImage(bytes, extension);
         } catch (e) {
             console.error('Error downloading image:', e);
             throw e;
         }
+    }
+
+    detectImageExtensionFromBytes(arrayBuffer) {
+        const bytes = arrayBuffer instanceof Uint8Array ? arrayBuffer : new Uint8Array(arrayBuffer);
+        if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+            return 'png';
+        }
+        if (bytes.length >= 3 && bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
+            return 'jpg';
+        }
+        if (bytes.length >= 12 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
+            return 'webp';
+        }
+        return null;
+    }
+
+    async saveDataUrl(dataUrl) {
+        const match = /^data:(image\/[^;]+);base64,(.+)$/i.exec(dataUrl || '');
+        if (!match) {
+            throw new Error('Invalid data URL image payload');
+        }
+
+        const [, mimeType, base64Data] = match;
+        return await this.saveImageFromBase64Auto(base64Data, mimeType);
+    }
+
+    _base64ToBytes(base64Data) {
+        const binaryString = atob(base64Data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        return bytes;
+    }
+
+    async _saveBytesAsImage(bytes, extension) {
+        const folder = await this.getImageFolder();
+        const timestamp = this._getTimestamp();
+        const filename = `generated_image_${timestamp}.${extension}`;
+        const file = await folder.createFile(filename, { overwrite: true });
+        const binaryBuffer = bytes instanceof Uint8Array ? bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) : bytes;
+        await file.write(binaryBuffer, { format: require('uxp').storage.formats.binary });
+        console.log(`[IMAGE] Image saved to: ${file.nativePath}`);
+        return file;
+    }
+
+    _getExtensionFromMimeType(mimeType) {
+        if (!mimeType) return null;
+        const lowerMimeType = mimeType.toLowerCase();
+        if (lowerMimeType.includes('png')) return 'png';
+        if (lowerMimeType.includes('jpeg') || lowerMimeType.includes('jpg')) return 'jpg';
+        if (lowerMimeType.includes('webp')) return 'webp';
+        return null;
+    }
+
+    _getExtensionFromUrl(url) {
+        const lowerUrl = (url || '').toLowerCase();
+        if (lowerUrl.includes('.webp')) return 'webp';
+        if (lowerUrl.includes('.jpg') || lowerUrl.includes('.jpeg')) return 'jpg';
+        if (lowerUrl.includes('.png')) return 'png';
+        return null;
     }
 
     /**

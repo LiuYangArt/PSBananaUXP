@@ -4,6 +4,14 @@
  */
 const { Z_IMAGE_TURBO_WORKFLOW, QWEN_IMAGE_EDIT_WORKFLOW } = require('./workflow_templates.js');
 const { getProviderConfig } = require('./api_providers');
+const { requestAny } = require('./network_client');
+const { BANANA_IMAGE_API, GPT_IMAGE_2_API } = require('./aspect_ratio');
+const {
+    GPT_IMAGE_2_DEFAULT_COUNT,
+    GPT_IMAGE_2_DEFAULT_QUALITY,
+    isGptImage2Api,
+    resolveGptImage2Size,
+} = require('./gpt_image_2');
 
 class ImageGenerator {
     constructor(fileManager) {
@@ -13,17 +21,7 @@ class ImageGenerator {
     /**
      * Generate image from prompt
      * @param {Object} options
-     * @param {string} options.prompt - Text prompt
-     * @param {Object} options.provider - Provider config (apiKey, baseUrl, model, name)
-     * @param {string} options.aspectRatio - Aspect ratio (e.g., "16:9")
-     * @param {string} options.resolution - Resolution (1K, 2K, 4K)
-     * @param {boolean} options.debugMode - Save debug files
-     * @param {string} options.mode - Generation mode ('text2img' or 'imgedit')
-     * @param {boolean} options.searchWeb - Enable Google Search tool
-     * @param {string} options.inputImage - Base64 encoded input image (for image edit mode)
-     * @param {string} options.sourceImage - Base64 encoded source image (多图模式)
-     * @param {string} options.referenceImage - Base64 encoded reference image (多图模式)
-     * @returns {Promise<File>} - UXP File object of generated image
+     * @returns {Promise<File>}
      */
     async generate(options) {
         const {
@@ -37,19 +35,66 @@ class ImageGenerator {
             inputImage,
             sourceImage,
             referenceImage,
+            imageApiKind = BANANA_IMAGE_API,
         } = options;
 
         if (!provider || !provider.apiKey || !provider.baseUrl) {
             throw new Error('Invalid provider configuration');
         }
 
-        // 使用 ProviderConfig 获取配置
         const config = getProviderConfig(provider.name, provider.baseUrl);
+        if (!config.supportsImageApi(imageApiKind)) {
+            throw new Error(`Provider ${provider.name} does not support image API ${imageApiKind}`);
+        }
+
         console.log(`[DEBUG] Provider type detected: ${config.type}`);
+        console.log(`[DEBUG] Image API kind: ${imageApiKind}`);
         console.log(`[DEBUG] Generation mode: ${mode}`);
         console.log(`[DEBUG] Search web mode: ${searchWeb}`);
 
-        // Build payload
+        if (isGptImage2Api(imageApiKind)) {
+            return await this._generateWithGptImage2({
+                prompt,
+                provider,
+                aspectRatio,
+                resolution,
+                debugMode,
+                mode,
+                inputImage,
+                sourceImage,
+                referenceImage,
+                config,
+            });
+        }
+
+        return await this._generateWithBanana({
+            prompt,
+            provider,
+            aspectRatio,
+            resolution,
+            debugMode,
+            mode,
+            searchWeb,
+            inputImage,
+            sourceImage,
+            referenceImage,
+            config,
+        });
+    }
+
+    async _generateWithBanana({
+        prompt,
+        provider,
+        aspectRatio,
+        resolution,
+        debugMode,
+        mode,
+        searchWeb,
+        inputImage,
+        sourceImage,
+        referenceImage,
+        config,
+    }) {
         const payload = await this._buildPayload(
             prompt,
             aspectRatio,
@@ -62,26 +107,35 @@ class ImageGenerator {
             sourceImage,
             referenceImage
         );
-        const apiUrl = config.buildApiUrl('generate', { model: provider.model, apiKey: provider.apiKey });
-        const headers = config.buildHeaders(provider.apiKey);
+        const apiUrls = config.buildApiUrls('generate', {
+            model: provider.model,
+            apiKey: provider.apiKey,
+        });
+        const headers = config.buildHeaders(provider.apiKey, { endpointType: 'generate' });
 
-        console.log(`[DEBUG] API URL: ${apiUrl}`);
+        console.log(`[DEBUG] API URLs:`, apiUrls);
         console.log(`[DEBUG] Headers:`, headers);
         console.log(`[DEBUG] Payload:`, JSON.stringify(payload, null, 2));
 
-        // Debug: Save payload
         if (debugMode) {
             await this.fileManager.savePayload(payload, provider.name);
         }
 
         try {
-            // Make API request
-            const response = await fetch(apiUrl, {
+            const { response, url, attempts } = await requestAny(apiUrls, {
                 method: 'POST',
-                headers: headers,
+                headers,
                 body: JSON.stringify(payload),
+                shouldAcceptResponse: (candidateResponse) =>
+                    candidateResponse.ok ||
+                    ![404, 500, 502, 503, 504].includes(candidateResponse.status),
             });
 
+            if (attempts.length > 0) {
+                console.warn('[DEBUG] Fallback attempts:', attempts);
+            }
+
+            console.log(`[DEBUG] Final API URL: ${url}`);
             console.log(`[DEBUG] Response status: ${response.status} ${response.statusText}`);
 
             if (!response.ok) {
@@ -93,7 +147,8 @@ class ImageGenerator {
                         `=== HTTP Error ===\n` +
                             `Time: ${new Date().toISOString()}\n` +
                             `Provider: ${provider.name}\n` +
-                            `URL: ${apiUrl}\n` +
+                            `URLs: ${apiUrls.join(', ')}\n` +
+                            `Final URL: ${url}\n` +
                             `Status: ${response.status} ${response.statusText}\n` +
                             `Response: ${errorText}\n`
                     );
@@ -105,12 +160,10 @@ class ImageGenerator {
             const responseData = await response.json();
             console.log(`[DEBUG] Response data:`, JSON.stringify(responseData, null, 2));
 
-            // Debug: Save response
             if (debugMode) {
                 await this.fileManager.saveResponse(responseData, provider.name);
             }
 
-            // Process response and download/save image
             return await this._processResponse(responseData, config.type, provider);
         } catch (e) {
             console.error('Image generation failed:', e);
@@ -120,16 +173,301 @@ class ImageGenerator {
                     `=== Generation Error ===\n` +
                         `Time: ${new Date().toISOString()}\n` +
                         `Provider: ${provider.name} (${config.type})\n` +
+                        `URLs: ${apiUrls.join(', ')}\n` +
                         `Prompt: ${prompt}\n` +
                         `Resolution: ${resolution}\n` +
                         `Aspect Ratio: ${aspectRatio}\n` +
                         `Error: ${e.message}\n` +
+                        `Attempts: ${e.attempts ? JSON.stringify(e.attempts) : '[]'}\n` +
                         `Stack: ${e.stack}\n`
                 );
             }
 
             throw new Error(`Generation failed: ${e.message}`);
         }
+    }
+
+    async _generateWithGptImage2({
+        prompt,
+        provider,
+        aspectRatio,
+        resolution,
+        debugMode,
+        mode,
+        inputImage,
+        sourceImage,
+        referenceImage,
+        config,
+    }) {
+        const size = resolveGptImage2Size(resolution, aspectRatio);
+        const endpointType = mode === 'imgedit' ? 'gptImage2Edit' : 'gptImage2Generate';
+        const apiUrls = config.buildApiUrls(endpointType, { apiKey: provider.apiKey });
+        const request = await this._buildGptImage2Request({
+            prompt,
+            provider,
+            aspectRatio,
+            resolution,
+            size,
+            mode,
+            inputImage,
+            sourceImage,
+            referenceImage,
+            config,
+        });
+
+        console.log(`[DEBUG] GPT Image 2 API URLs:`, apiUrls);
+        console.log(`[DEBUG] GPT Image 2 headers:`, request.headers);
+        console.log(`[DEBUG] GPT Image 2 payload:`, JSON.stringify(request.debugPayload, null, 2));
+
+        if (debugMode) {
+            await this.fileManager.savePayload(
+                request.debugPayload,
+                `${provider.name}_gpt_image_2`
+            );
+        }
+
+        try {
+            const { response, url, attempts } = await requestAny(apiUrls, {
+                method: request.method,
+                headers: request.headers,
+                body: request.body,
+                shouldAcceptResponse: (candidateResponse) =>
+                    candidateResponse.ok ||
+                    ![404, 500, 502, 503, 504].includes(candidateResponse.status),
+            });
+
+            if (attempts.length > 0) {
+                console.warn('[DEBUG] GPT Image 2 fallback attempts:', attempts);
+            }
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(
+                    `GPT Image 2 request failed for provider ${provider.name} (${mode}, ${resolution}, ${aspectRatio}, ${size}, ${url}): ${response.status} - ${errorText.substring(0, 400)}`
+                );
+            }
+
+            const responseData = await response.json();
+            if (debugMode) {
+                await this.fileManager.saveResponse(responseData, `${provider.name}_gpt_image_2`);
+            }
+
+            return await this._processGptImage2Response(responseData);
+        } catch (error) {
+            console.error('GPT Image 2 generation failed:', error);
+            if (debugMode) {
+                await this.fileManager.saveLog(
+                    `=== GPT Image 2 Error ===\n` +
+                        `Time: ${new Date().toISOString()}\n` +
+                        `Provider: ${provider.name} (${config.type})\n` +
+                        `Prompt: ${prompt}\n` +
+                        `Resolution: ${resolution}\n` +
+                        `Aspect Ratio: ${aspectRatio}\n` +
+                        `Size: ${size}\n` +
+                        `URLs: ${apiUrls.join(', ')}\n` +
+                        `Error: ${error.message}\n` +
+                        `Stack: ${error.stack}\n`
+                );
+            }
+            throw new Error(`Generation failed: ${error.message}`);
+        }
+    }
+
+    async _buildGptImage2Request({
+        prompt,
+        provider,
+        aspectRatio,
+        resolution,
+        size,
+        mode,
+        inputImage,
+        sourceImage,
+        referenceImage,
+        config,
+    }) {
+        if (mode === 'imgedit') {
+            return await this._buildGptImage2EditRequest({
+                prompt,
+                provider,
+                aspectRatio,
+                resolution,
+                size,
+                inputImage,
+                sourceImage,
+                referenceImage,
+                config,
+            });
+        }
+
+        return this._buildGptImage2GenerationRequest({
+            prompt,
+            provider,
+            aspectRatio,
+            resolution,
+            size,
+            config,
+        });
+    }
+
+    _buildGptImage2GenerationRequest({ prompt, provider, aspectRatio, resolution, size, config }) {
+        const payload = {
+            model: provider.model,
+            prompt,
+            size,
+            quality: GPT_IMAGE_2_DEFAULT_QUALITY,
+            n: GPT_IMAGE_2_DEFAULT_COUNT,
+            response_format: 'b64_json',
+        };
+
+        return {
+            method: 'POST',
+            headers: config.buildHeaders(provider.apiKey, { endpointType: 'gptImage2Generate' }),
+            body: JSON.stringify(payload),
+            debugPayload: {
+                imageApiKind: GPT_IMAGE_2_API,
+                mode: 'text2img',
+                resolution,
+                aspectRatio,
+                ...payload,
+            },
+        };
+    }
+
+    async _buildGptImage2EditRequest({
+        prompt,
+        provider,
+        aspectRatio,
+        resolution,
+        size,
+        inputImage,
+        sourceImage,
+        referenceImage,
+        config,
+    }) {
+        const imageParts = [];
+        const debugImages = [];
+
+        if (referenceImage) {
+            imageParts.push({
+                fieldName: 'image',
+                filename: 'reference.webp',
+                mimeType: 'image/webp',
+                base64Data: referenceImage,
+            });
+            debugImages.push('reference.webp');
+        }
+        if (sourceImage) {
+            imageParts.push({
+                fieldName: 'image',
+                filename: 'source.webp',
+                mimeType: 'image/webp',
+                base64Data: sourceImage,
+            });
+            debugImages.push('source.webp');
+        }
+        if (inputImage) {
+            imageParts.push({
+                fieldName: 'image',
+                filename: 'input.png',
+                mimeType: 'image/png',
+                base64Data: inputImage,
+            });
+            debugImages.push('input.png');
+        }
+
+        if (imageParts.length === 0) {
+            throw new Error('GPT Image 2 edit request requires at least one input image');
+        }
+
+        const multipart = this._buildMultipartRequestBody(
+            [
+                { name: 'model', value: provider.model },
+                { name: 'prompt', value: prompt },
+                { name: 'size', value: size },
+                { name: 'quality', value: GPT_IMAGE_2_DEFAULT_QUALITY },
+                { name: 'n', value: String(GPT_IMAGE_2_DEFAULT_COUNT) },
+                { name: 'response_format', value: 'b64_json' },
+            ],
+            imageParts
+        );
+
+        return {
+            method: 'POST',
+            headers: {
+                ...config.buildHeaders(provider.apiKey, {
+                    includeContentType: false,
+                    endpointType: 'gptImage2Edit',
+                }),
+                'Content-Type': `multipart/form-data; boundary=${multipart.boundary}`,
+            },
+            body: multipart.body,
+            debugPayload: {
+                imageApiKind: GPT_IMAGE_2_API,
+                mode: 'imgedit',
+                resolution,
+                aspectRatio,
+                model: provider.model,
+                prompt,
+                size,
+                quality: GPT_IMAGE_2_DEFAULT_QUALITY,
+                n: GPT_IMAGE_2_DEFAULT_COUNT,
+                response_format: 'b64_json',
+                images: debugImages,
+            },
+        };
+    }
+
+    _buildMultipartRequestBody(fields, files) {
+        const boundary = '----BananaBoundary' + Math.random().toString(36).slice(2);
+        const chunks = [];
+
+        // multipart 文本字段必须使用 UTF-8 编码，否则中文 prompt 会被写坏
+        const pushText = (value) => {
+            const bytes =
+                typeof globalThis.TextEncoder === 'function'
+                    ? new globalThis.TextEncoder().encode(value)
+                    : Uint8Array.from(unescape(encodeURIComponent(value)), (char) =>
+                          char.charCodeAt(0)
+                      );
+            chunks.push(bytes);
+        };
+
+        for (const field of fields) {
+            pushText(`--${boundary}\r\n`);
+            pushText(`Content-Disposition: form-data; name="${field.name}"\r\n\r\n`);
+            pushText(`${field.value}\r\n`);
+        }
+
+        for (const file of files) {
+            pushText(`--${boundary}\r\n`);
+            pushText(
+                `Content-Disposition: form-data; name="${file.fieldName}"; filename="${file.filename}"\r\n`
+            );
+            pushText(`Content-Type: ${file.mimeType}\r\n\r\n`);
+            chunks.push(this._base64ToBytes(file.base64Data));
+            pushText('\r\n');
+        }
+
+        pushText(`--${boundary}--\r\n`);
+
+        const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+        const body = new Uint8Array(totalLength);
+        let offset = 0;
+        for (const chunk of chunks) {
+            body.set(chunk, offset);
+            offset += chunk.length;
+        }
+
+        return { boundary, body: body.buffer };
+    }
+
+    _base64ToBytes(base64Data) {
+        const binaryString = atob(base64Data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        return bytes;
     }
 
     /**
@@ -1062,6 +1400,55 @@ class ImageGenerator {
         return ratioMap[aspectRatio] || `Aspect ratio ${aspectRatio}`;
     }
 
+    async _processGptImage2Response(responseData) {
+        const imageRef = this._extractGptImage2ImageRef(responseData);
+
+        if (imageRef.type === 'b64_json') {
+            return await this.fileManager.saveImageFromBase64Auto(
+                imageRef.data,
+                imageRef.mimeType || 'image/png'
+            );
+        }
+
+        if (imageRef.type === 'data_url') {
+            return await this.fileManager.saveDataUrl(imageRef.url);
+        }
+
+        if (imageRef.type === 'url') {
+            return await this.fileManager.downloadImageAndDetectType(imageRef.url);
+        }
+
+        throw new Error('Unsupported GPT Image 2 image reference type');
+    }
+
+    _extractGptImage2ImageRef(responseData) {
+        if (!responseData || !Array.isArray(responseData.data) || responseData.data.length === 0) {
+            const serverMessage = this._extractServerMessage(responseData);
+            throw new Error(`No GPT Image 2 image data found. ${serverMessage}`);
+        }
+
+        const firstItem = responseData.data[0];
+        if (firstItem.b64_json) {
+            return { type: 'b64_json', data: firstItem.b64_json, mimeType: 'image/png' };
+        }
+
+        const imageUrl = firstItem.url;
+        if (!imageUrl) {
+            const serverMessage = this._extractServerMessage(responseData);
+            throw new Error(`No GPT Image 2 image URL found. ${serverMessage}`);
+        }
+
+        if (imageUrl.startsWith('data:image/')) {
+            return { type: 'data_url', url: imageUrl };
+        }
+
+        if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+            return { type: 'url', url: imageUrl };
+        }
+
+        throw new Error(`Unsupported GPT Image 2 image URL format: ${imageUrl.substring(0, 64)}`);
+    }
+
     /**
      * Process API response and return image file
      */
@@ -1076,11 +1463,9 @@ class ImageGenerator {
             return await this._processSeedreamResponse(responseData);
         } else if (providerType === 'comfyui') {
             return await this._processComfyUIResponse(responseData, provider);
-            // Note: I need to access provider config to get baseUrl for history polling.
-            // Since _processResponse signature doesn't pass it, I'll assume I can pass it or fix the architecture.
-            // Wait, I can just change _processResponse signature in the next step or rely on a class property?
-            // Actually, I should pass provider to _processResponse in the main generate method.
         }
+
+        throw new Error(`Unsupported provider response processor: ${providerType}`);
     }
 
     /**
@@ -1161,7 +1546,7 @@ class ImageGenerator {
      * Process OpenRouter response
      */
     async _processOpenRouterResponse(responseData) {
-        if (!responseData.choices || !responseData.choices.length === 0) {
+        if (!responseData.choices || responseData.choices.length === 0) {
             const serverMessage = this._extractServerMessage(responseData);
             throw new Error(`No image generated. ${serverMessage}`);
         }

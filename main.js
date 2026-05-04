@@ -5,7 +5,9 @@ const { PresetManager } = require('./presets_manager');
 const { ImageGenerator } = require('./image_generator');
 const { FileManager } = require('./file_manager');
 const { PSOperations } = require('./ps_operations');
-const { calculateAspectRatio } = require('./aspect_ratio');
+const { getProviderConfig } = require('./api_providers');
+const { calculateAspectRatio, BANANA_IMAGE_API, GPT_IMAGE_2_API } = require('./aspect_ratio');
+const { isGptImage2Api, resolveGptImage2Size } = require('./gpt_image_2');
 const translations = require('./localization');
 
 // Localization Helper
@@ -35,6 +37,7 @@ let isProcessing = false; // 用于测试操作的锁
 let taskIdCounter = 0; // 任务ID计数器，用于调试
 const taskLogs = []; // 存储任务日志
 let generationMode = 'text2img'; // 'text2img' or 'imgedit'
+let currentImageApiKind = BANANA_IMAGE_API;
 
 // 添加任务日志并写入文件
 async function logTask(message) {
@@ -60,11 +63,111 @@ document.addEventListener('DOMContentLoaded', async () => {
     await initializeApp();
 });
 
+function getSelectedImageApiKind() {
+    return currentImageApiKind || settingsManager.get('selected_image_api', BANANA_IMAGE_API);
+}
+
+function getEffectiveImageApiKind(imageApiKind = getSelectedImageApiKind()) {
+    if (!currentProvider) {
+        return imageApiKind;
+    }
+
+    const providerConfig = getProviderConfig(currentProvider.name, currentProvider.baseUrl);
+    if (providerConfig.supportsImageApi(imageApiKind)) {
+        return imageApiKind;
+    }
+
+    return providerConfig.supportsImageApi(BANANA_IMAGE_API)
+        ? BANANA_IMAGE_API
+        : providerConfig.supportedImageApis[0] || BANANA_IMAGE_API;
+}
+
+function setDropdownValue(dropdown, value) {
+    if (!dropdown) {
+        return;
+    }
+
+    dropdown.value = value;
+    const options = dropdown.querySelectorAll('sp-menu-item');
+    options.forEach((option) => {
+        option.selected = option.value === value;
+    });
+}
+
+function setElementDisabled(element, disabled) {
+    if (!element) {
+        return;
+    }
+
+    element.disabled = disabled;
+    if (disabled) {
+        element.setAttribute('disabled', 'true');
+    } else {
+        element.removeAttribute('disabled');
+    }
+}
+
+function updateImageApiDependentUI() {
+    const imageApiSelect = document.getElementById('imageApiSelect');
+    const searchWebCheckbox = document.getElementById('searchWebCheckbox');
+    const gptImage2ModelInput = document.getElementById('inputGptImage2ModelId');
+    const preferredKind = getSelectedImageApiKind();
+    const effectiveKind = getEffectiveImageApiKind(preferredKind);
+    const providerConfig = currentProvider
+        ? getProviderConfig(currentProvider.name, currentProvider.baseUrl)
+        : null;
+    const supportsGptImage2 = providerConfig
+        ? providerConfig.supportsImageApi(GPT_IMAGE_2_API)
+        : true;
+    const gptImage2Option = imageApiSelect?.querySelector('sp-menu-item[value="gpt_image_2"]');
+    const gptMode = isGptImage2Api(effectiveKind);
+
+    if (imageApiSelect) {
+        setDropdownValue(imageApiSelect, effectiveKind);
+        setElementDisabled(imageApiSelect, !supportsGptImage2);
+    }
+
+    if (gptImage2Option) {
+        setElementDisabled(gptImage2Option, !supportsGptImage2);
+    }
+
+    if (gptImage2ModelInput) {
+        setElementDisabled(gptImage2ModelInput, !supportsGptImage2);
+    }
+
+    if (searchWebCheckbox) {
+        setElementDisabled(searchWebCheckbox, gptMode);
+    }
+}
+
+async function setSelectedImageApiKind(imageApiKind) {
+    currentImageApiKind = imageApiKind || BANANA_IMAGE_API;
+    await settingsManager.set('selected_image_api', currentImageApiKind);
+    updateImageApiDependentUI();
+}
+
+function getCurrentProviderModel(imageApiKind) {
+    return providerManager.getModelForImageApi(currentProvider, imageApiKind);
+}
+
+function buildGenerationProvider(imageApiKind) {
+    if (!currentProvider) {
+        return null;
+    }
+
+    const selectedModel = getCurrentProviderModel(imageApiKind);
+    return {
+        ...currentProvider,
+        model: selectedModel,
+    };
+}
+
 async function initializeApp() {
     // Load all managers
     await settingsManager.load();
     await providerManager.load();
     await presetManager.load();
+    currentImageApiKind = settingsManager.get('selected_image_api', BANANA_IMAGE_API);
 
     // Setup tabs
     setupTabs();
@@ -81,16 +184,17 @@ async function initializeApp() {
 
     // Load selected provider
 
-
     // Set Dynamic Version in Footer
-    try {
-        const manifest = require('./manifest.json');
-        const footerText = document.getElementById('footerText');
-        if (footerText && manifest.version) {
-            footerText.textContent = `🍌PSBanana by LiuYang v${manifest.version}`;
+    const footerText = document.getElementById('footerText');
+    if (footerText) {
+        try {
+            const manifest = require('./manifest.json');
+            const versionText = manifest && manifest.version ? ` v${manifest.version}` : '';
+            footerText.textContent = `🍌PSBanana by LiuYang${versionText}`;
+        } catch (e) {
+            footerText.textContent = '🍌PSBanana by LiuYang';
+            console.error('Failed to load version from manifest', e);
         }
-    } catch (e) {
-        console.error('Failed to load version from manifest', e);
     }
 
     // Restore latest prompt
@@ -171,6 +275,7 @@ function setupGenerateUI() {
     const btnTestExport = document.getElementById('btnTestExport');
     const btnEnsureGroups = document.getElementById('btnEnsureGroups');
     const multiImageModeCheckbox = document.getElementById('multiImageModeCheckbox');
+    const imageApiSelect = document.getElementById('imageApiSelect');
     const resolutionSelect = document.getElementById('resolutionSelect');
     const btnSmartCanvasRatio = document.getElementById('btnSmartCanvasRatio');
 
@@ -185,6 +290,14 @@ function setupGenerateUI() {
         await settingsManager.set('multi_image_mode', e.target.checked);
         console.log(`[UI] Multi-image mode switched to: ${e.target.checked}`);
     });
+
+    // Image API Dropdown
+    setDropdownValue(imageApiSelect, getSelectedImageApiKind());
+    imageApiSelect.addEventListener('change', async (e) => {
+        await setSelectedImageApiKind(e.target.value);
+        console.log(`[UI] Image API switched to: ${e.target.value}`);
+    });
+    updateImageApiDependentUI();
 
     // Resolution Dropdown
     const savedResolution = settingsManager.get('generation_resolution', '1K');
@@ -320,7 +433,8 @@ function setupSettingsUI() {
     const btnTestConnection = document.getElementById('btnTestConnection');
     const inputApiKey = document.getElementById('inputApiKey');
     const inputBaseUrl = document.getElementById('inputBaseUrl');
-    const inputModelId = document.getElementById('inputModelId');
+    const inputBananaModelId = document.getElementById('inputBananaModelId');
+    const inputGptImage2ModelId = document.getElementById('inputGptImage2ModelId');
     const debugModeCheckbox = document.getElementById('debugModeCheckbox');
     const inputMaxSize = document.getElementById('inputMaxSize');
     const inputQuality = document.getElementById('inputQuality');
@@ -355,7 +469,9 @@ function setupSettingsUI() {
     // Populate provider dropdown
     const savedProvider = settingsManager.get('selected_provider');
     const providerNames = providerManager.getAllNames();
-    const initialProvider = providerNames.includes(savedProvider) ? savedProvider : providerNames[0] || null;
+    const initialProvider = providerNames.includes(savedProvider)
+        ? savedProvider
+        : providerNames[0] || null;
     updateProviderDropdown(initialProvider);
     if (initialProvider) {
         loadProviderConfig(initialProvider);
@@ -413,6 +529,7 @@ function setupSettingsUI() {
     providerSelect.addEventListener('change', async (e) => {
         console.log(`[Settings] Provider changed to: ${e.target.value}`);
         loadProviderConfig(e.target.value);
+        updateImageApiDependentUI();
         await settingsManager.set('selected_provider', e.target.value);
     });
 
@@ -427,13 +544,18 @@ function setupSettingsUI() {
             currentProvider.name,
             inputApiKey.value,
             inputBaseUrl.value,
-            inputModelId.value
+            inputBananaModelId.value,
+            inputGptImage2ModelId.value
         );
 
         if (result.success) {
             currentProvider.apiKey = inputApiKey.value;
             currentProvider.baseUrl = inputBaseUrl.value;
-            currentProvider.model = inputModelId.value;
+            currentProvider.models = {
+                banana: inputBananaModelId.value,
+                gpt_image_2: inputGptImage2ModelId.value,
+            };
+            currentProvider.model = inputBananaModelId.value;
             await settingsManager.set('selected_provider', currentProvider.name);
             showStatus(getText('msg_provider_saved'), 'success');
         } else {
@@ -454,7 +576,7 @@ function setupSettingsUI() {
             name: currentProvider.name,
             apiKey: inputApiKey.value,
             baseUrl: inputBaseUrl.value,
-            model: inputModelId.value,
+            model: inputBananaModelId.value,
         };
 
         const result = await providerManager.testConnection(testConfig);
@@ -535,14 +657,23 @@ function loadProviderConfig(providerName) {
     currentProvider = provider;
     document.getElementById('inputApiKey').value = provider.apiKey || '';
     document.getElementById('inputBaseUrl').value = provider.baseUrl || '';
-    document.getElementById('inputModelId').value = provider.model || '';
+    document.getElementById('inputBananaModelId').value = providerManager.getModelForImageApi(
+        provider,
+        BANANA_IMAGE_API
+    );
+    document.getElementById('inputGptImage2ModelId').value = providerManager.getModelForImageApi(
+        provider,
+        GPT_IMAGE_2_API
+    );
+    updateImageApiDependentUI();
 }
 
 function clearProviderConfig() {
     currentProvider = null;
     document.getElementById('inputApiKey').value = '';
     document.getElementById('inputBaseUrl').value = '';
-    document.getElementById('inputModelId').value = '';
+    document.getElementById('inputBananaModelId').value = '';
+    document.getElementById('inputGptImage2ModelId').value = '';
 }
 
 function showStatus(message, type) {
@@ -609,9 +740,10 @@ async function handleSmartCanvasRatio() {
         showCanvasRatioStatus(getText('msg_analyzing_ratio'), 'info');
         btnSmartCanvasRatio.disabled = true;
 
+        const imageApiKind = getEffectiveImageApiKind();
         const result = await executeAsModal(
             async () => {
-                return await PSOperations.applySmartCanvasRatio();
+                return await PSOperations.applySmartCanvasRatio(imageApiKind);
             },
             { commandName: 'Smart Canvas Ratio' }
         );
@@ -668,6 +800,32 @@ async function handleGenerateImage() {
     }
 
     const resolution = document.getElementById('resolutionSelect').value || '1K';
+    const imageApiKind = getEffectiveImageApiKind();
+    const providerConfig = getProviderConfig(currentProvider.name, currentProvider.baseUrl);
+
+    if (!providerConfig.supportsImageApi(imageApiKind)) {
+        showGenerateStatus(
+            getText('msg_provider_image_api_not_supported', {
+                provider: currentProvider.name,
+                imageApi: isGptImage2Api(imageApiKind)
+                    ? getText('option_image_api_gpt_image_2')
+                    : getText('option_image_api_banana'),
+            }),
+            'error'
+        );
+        return;
+    }
+
+    const providerForGeneration = buildGenerationProvider(imageApiKind);
+
+    if (!providerForGeneration || !providerForGeneration.model) {
+        const messageKey = isGptImage2Api(imageApiKind)
+            ? 'msg_gpt_model_missing'
+            : 'msg_banana_model_missing';
+        showGenerateStatus(getText(messageKey), 'error');
+        return;
+    }
+
     const debugMode = settingsManager.get('debug_mode', false);
     const mode = generationMode;
     const selectionMode = settingsManager.get('selection_mode', false);
@@ -705,7 +863,8 @@ async function handleGenerateImage() {
                             region = PSOperations.calculateGenerationRegion(
                                 selectionInfo.bounds,
                                 info.width,
-                                info.height
+                                info.height,
+                                imageApiKind
                             );
                             // 在 executeAsModal 内部，先保存到临时变量，稍后记录到日志
                         }
@@ -810,7 +969,11 @@ async function handleGenerateImage() {
                 aspectRatio = selectionRegion.aspectRatio;
             } else {
                 logTask(`[Task ${taskId}] No selection, using full canvas`);
-                aspectRatio = calculateAspectRatio(canvasInfo.width, canvasInfo.height);
+                aspectRatio = calculateAspectRatio(
+                    canvasInfo.width,
+                    canvasInfo.height,
+                    imageApiKind
+                );
             }
         } catch (e) {
             console.error('Failed to get canvas info or export:', e);
@@ -827,9 +990,14 @@ async function handleGenerateImage() {
             'info'
         );
 
+        if (isGptImage2Api(imageApiKind)) {
+            resolveGptImage2Size(resolution, aspectRatio);
+        }
+
         const imageFile = await imageGenerator.generate({
             prompt,
-            provider: currentProvider,
+            provider: providerForGeneration,
+            imageApiKind,
             aspectRatio,
             resolution,
             debugMode,
@@ -1102,7 +1270,8 @@ async function handleTestImport() {
                             region = PSOperations.calculateGenerationRegion(
                                 selectionInfo.bounds,
                                 doc.width,
-                                doc.height
+                                doc.height,
+                                getSelectedImageApiKind()
                             );
                         }
                     }
@@ -1159,7 +1328,8 @@ async function handleTestExport() {
                             region = PSOperations.calculateGenerationRegion(
                                 selectionInfo.bounds,
                                 doc.width,
-                                doc.height
+                                doc.height,
+                                getSelectedImageApiKind()
                             );
                         }
                     }
@@ -1337,6 +1507,12 @@ function updateLanguage(lang) {
     document.getElementById('btnRenamePreset').textContent = getText('btn_rename');
     document.getElementById('btnDeletePreset').textContent = getText('btn_del');
     document.getElementById('promptInput').placeholder = getText('placeholder_prompt');
+    document.getElementById('labelImageApi').textContent = getText('label_image_api');
+    document.getElementById('imageApiSelect').placeholder = getText('placeholder_select');
+    document.querySelector('#imageApiSelect sp-menu-item[value="banana"]').textContent =
+        getText('option_image_api_banana');
+    document.querySelector('#imageApiSelect sp-menu-item[value="gpt_image_2"]').textContent =
+        getText('option_image_api_gpt_image_2');
     document.getElementById('labelResolution').textContent = getText('label_resolution');
     document.getElementById('resolutionSelect').placeholder = getText('placeholder_select');
     document.getElementById('btnSmartCanvasRatio').textContent = getText('btn_smart_ratio');
@@ -1356,16 +1532,26 @@ function updateLanguage(lang) {
     document.getElementById('labelLanguage').textContent = getText('label_language');
     document.getElementById('labelProvider').textContent = getText('label_provider');
     document.getElementById('providerSelect').placeholder = getText('placeholder_select_provider');
-    document.getElementById('btnAddProvider').textContent = getText('btn_add');
+    const btnAddProvider = document.getElementById('btnAddProvider');
+    if (btnAddProvider) btnAddProvider.textContent = getText('btn_add');
     document.getElementById('btnSaveProvider').textContent = getText('btn_save');
-    document.getElementById('btnDeleteProvider').textContent = getText('btn_del');
+    const btnDeleteProvider = document.getElementById('btnDeleteProvider');
+    if (btnDeleteProvider) btnDeleteProvider.textContent = getText('btn_del');
     document.getElementById('btnTestConnection').textContent = getText('btn_test_connection');
     document.getElementById('labelApiKey').textContent = getText('label_api_key');
     document.getElementById('inputApiKey').placeholder = getText('placeholder_api_key');
     document.getElementById('labelBaseUrl').textContent = getText('label_base_url');
     document.getElementById('inputBaseUrl').placeholder = getText('placeholder_base_url');
-    document.getElementById('labelModelId').textContent = getText('label_model_id');
-    document.getElementById('inputModelId').placeholder = getText('placeholder_model_id');
+    document.getElementById('labelBananaModelId').textContent = getText('label_banana_model_id');
+    document.getElementById('inputBananaModelId').placeholder = getText(
+        'placeholder_banana_model_id'
+    );
+    document.getElementById('labelGptImage2ModelId').textContent = getText(
+        'label_gpt_image_2_model_id'
+    );
+    document.getElementById('inputGptImage2ModelId').placeholder = getText(
+        'placeholder_gpt_image_2_model_id'
+    );
     document.getElementById('labelExportSettings').textContent = getText('label_export_settings');
     document.getElementById('labelMaxSize').textContent = getText('label_max_size');
     document.getElementById('labelQuality').textContent = getText('label_quality');

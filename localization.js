@@ -1,10 +1,7 @@
 const translations = {
     en: {
-        // Tabs
         tab_generate: 'Generate',
         tab_settings: 'Settings',
-
-        // Generate Tab
         label_prompt_presets: 'Prompt Presets',
         placeholder_select_preset: 'Select a preset...',
         btn_add: 'Add',
@@ -12,6 +9,9 @@ const translations = {
         btn_rename: 'Rename',
         btn_del: 'Del',
         placeholder_prompt: 'Enter your image generation prompt...',
+        label_image_api: 'Image API:',
+        option_image_api_banana: 'Nano Banana',
+        option_image_api_gpt_image_2: 'GPT Image 2',
         label_resolution: 'Resolution:',
         placeholder_select: 'Select',
         btn_smart_ratio: 'Smart Ratio',
@@ -24,8 +24,6 @@ const translations = {
         radio_imgedit: 'Image Edit',
         checkbox_layer_groups: 'Use Layer Groups',
         btn_add_groups: 'Add Reference/Source Group',
-
-        // Settings Tab
         placeholder_language_select: 'Select Language',
         label_extra_settings: 'Extra Settings',
         label_language: 'Language',
@@ -36,8 +34,10 @@ const translations = {
         placeholder_api_key: 'Enter API Key',
         label_base_url: 'Base URL',
         placeholder_base_url: 'https://...',
-        label_model_id: 'Model ID',
-        placeholder_model_id: 'model-name',
+        label_banana_model_id: 'Nano Banana Model',
+        placeholder_banana_model_id: 'gemini-...',
+        label_gpt_image_2_model_id: 'GPT Image 2 Model',
+        placeholder_gpt_image_2_model_id: 'gpt-image-2',
         label_export_settings: 'Image to Generator Export Settings',
         label_max_size: 'Max Size',
         label_quality: 'Quality',
@@ -46,8 +46,6 @@ const translations = {
         placeholder_log_path: 'Log path will appear here',
         btn_test_export: 'Test Export',
         btn_test_import: 'Test Import',
-
-        // Messages & Dialogs
         msg_enter_preset_name: 'Enter preset name:',
         msg_rename_preset: 'Rename "{name}" to:',
         msg_delete_preset: 'Delete preset "{name}"?',
@@ -68,6 +66,9 @@ const translations = {
         msg_open_document_first: '❌ Please open a document first',
         msg_enter_prompt: 'Please enter a prompt',
         msg_configure_provider: 'Please configure a provider in Settings',
+        msg_banana_model_missing: 'Please configure Nano Banana model for the selected provider',
+        msg_provider_image_api_not_supported: '{provider} does not support {imageApi}',
+        msg_gpt_model_missing: 'Please configure GPT Image 2 model for the selected provider',
         msg_getting_canvas_info: 'Getting canvas info...',
         msg_generating_image: 'Generating image... ({mode}, {resolution}, {ratio})',
         msg_importing_image: 'Importing image to Photoshop...',
@@ -76,14 +77,10 @@ const translations = {
         dialog_cancel: 'Cancel',
         dialog_ok: 'OK',
         dialog_placeholder_name: 'Enter name...',
-        // "footer_text": "🍌PSBanana by LiuYang v2.2.0"
     },
     zh: {
-        // Tabs
         tab_generate: '生成',
         tab_settings: '设置',
-
-        // Generate Tab
         label_prompt_presets: '提示词预设',
         placeholder_select_preset: '选择预设...',
         btn_add: '添加',
@@ -91,6 +88,9 @@ const translations = {
         btn_rename: '重命名',
         btn_del: '删除',
         placeholder_prompt: '输入图像生成提示词...',
+        label_image_api: '图片协议:',
+        option_image_api_banana: 'Nano Banana',
+        option_image_api_gpt_image_2: 'GPT Image 2',
         label_resolution: '分辨率:',
         placeholder_select: '选择',
         btn_smart_ratio: '智能比例',
@@ -103,8 +103,6 @@ const translations = {
         radio_imgedit: '图像编辑',
         checkbox_layer_groups: '使用图层组',
         btn_add_groups: '添加参考/原图组',
-
-        // Settings Tab
         placeholder_language_select: '选择语言',
         label_extra_settings: '额外设置',
         label_language: '语言',
@@ -115,8 +113,10 @@ const translations = {
         placeholder_api_key: '输入 API Key',
         label_base_url: 'Base URL',
         placeholder_base_url: 'https://...',
-        label_model_id: '模型 ID',
-        placeholder_model_id: '模型名称',
+        label_banana_model_id: 'Nano Banana 模型',
+        placeholder_banana_model_id: 'gemini-...',
+        label_gpt_image_2_model_id: 'GPT Image 2 模型',
+        placeholder_gpt_image_2_model_id: 'gpt-image-2',
         label_export_settings: '图像导出设置',
         label_max_size: '最大尺寸',
         label_quality: '质量',
@@ -125,8 +125,6 @@ const translations = {
         placeholder_log_path: '日志路径将显示在这里',
         btn_test_export: '测试导出',
         btn_test_import: '测试导入',
-
-        // Messages & Dialogs
         msg_enter_preset_name: '输入预设名称:',
         msg_rename_preset: '重命名 "{name}" 为:',
         msg_delete_preset: '删除预设 "{name}"?',
@@ -147,6 +145,9 @@ const translations = {
         msg_open_document_first: '❌ 请先打开一个文档',
         msg_enter_prompt: '请输入提示词',
         msg_configure_provider: '请在设置中配置服务商',
+        msg_banana_model_missing: '请先为当前服务商配置 Nano Banana 模型',
+        msg_provider_image_api_not_supported: '{provider} 不支持 {imageApi}',
+        msg_gpt_model_missing: '请先为当前服务商配置 GPT Image 2 模型',
         msg_getting_canvas_info: '正在获取画布信息...',
         msg_generating_image: '正在生成图像... ({mode}, {resolution}, {ratio})',
         msg_importing_image: '正在导入图像到 Photoshop...',
@@ -155,7 +156,6 @@ const translations = {
         dialog_cancel: '取消',
         dialog_ok: '确定',
         dialog_placeholder_name: '输入名称...',
-        // "footer_text": "🍌PSBanana by LiuYang v2.2.0"
     },
 };
 

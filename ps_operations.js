@@ -1,7 +1,7 @@
 const { app } = require('photoshop');
 const { batchPlay } = require('photoshop').action;
 const fs = require('uxp').storage.localFileSystem;
-const { ASPECT_RATIOS } = require('./aspect_ratio');
+const { BANANA_IMAGE_API, getAspectRatiosForImageApi } = require('./aspect_ratio');
 
 /**
  * Photoshop operations for image generation
@@ -96,7 +96,7 @@ class PSOperations {
      * @param {number} canvasHeight - 画布高度
      * @returns {Object} - 生图区域 {left, top, width, height, aspectRatio}
      */
-    static calculateGenerationRegion(selectionBounds, canvasWidth, canvasHeight) {
+    static calculateGenerationRegion(selectionBounds, canvasWidth, canvasHeight, imageApiKind = BANANA_IMAGE_API) {
         const { left, top, right, bottom } = selectionBounds;
         const selectionWidth = right - left;
         const selectionHeight = bottom - top;
@@ -108,11 +108,12 @@ class PSOperations {
         // 计算选区的宽高比
         const selectionRatio = selectionWidth / selectionHeight;
 
-        // 找到最接近的标准比例
-        let closestRatio = ASPECT_RATIOS[0];
+        // 按当前图片协议族选择比例集合
+        const aspectRatios = getAspectRatiosForImageApi(imageApiKind);
+        let closestRatio = aspectRatios[0];
         let minDifference = Math.abs(selectionRatio - closestRatio.value);
 
-        for (const ratio of ASPECT_RATIOS) {
+        for (const ratio of aspectRatios) {
             const difference = Math.abs(selectionRatio - ratio.value);
             if (difference < minDifference) {
                 minDifference = difference;
@@ -1427,7 +1428,7 @@ class PSOperations {
      * 必须在executeAsModal中调用
      * @returns {Promise<Object>} - 返回原始尺寸、新尺寸和目标比例
      */
-    static async applySmartCanvasRatio() {
+    static async applySmartCanvasRatio(imageApiKind = BANANA_IMAGE_API) {
         try {
             const doc = app.activeDocument;
             if (!doc) {
@@ -1438,8 +1439,8 @@ class PSOperations {
             const currentHeight = doc.height;
             console.log(`[PS] Current canvas: ${currentWidth}x${currentHeight}`);
 
-            // 复用统一比例定义,避免多处维护导致不一致
-            const standardRatios = ASPECT_RATIOS.map(({ name, value }) => ({
+            // 按当前图片协议族选择比例集合,避免 GPT 与 Banana 混用
+            const standardRatios = getAspectRatiosForImageApi(imageApiKind).map(({ name, value }) => ({
                 name,
                 ratio: value,
             }));
