@@ -1,7 +1,7 @@
 {
     "id": "com.liuyang.psbanana",
     "name": "PS Banana",
-    "version": "2.3.2",
+    "version": "2.4.0",
     "main": "index.html",
     "host": {
         "app": "PS",
@@ -76,9 +76,21 @@
             "width": 48,
             "height": 48,
             "path": "icons/plugin.png",
-            "scale": [1, 2],
-            "theme": ["darkest", "dark", "medium", "lightest", "light", "all"],
-            "species": ["pluginList"]
+            "scale": [
+                1,
+                2
+            ],
+            "theme": [
+                "darkest",
+                "dark",
+                "medium",
+                "lightest",
+                "light",
+                "all"
+            ],
+            "species": [
+                "pluginList"
+            ]
         }
     ],
     "entrypoints": [
@@ -95,15 +107,28 @@
                     "width": 23,
                     "height": 23,
                     "path": "icons/dark.png",
-                    "scale": [1, 2],
-                    "theme": ["darkest", "dark", "medium"]
+                    "scale": [
+                        1,
+                        2
+                    ],
+                    "theme": [
+                        "darkest",
+                        "dark",
+                        "medium"
+                    ]
                 },
                 {
                     "width": 23,
                     "height": 23,
                     "path": "icons/light.png",
-                    "scale": [1, 2],
-                    "theme": ["lightest", "light"]
+                    "scale": [
+                        1,
+                        2
+                    ],
+                    "theme": [
+                        "lightest",
+                        "light"
+                    ]
                 }
             ],
             "minimumSize": {
